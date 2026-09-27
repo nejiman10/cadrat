@@ -1,0 +1,11 @@
+#!/bin/sh
+# Drop the hidraw access rule from devices that are still connected.
+set -e
+if [ "$1" = "remove" ] || [ "$1" = "purge" ]; then
+    if [ -d /run/udev ] && command -v udevadm >/dev/null 2>&1; then
+        udevadm control --reload || true
+        udevadm trigger --subsystem-match=hidraw --action=change || true
+    fi
+fi
+#DEBHELPER#
+exit 0

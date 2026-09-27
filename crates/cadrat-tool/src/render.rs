@@ -1,6 +1,7 @@
 //! Shared formatting of devices, slots and wire reports.
 
 use std::collections::HashMap;
+use std::fmt::Write as _;
 
 use cadrat_config::{Config, Key};
 use cadrat_hidraw::{Inventory, Mouse, MouseRoute, Receiver, RouteState, SlotMatch, SlotsRead};
@@ -137,7 +138,8 @@ pub fn slot_line(
         redactor.id(slot.id_candidate())
     );
     if let Some((number, mouse)) = mouse {
-        line.push_str(&format!("   → mouse {number} ({})", redactor.key(mouse)));
+        let key = redactor.key(mouse);
+        let _ = write!(line, "   → mouse {number} ({key})");
     }
     line
 }

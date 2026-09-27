@@ -1,0 +1,9 @@
+#!/bin/sh
+# Apply the hidraw access rule to devices that are already connected.
+set -e
+if [ "$1" = "configure" ] && [ -d /run/udev ] && command -v udevadm >/dev/null 2>&1; then
+    udevadm control --reload || true
+    udevadm trigger --subsystem-match=hidraw --action=change || true
+fi
+#DEBHELPER#
+exit 0

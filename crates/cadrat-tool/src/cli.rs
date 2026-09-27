@@ -4,9 +4,17 @@ use std::path::PathBuf;
 
 use clap::{Args, Parser, Subcommand, ValueEnum};
 
+/// The version shown by `--version`: `CADRAT_VERSION` at build time (set by
+/// packaging/build-deb.sh, e.g. `0.1.0~test1+gabc1234`), else the crate
+/// version.
+const VERSION: &str = match option_env!("CADRAT_VERSION") {
+    Some(version) => version,
+    None => env!("CARGO_PKG_VERSION"),
+};
+
 /// Configure the C658 mouse and the C652 Receiver without a daemon.
 #[derive(Debug, Parser)]
-#[command(name = "cadrat-tool", version, about)]
+#[command(name = "cadrat-tool", version = VERSION, about)]
 pub struct Cli {
     #[command(flatten)]
     pub global: Global,

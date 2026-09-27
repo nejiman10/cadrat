@@ -114,6 +114,8 @@ CLIのテストでは、`cadrat-tool` のライブラリの入口 `run(args, env
   - `/usr/lib/udev/rules.d/69-cadrat.rules`（hidrawの `uaccess`）。インストール後に `udevadm control --reload` と `udevadm trigger` を実行する
   - manページとシェル補完（bash / zsh / fish）
   - 後のPhaseでは、systemdのuser unit（`/usr/lib/systemd/user/`）とGNOME Shell拡張（`/usr/share/gnome-shell/extensions/`）を同じパッケージか別パッケージで追加する
+- manページとシェル補完は、CLIの定義から `cargo run -p xtask -- dist` で生成する。
+- **試験ビルド。** Phase 1の実機確認（§5）を終えるまでに作る `.deb` は試験ビルドとし、リリースしない。版を `<版>~test<番号>+g<commit>` とし、`--version` にも `(test build)` と表示する。作り方と確認の記録は [docs/packaging.md](../packaging.md) に置く。
 - flatpakとAppImageは採用しない。
   - flatpak: サンドボックスの中からudevルール、systemd unit、GNOME Shell拡張をホストに入れられない。hidrawへのアクセスにも `--device=all` が要る。CLIの起動も `flatpak run …` になる。
   - AppImage: udevルールとunitを別の手順で入れる必要がある。最近のUbuntuでは、AppImageの実行にlibfuse2の追加インストールが要る。

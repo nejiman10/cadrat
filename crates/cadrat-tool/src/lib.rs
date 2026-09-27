@@ -23,6 +23,13 @@ pub use exit::Exit;
 
 use cli::{Cli, Command};
 
+/// The command-line definition, for generating the manual page and shell
+/// completions.
+#[must_use]
+pub fn command() -> clap::Command {
+    <Cli as clap::CommandFactory>::command()
+}
+
 /// Runs `cadrat-tool` and returns the exit code.
 pub fn run(args: impl IntoIterator<Item = OsString>, env: &Env, io: Io) -> i32 {
     let args: Vec<OsString> = args.into_iter().collect();
