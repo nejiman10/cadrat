@@ -1,6 +1,6 @@
 [workspace]
 resolver = "3"
-members = ["crates/cadrat-proto", "crates/cadrat-config", "crates/cadrat-hidraw"]
+members = ["crates/cadrat-proto", "crates/cadrat-config", "crates/cadrat-hidraw", "crates/cadrat-tool"]
 
 [workspace.package]
 version = "0.1.0"

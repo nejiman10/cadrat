@@ -15,6 +15,10 @@
 - オプションは `--name=value` と `--name value` のどちらでも受け付ける。文書では `=` 形式で書く。
 - 結果はstdoutに、警告とエラーはstderrに出す。`--json` のときもstderrは人間向けのままにする。
 - 対話的な確認をするのは `receiver unpair` だけとする（[05 §4](05-receiver.md#4-unpair)）。それ以外のコマンドは、スクリプトからそのまま使える。
+- `-q` は、情報の行（`set` / `apply` の送信結果、`note`、`init` の結果など）を出さない。要求された結果（`list`、`get`、`receiver slots` の表示）と、警告・エラーは出す。
+- `-v` は、各hidraw nodeの判定結果をstderrに出す。
+- `--hidraw` は `--mouse`、`--route` と同時に指定できない（終了コード2）。
+- 引数の解析で失敗した場合も、`--json` があれば外枠のJSONを出す。このとき `command` は `null` とする。
 
 ## 2. 設定キーと値の書き方
 
@@ -192,6 +196,7 @@ note    the receiver route is on standby; run `cadrat-tool apply` after switchin
 }
 ```
 
+- `command` は `list`、`init`、`get`、`check`、`set`、`apply`、`receiver slots`、`receiver pair`、`receiver unpair` のいずれか。
 - エラーのときは `"ok": false`、`"error": {"code": "AmbiguousTarget", "message": "…", "details": {…}}` とする。
 - `list --json` は、`mice`、`receivers`（`--nodes` 指定時は `nodes` も）を配列で出す。デーモンの前準備として、この構造を[02 §2](02-device.md#2-デバイスモデル)のモデルと一致させる。
 - `format` はJSON出力の形式バージョン。フィールドを足すときは据え置き、互換性を壊すときだけ上げる。
@@ -210,7 +215,7 @@ note    the receiver route is on standby; run `cadrat-tool apply` after switchin
 | 7 | DeviceInvalid | `--hidraw` で指定したnodeが判定に通らない、または対象が `ambiguous-node` |
 | 8 | SendFailed | 送信の失敗（TOMLは変更していない） |
 | 9 | SentNotSaved | 送信は成功したが、TOMLを保存できなかった、またはTOMLが同時に変更されていた |
-| 10 | IoError | 上記以外のファイルI/Oエラー（`init` の書き込み失敗など） |
+| 10 | IoError | 上記以外のファイルI/Oエラー（`init` の書き込み失敗、`init` で `--force` なしに既存ファイルがあった場合など） |
 | 11 | ConfigLocked | 設定ファイルのロックを取れなかった |
 | 12 | PairTimeout | pairで、timeoutまでに新しいslotが占有されなかった（停止は成功） |
 | 13 | PairStopFailed | pairing modeの停止に失敗した（pairing modeが続いている可能性がある） |
@@ -236,5 +241,6 @@ note    the receiver route is on standby; run `cadrat-tool apply` after switchin
 | `W-NO-DEVICE-ID` | 有線の設定nodeで機器IDが取れず、退避keyを使った |
 | `W-SLOT-IF-MISMATCH` | Receiverの設定nodeのinterface番号が、機器IDで対応付けたslot番号と一致しない |
 | `W-INACTIVE-ROUTE` | `--route` で待機中（standby）の経路へ送った |
+| `W-INACCESSIBLE` | 列挙で、permission不足で開けないnodeがあった（udevルールのヒントを添える） |
 
 警告は送信を止めない。止める設定（`--deny-warnings`）を用意するかは未決（[Q6](04-implementation.md#6-未決事項)）。

@@ -26,11 +26,24 @@ pub enum Request {
 
 type Reply<T> = Result<T, i32>;
 
-#[derive(Debug, Default)]
+type SetHook = Box<dyn FnMut(&[u8])>;
+
+#[derive(Default)]
 struct State {
     gets: HashMap<u8, VecDeque<Reply<Vec<u8>>>>,
     sets: VecDeque<Reply<usize>>,
     log: Vec<Request>,
+    on_set: Option<SetHook>,
+}
+
+impl std::fmt::Debug for State {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("State")
+            .field("gets", &self.gets)
+            .field("sets", &self.sets)
+            .field("log", &self.log)
+            .finish_non_exhaustive()
+    }
 }
 
 fn next<T: Clone>(queue: &mut VecDeque<Reply<T>>) -> Option<Reply<T>> {
@@ -186,6 +199,14 @@ impl FakeNode {
         self
     }
 
+    /// Runs `hook` with the data of every SET request, before it is
+    /// answered (e.g. to edit a file while a send is in progress).
+    #[must_use]
+    pub fn on_set(self, hook: impl FnMut(&[u8]) + 'static) -> Self {
+        self.state.borrow_mut().on_set = Some(Box::new(hook));
+        self
+    }
+
     /// Every request received so far.
     #[must_use]
     pub fn log(&self) -> Vec<Request> {
@@ -241,6 +262,9 @@ impl Device for FakeDevice {
     fn set_feature(&mut self, data: &[u8]) -> io::Result<usize> {
         let mut state = self.node.state.borrow_mut();
         state.log.push(Request::Set(data.to_vec()));
+        if let Some(hook) = state.on_set.as_mut() {
+            hook(data);
+        }
         next(&mut state.sets)
             .unwrap_or(Ok(data.len()))
             .map_err(os_error)

@@ -1,0 +1,23 @@
+[package]
+name = "cadrat-tool"
+description = "Stand-alone configuration tool for the C658 mouse and the C652 Receiver"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+publish.workspace = true
+
+[lints]
+workspace = true
+
+[dependencies]
+cadrat-config = { path = "../cadrat-config" }
+cadrat-hidraw = { path = "../cadrat-hidraw" }
+cadrat-proto = { path = "../cadrat-proto" }
+clap = { version = "4.6.7", features = ["derive"] }
+serde_json = "1.0.151"
+signal-hook = "0.4.4"
+
+[dev-dependencies]
+cadrat-hidraw = { path = "../cadrat-hidraw", features = ["fake"] }
+tempfile = "3.27.0"

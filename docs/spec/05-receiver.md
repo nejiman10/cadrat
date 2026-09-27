@@ -25,7 +25,7 @@ C652 Universal Receiverの結合状態を読んだり変えたりする。この
 
 - slot 0..4について、GET Feature `0x43 + slot` を長さ8で要求する。
 - 列挙のときは、slot報告を宣言する管理nodeの候補のうち、interface番号が最小のものから読む（`0x41` の条件は問わない）。
-- 応答の長さが8で、かつ `resp[0] == 0x43 + slot` でなければ `ReceiverProtocolError`（17）にする。
+- 応答の長さが8で、かつ `resp[0] == 0x43 + slot` でなければ `ReceiverProtocolError`（17）にする。GET自体がerrnoで失敗した場合も17とする。
 - 解析:
 
 | byte | 解釈 | 根拠 |
@@ -130,7 +130,7 @@ cadrat-tool receiver unpair <slot> [--receiver=<key>] [--yes]
 
 ## 5. 共通事項
 
-- `--mouse` は使わない。指定されたら使い方の誤り（終了コード2）にする。
+- `--mouse` と `--route` は使わない。指定されたら使い方の誤り（終了コード2）にする。
 - `--json` は[03 §5](03-cli.md#5-出力)の共通の外枠に従い、`receiver`、`slots_before`、`slots_after`、`new_slots`、`stop_sent` などを載せる。`--json` のときの `unpair` は対話しないので、`--yes` が必須になる。
 - 自動再試行はしない。
 - 管理nodeへのSETはすべて、Feature Reportの宣言長（`0x41` は5 byte）どおりに送る。宣言長と違う長さでは送らない。
