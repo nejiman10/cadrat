@@ -16,7 +16,7 @@ docs/spec/
 
 | crate | 責務 | 後のデーモンで再利用するか |
 |---|---|---|
-| `cadrat-proto` | `Report10Config`、actionのenum、blob・wireの生成と `inspect`、HID descriptorの長さ解析、Report `0x03` のparser、Receiver管理packet（`41 02 …` / `41 04 …`）の生成、slot応答の解析 | する |
+| `cadrat-proto` | `Report10Config`、actionのenum、blob・wireの生成と `inspect`、HID descriptorの長さ解析、Report `0x03` のparser、Receiver管理packet（`41 02 …` / `41 04 …`）の生成、slot応答とIDプローブ応答（GET `0x08`）の解析 | する |
 | `cadrat-hidraw` | 列挙、ioctl、候補の判定・選択、送信、Receiver管理（管理nodeの選択、slotのpoll、pair/unpairの手順）。I/Oと時計はtraitの裏に隠し、テストではfakeに差し替える | する（hold-openとudev監視を追加する） |
 | `cadrat-config` | schema 1の型、検証、`toml_edit` での部分更新、原子的な保存、lock | する |
 | `cadrat-tool` | clap、出力の整形、終了コード | 独立ツールとして残す（デーモンのフロントエンド `cadratctl` とは別） |
@@ -26,7 +26,9 @@ docs/spec/
 ## 2. 型の方針
 
 - 検証済みの値だけを型で表す（例: `Dpi` は50..8200の50刻みしか作れない）。blob生成関数は失敗しない（`Result` を返さない）ようにする。
-- `Action` は `Direct(DirectAction)`、`HostRouted(u8)`、`Raw(u8)` とする。`DirectAction` に code 6 を `Unknown6` として含める。
+- `Action` は `Direct(DirectAction)`、`HostRouted(HostIndex)`、`Raw(RawWire)` とする。`HostIndex` は0..215、`RawWire` は `0x10`..`0x27` しか作れない。どのwire値も書き方が1つに決まる。`DirectAction` に code 6 を `Unknown6` として含める。
+- `cadrat-proto` は `core` だけに依存し、allocも使わない。
+- descriptorの解析は調査SDKの `hid_descriptor.py` と同じ規則に従う。ただし、HIDの仕様上1 byteに収まらないReport ID（256以上）と、16段を超えるPUSHの入れ子はエラーにする。調査SDKはどちらも受け付ける。
 - TOMLの文字列表現とJSONの表現は、どちらも同じ `Display` / `FromStr` を使う。
 
 ## 3. テストベクタ
