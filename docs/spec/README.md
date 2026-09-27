@@ -1,6 +1,6 @@
 # cadrat-tool 仕様（Phase 1: 独立設定ツール）
 
-状態: **草案 v0.5**（2026-09-27）。実装前の合意用。
+状態: **草案 v0.6**（2026-09-27）。実装前の合意用。
 
 ## 0. cadrat プロジェクトの構成
 
@@ -63,7 +63,7 @@ CadMouse Compact Wireless（C658）の設定を、Linux上でデーモンを介�
 
 ## 5. 調査リポジトリとの関係
 
-プロトコルの事実は [nejiman10/3dx-hid-research](https://github.com/nejiman10/3dx-hid-research) の `SPEC.md` を正本とし、本仕様はそれを引用するだけとする。参照基準は commit `8c8d423`（2026-09-27）。
+プロトコルの事実は [nejiman10/3dx-hid-research](https://github.com/nejiman10/3dx-hid-research) の `SPEC.md` を正本とし、本仕様はそれを引用するだけとする。参照基準は commit `6b151ae`（2026-09-27）。
 
 本仕様内のプロトコル記述には、調査側の根拠ラベル（`CONFIRMED` / `OBSERVED` / `HYPOTHESIS` / `UNKNOWN`）を付ける。調査側のSPECが更新されたら、影響箇所を洗い出して本仕様を改訂する。
 

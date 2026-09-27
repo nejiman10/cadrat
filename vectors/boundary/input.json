@@ -1,0 +1,805 @@
+{
+  "wire": [
+    {
+      "name": "research_baseline",
+      "config": {
+        "dpi": 1400,
+        "lift_threshold": null,
+        "wheel_mode": "NORMAL",
+        "buttons": [
+          {
+            "direct": "HID_MOUSE_LEFT"
+          },
+          {
+            "direct": "HID_MOUSE_RIGHT"
+          },
+          {
+            "direct": "HID_MOUSE_MIDDLE_OR_WHEEL_BUTTON"
+          },
+          {
+            "direct": "HID_MOUSE_MIDDLE_OR_WHEEL_BUTTON"
+          },
+          {
+            "direct": "HID_MOUSE_FORWARD"
+          },
+          {
+            "direct": "HID_MOUSE_BACKWARD"
+          },
+          {
+            "direct": "HID_MOUSE_MIDDLE_OR_WHEEL_BUTTON"
+          }
+        ],
+        "polling_hz": 1000
+      }
+    },
+    {
+      "name": "dpi_min_50",
+      "config": {
+        "dpi": 50,
+        "lift_threshold": null,
+        "wheel_mode": "NORMAL",
+        "buttons": [
+          {
+            "direct": "HID_MOUSE_LEFT"
+          },
+          {
+            "direct": "HID_MOUSE_RIGHT"
+          },
+          {
+            "direct": "HID_MOUSE_MIDDLE_OR_WHEEL_BUTTON"
+          },
+          {
+            "direct": "HID_MOUSE_MIDDLE_OR_WHEEL_BUTTON"
+          },
+          {
+            "direct": "HID_MOUSE_FORWARD"
+          },
+          {
+            "direct": "HID_MOUSE_BACKWARD"
+          },
+          {
+            "direct": "HID_MOUSE_MIDDLE_OR_WHEEL_BUTTON"
+          }
+        ],
+        "polling_hz": 1000
+      }
+    },
+    {
+      "name": "dpi_max_8200",
+      "config": {
+        "dpi": 8200,
+        "lift_threshold": null,
+        "wheel_mode": "NORMAL",
+        "buttons": [
+          {
+            "direct": "HID_MOUSE_LEFT"
+          },
+          {
+            "direct": "HID_MOUSE_RIGHT"
+          },
+          {
+            "direct": "HID_MOUSE_MIDDLE_OR_WHEEL_BUTTON"
+          },
+          {
+            "direct": "HID_MOUSE_MIDDLE_OR_WHEEL_BUTTON"
+          },
+          {
+            "direct": "HID_MOUSE_FORWARD"
+          },
+          {
+            "direct": "HID_MOUSE_BACKWARD"
+          },
+          {
+            "direct": "HID_MOUSE_MIDDLE_OR_WHEEL_BUTTON"
+          }
+        ],
+        "polling_hz": 1000
+      }
+    },
+    {
+      "name": "dpi_1650",
+      "config": {
+        "dpi": 1650,
+        "lift_threshold": null,
+        "wheel_mode": "NORMAL",
+        "buttons": [
+          {
+            "direct": "HID_MOUSE_LEFT"
+          },
+          {
+            "direct": "HID_MOUSE_RIGHT"
+          },
+          {
+            "direct": "HID_MOUSE_MIDDLE_OR_WHEEL_BUTTON"
+          },
+          {
+            "direct": "HID_MOUSE_MIDDLE_OR_WHEEL_BUTTON"
+          },
+          {
+            "direct": "HID_MOUSE_FORWARD"
+          },
+          {
+            "direct": "HID_MOUSE_BACKWARD"
+          },
+          {
+            "direct": "HID_MOUSE_MIDDLE_OR_WHEEL_BUTTON"
+          }
+        ],
+        "polling_hz": 1000
+      }
+    },
+    {
+      "name": "lift_threshold_0",
+      "config": {
+        "dpi": 1400,
+        "lift_threshold": 0,
+        "wheel_mode": "NORMAL",
+        "buttons": [
+          {
+            "direct": "HID_MOUSE_LEFT"
+          },
+          {
+            "direct": "HID_MOUSE_RIGHT"
+          },
+          {
+            "direct": "HID_MOUSE_MIDDLE_OR_WHEEL_BUTTON"
+          },
+          {
+            "direct": "HID_MOUSE_MIDDLE_OR_WHEEL_BUTTON"
+          },
+          {
+            "direct": "HID_MOUSE_FORWARD"
+          },
+          {
+            "direct": "HID_MOUSE_BACKWARD"
+          },
+          {
+            "direct": "HID_MOUSE_MIDDLE_OR_WHEEL_BUTTON"
+          }
+        ],
+        "polling_hz": 1000
+      }
+    },
+    {
+      "name": "lift_threshold_31_ambiguous",
+      "config": {
+        "dpi": 1400,
+        "lift_threshold": 31,
+        "wheel_mode": "NORMAL",
+        "buttons": [
+          {
+            "direct": "HID_MOUSE_LEFT"
+          },
+          {
+            "direct": "HID_MOUSE_RIGHT"
+          },
+          {
+            "direct": "HID_MOUSE_MIDDLE_OR_WHEEL_BUTTON"
+          },
+          {
+            "direct": "HID_MOUSE_MIDDLE_OR_WHEEL_BUTTON"
+          },
+          {
+            "direct": "HID_MOUSE_FORWARD"
+          },
+          {
+            "direct": "HID_MOUSE_BACKWARD"
+          },
+          {
+            "direct": "HID_MOUSE_MIDDLE_OR_WHEEL_BUTTON"
+          }
+        ],
+        "polling_hz": 1000
+      }
+    },
+    {
+      "name": "lift_threshold_255",
+      "config": {
+        "dpi": 1400,
+        "lift_threshold": 255,
+        "wheel_mode": "NORMAL",
+        "buttons": [
+          {
+            "direct": "HID_MOUSE_LEFT"
+          },
+          {
+            "direct": "HID_MOUSE_RIGHT"
+          },
+          {
+            "direct": "HID_MOUSE_MIDDLE_OR_WHEEL_BUTTON"
+          },
+          {
+            "direct": "HID_MOUSE_MIDDLE_OR_WHEEL_BUTTON"
+          },
+          {
+            "direct": "HID_MOUSE_FORWARD"
+          },
+          {
+            "direct": "HID_MOUSE_BACKWARD"
+          },
+          {
+            "direct": "HID_MOUSE_MIDDLE_OR_WHEEL_BUTTON"
+          }
+        ],
+        "polling_hz": 1000
+      }
+    },
+    {
+      "name": "wheel_inertial",
+      "config": {
+        "dpi": 1400,
+        "lift_threshold": null,
+        "wheel_mode": "INERTIAL",
+        "buttons": [
+          {
+            "direct": "HID_MOUSE_LEFT"
+          },
+          {
+            "direct": "HID_MOUSE_RIGHT"
+          },
+          {
+            "direct": "HID_MOUSE_MIDDLE_OR_WHEEL_BUTTON"
+          },
+          {
+            "direct": "HID_MOUSE_MIDDLE_OR_WHEEL_BUTTON"
+          },
+          {
+            "direct": "HID_MOUSE_FORWARD"
+          },
+          {
+            "direct": "HID_MOUSE_BACKWARD"
+          },
+          {
+            "direct": "HID_MOUSE_MIDDLE_OR_WHEEL_BUTTON"
+          }
+        ],
+        "polling_hz": 1000
+      }
+    },
+    {
+      "name": "polling_500",
+      "config": {
+        "dpi": 1400,
+        "lift_threshold": null,
+        "wheel_mode": "NORMAL",
+        "buttons": [
+          {
+            "direct": "HID_MOUSE_LEFT"
+          },
+          {
+            "direct": "HID_MOUSE_RIGHT"
+          },
+          {
+            "direct": "HID_MOUSE_MIDDLE_OR_WHEEL_BUTTON"
+          },
+          {
+            "direct": "HID_MOUSE_MIDDLE_OR_WHEEL_BUTTON"
+          },
+          {
+            "direct": "HID_MOUSE_FORWARD"
+          },
+          {
+            "direct": "HID_MOUSE_BACKWARD"
+          },
+          {
+            "direct": "HID_MOUSE_MIDDLE_OR_WHEEL_BUTTON"
+          }
+        ],
+        "polling_hz": 500
+      }
+    },
+    {
+      "name": "polling_250",
+      "config": {
+        "dpi": 1400,
+        "lift_threshold": null,
+        "wheel_mode": "NORMAL",
+        "buttons": [
+          {
+            "direct": "HID_MOUSE_LEFT"
+          },
+          {
+            "direct": "HID_MOUSE_RIGHT"
+          },
+          {
+            "direct": "HID_MOUSE_MIDDLE_OR_WHEEL_BUTTON"
+          },
+          {
+            "direct": "HID_MOUSE_MIDDLE_OR_WHEEL_BUTTON"
+          },
+          {
+            "direct": "HID_MOUSE_FORWARD"
+          },
+          {
+            "direct": "HID_MOUSE_BACKWARD"
+          },
+          {
+            "direct": "HID_MOUSE_MIDDLE_OR_WHEEL_BUTTON"
+          }
+        ],
+        "polling_hz": 250
+      }
+    },
+    {
+      "name": "polling_125",
+      "config": {
+        "dpi": 1400,
+        "lift_threshold": null,
+        "wheel_mode": "NORMAL",
+        "buttons": [
+          {
+            "direct": "HID_MOUSE_LEFT"
+          },
+          {
+            "direct": "HID_MOUSE_RIGHT"
+          },
+          {
+            "direct": "HID_MOUSE_MIDDLE_OR_WHEEL_BUTTON"
+          },
+          {
+            "direct": "HID_MOUSE_MIDDLE_OR_WHEEL_BUTTON"
+          },
+          {
+            "direct": "HID_MOUSE_FORWARD"
+          },
+          {
+            "direct": "HID_MOUSE_BACKWARD"
+          },
+          {
+            "direct": "HID_MOUSE_MIDDLE_OR_WHEEL_BUTTON"
+          }
+        ],
+        "polling_hz": 125
+      }
+    },
+    {
+      "name": "all_direct_actions",
+      "config": {
+        "dpi": 1400,
+        "lift_threshold": null,
+        "wheel_mode": "NORMAL",
+        "buttons": [
+          {
+            "direct": "HID_MOUSE_LEFT"
+          },
+          {
+            "direct": "HID_MOUSE_RIGHT"
+          },
+          {
+            "direct": "HID_MOUSE_MIDDLE_OR_WHEEL_BUTTON"
+          },
+          {
+            "direct": "HID_MOUSE_BACKWARD"
+          },
+          {
+            "direct": "HID_MOUSE_FORWARD"
+          },
+          {
+            "direct": "UNKNOWN_DIRECT_CODE_6"
+          },
+          {
+            "direct": "UNKNOWN_DIRECT_CODE_6"
+          }
+        ],
+        "polling_hz": 1000
+      }
+    },
+    {
+      "name": "host_index_0_7_215",
+      "config": {
+        "dpi": 1400,
+        "lift_threshold": null,
+        "wheel_mode": "NORMAL",
+        "buttons": [
+          {
+            "host_index": 0
+          },
+          {
+            "host_index": 1
+          },
+          {
+            "host_index": 2
+          },
+          {
+            "host_index": 7
+          },
+          {
+            "host_index": 8
+          },
+          {
+            "host_index": 214
+          },
+          {
+            "host_index": 215
+          }
+        ],
+        "polling_hz": 1000
+      }
+    },
+    {
+      "name": "radial_host_1_to_7",
+      "config": {
+        "dpi": 1400,
+        "lift_threshold": null,
+        "wheel_mode": "NORMAL",
+        "buttons": [
+          {
+            "direct": "HID_MOUSE_LEFT"
+          },
+          {
+            "direct": "HID_MOUSE_RIGHT"
+          },
+          {
+            "direct": "HID_MOUSE_MIDDLE_OR_WHEEL_BUTTON"
+          },
+          {
+            "direct": "HID_MOUSE_MIDDLE_OR_WHEEL_BUTTON"
+          },
+          {
+            "direct": "HID_MOUSE_FORWARD"
+          },
+          {
+            "direct": "HID_MOUSE_BACKWARD"
+          },
+          {
+            "host_index": 7
+          }
+        ],
+        "polling_hz": 1000
+      }
+    },
+    {
+      "name": "combined_extremes",
+      "config": {
+        "dpi": 8200,
+        "lift_threshold": 0,
+        "wheel_mode": "INERTIAL",
+        "buttons": [
+          {
+            "host_index": 215
+          },
+          {
+            "host_index": 215
+          },
+          {
+            "host_index": 215
+          },
+          {
+            "host_index": 215
+          },
+          {
+            "host_index": 215
+          },
+          {
+            "host_index": 215
+          },
+          {
+            "direct": "UNKNOWN_DIRECT_CODE_6"
+          }
+        ],
+        "polling_hz": 125
+      }
+    },
+    {
+      "name": "host_1_at_offset_18",
+      "config": {
+        "dpi": 1400,
+        "lift_threshold": null,
+        "wheel_mode": "NORMAL",
+        "buttons": [
+          {
+            "host_index": 1
+          },
+          {
+            "direct": "HID_MOUSE_RIGHT"
+          },
+          {
+            "direct": "HID_MOUSE_MIDDLE_OR_WHEEL_BUTTON"
+          },
+          {
+            "direct": "HID_MOUSE_MIDDLE_OR_WHEEL_BUTTON"
+          },
+          {
+            "direct": "HID_MOUSE_FORWARD"
+          },
+          {
+            "direct": "HID_MOUSE_BACKWARD"
+          },
+          {
+            "direct": "HID_MOUSE_MIDDLE_OR_WHEEL_BUTTON"
+          }
+        ],
+        "polling_hz": 1000
+      }
+    },
+    {
+      "name": "host_1_at_offset_19",
+      "config": {
+        "dpi": 1400,
+        "lift_threshold": null,
+        "wheel_mode": "NORMAL",
+        "buttons": [
+          {
+            "direct": "HID_MOUSE_LEFT"
+          },
+          {
+            "host_index": 1
+          },
+          {
+            "direct": "HID_MOUSE_MIDDLE_OR_WHEEL_BUTTON"
+          },
+          {
+            "direct": "HID_MOUSE_MIDDLE_OR_WHEEL_BUTTON"
+          },
+          {
+            "direct": "HID_MOUSE_FORWARD"
+          },
+          {
+            "direct": "HID_MOUSE_BACKWARD"
+          },
+          {
+            "direct": "HID_MOUSE_MIDDLE_OR_WHEEL_BUTTON"
+          }
+        ],
+        "polling_hz": 1000
+      }
+    },
+    {
+      "name": "host_1_at_offset_20",
+      "config": {
+        "dpi": 1400,
+        "lift_threshold": null,
+        "wheel_mode": "NORMAL",
+        "buttons": [
+          {
+            "direct": "HID_MOUSE_LEFT"
+          },
+          {
+            "direct": "HID_MOUSE_RIGHT"
+          },
+          {
+            "host_index": 1
+          },
+          {
+            "direct": "HID_MOUSE_MIDDLE_OR_WHEEL_BUTTON"
+          },
+          {
+            "direct": "HID_MOUSE_FORWARD"
+          },
+          {
+            "direct": "HID_MOUSE_BACKWARD"
+          },
+          {
+            "direct": "HID_MOUSE_MIDDLE_OR_WHEEL_BUTTON"
+          }
+        ],
+        "polling_hz": 1000
+      }
+    },
+    {
+      "name": "host_1_at_offset_21",
+      "config": {
+        "dpi": 1400,
+        "lift_threshold": null,
+        "wheel_mode": "NORMAL",
+        "buttons": [
+          {
+            "direct": "HID_MOUSE_LEFT"
+          },
+          {
+            "direct": "HID_MOUSE_RIGHT"
+          },
+          {
+            "direct": "HID_MOUSE_MIDDLE_OR_WHEEL_BUTTON"
+          },
+          {
+            "host_index": 1
+          },
+          {
+            "direct": "HID_MOUSE_FORWARD"
+          },
+          {
+            "direct": "HID_MOUSE_BACKWARD"
+          },
+          {
+            "direct": "HID_MOUSE_MIDDLE_OR_WHEEL_BUTTON"
+          }
+        ],
+        "polling_hz": 1000
+      }
+    },
+    {
+      "name": "host_1_at_offset_22",
+      "config": {
+        "dpi": 1400,
+        "lift_threshold": null,
+        "wheel_mode": "NORMAL",
+        "buttons": [
+          {
+            "direct": "HID_MOUSE_LEFT"
+          },
+          {
+            "direct": "HID_MOUSE_RIGHT"
+          },
+          {
+            "direct": "HID_MOUSE_MIDDLE_OR_WHEEL_BUTTON"
+          },
+          {
+            "direct": "HID_MOUSE_MIDDLE_OR_WHEEL_BUTTON"
+          },
+          {
+            "host_index": 1
+          },
+          {
+            "direct": "HID_MOUSE_BACKWARD"
+          },
+          {
+            "direct": "HID_MOUSE_MIDDLE_OR_WHEEL_BUTTON"
+          }
+        ],
+        "polling_hz": 1000
+      }
+    },
+    {
+      "name": "host_1_at_offset_23",
+      "config": {
+        "dpi": 1400,
+        "lift_threshold": null,
+        "wheel_mode": "NORMAL",
+        "buttons": [
+          {
+            "direct": "HID_MOUSE_LEFT"
+          },
+          {
+            "direct": "HID_MOUSE_RIGHT"
+          },
+          {
+            "direct": "HID_MOUSE_MIDDLE_OR_WHEEL_BUTTON"
+          },
+          {
+            "direct": "HID_MOUSE_MIDDLE_OR_WHEEL_BUTTON"
+          },
+          {
+            "direct": "HID_MOUSE_FORWARD"
+          },
+          {
+            "host_index": 1
+          },
+          {
+            "direct": "HID_MOUSE_MIDDLE_OR_WHEEL_BUTTON"
+          }
+        ],
+        "polling_hz": 1000
+      }
+    },
+    {
+      "name": "host_1_at_offset_24",
+      "config": {
+        "dpi": 1400,
+        "lift_threshold": null,
+        "wheel_mode": "NORMAL",
+        "buttons": [
+          {
+            "direct": "HID_MOUSE_LEFT"
+          },
+          {
+            "direct": "HID_MOUSE_RIGHT"
+          },
+          {
+            "direct": "HID_MOUSE_MIDDLE_OR_WHEEL_BUTTON"
+          },
+          {
+            "direct": "HID_MOUSE_MIDDLE_OR_WHEEL_BUTTON"
+          },
+          {
+            "direct": "HID_MOUSE_FORWARD"
+          },
+          {
+            "direct": "HID_MOUSE_BACKWARD"
+          },
+          {
+            "host_index": 1
+          }
+        ],
+        "polling_hz": 1000
+      }
+    }
+  ],
+  "descriptors": [
+    {
+      "name": "receiver_management_shape",
+      "hex": "06 00 ff 09 01 a1 01 75 08 85 41 95 04 09 01 b1 02 85 43 95 07 09 02 b1 02 85 44 95 07 09 02 b1 02 85 45 95 07 09 02 b1 02 85 46 95 07 09 02 b1 02 85 47 95 07 09 02 b1 02 c0"
+    },
+    {
+      "name": "setting_node_shape",
+      "hex": "06 00 ff 09 01 a1 01 75 08 85 10 95 1f 09 01 b1 02 85 08 95 07 09 02 b1 02 85 03 95 01 09 03 81 02 c0"
+    },
+    {
+      "name": "summed_feature_items_round_up",
+      "hex": "85 41 75 08 95 02 b1 02 75 01 95 0a b1 02"
+    },
+    {
+      "name": "no_report_id",
+      "hex": "05 01 09 02 a1 01 75 08 95 04 81 02 c0"
+    },
+    {
+      "name": "push_pop_restores_globals",
+      "hex": "85 01 75 08 95 02 a4 85 02 95 04 b1 02 b4 b1 02"
+    },
+    {
+      "name": "long_item_skipped",
+      "hex": "fe 03 10 aa bb cc 85 05 75 08 95 01 b1 02"
+    },
+    {
+      "name": "four_byte_item",
+      "hex": "85 07 75 08 97 03 00 00 00 b1 02"
+    },
+    {
+      "name": "output_items_ignored",
+      "hex": "85 02 75 08 95 04 91 02 a1 01 c0"
+    },
+    {
+      "name": "two_top_level_collections",
+      "hex": "05 01 09 02 a1 01 85 01 75 08 95 03 81 02 c0 06 00 ff 09 01 a1 01 85 02 75 08 95 07 b1 02 c0"
+    },
+    {
+      "name": "empty",
+      "hex": ""
+    }
+  ],
+  "report03": [
+    {
+      "name": "press_index_7",
+      "hex": "03 40",
+      "previous_bitmap": 0
+    },
+    {
+      "name": "release_index_7",
+      "hex": "03 00",
+      "previous_bitmap": 64
+    },
+    {
+      "name": "overlapping_transitions",
+      "hex": "03 06",
+      "previous_bitmap": 3
+    },
+    {
+      "name": "high_bits_masked",
+      "hex": "03 ff ff ff ff ff",
+      "previous_bitmap": 128
+    },
+    {
+      "name": "no_change",
+      "hex": "03 01",
+      "previous_bitmap": 1
+    }
+  ],
+  "receiver": [
+    {
+      "operation": "pair_start"
+    },
+    {
+      "operation": "pair_stop"
+    },
+    {
+      "operation": "unpair",
+      "slot": 0
+    },
+    {
+      "operation": "unpair",
+      "slot": 1
+    },
+    {
+      "operation": "unpair",
+      "slot": 2
+    },
+    {
+      "operation": "unpair",
+      "slot": 3
+    },
+    {
+      "operation": "unpair",
+      "slot": 4
+    }
+  ]
+}

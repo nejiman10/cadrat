@@ -2,20 +2,6 @@
 
 このファイルは未完了項目と達成条件の正本です。項目番号は再開時の参照に使うため、完了や並べ替えの後も再利用しません。
 
-## 1. 調査リポジトリのテストベクタを取り込む
-
-目的: `cadrat-proto` の出力を Python SDK と突き合わせる基準を用意する。
-
-前提: 調査リポジトリの TODO 11（テストベクタ書き出しツール）と TODO 12（descriptor の収録）。
-
-達成条件: 調査リポジトリの特定commitで生成したベクタを `vectors/` に置き、出所のcommitと再生成手順を記録する。ベクタに個体識別子が含まれないことを確認する。
-
-## 2. Cargo workspace と `cadrat-proto` を作る
-
-目的: I/O を持たない Report `0x10` 生成・検査、descriptor 解析、Report `0x03` 解析、Receiver packet と slot 応答の処理を実装する。
-
-達成条件: [仕様 04 §1〜§3](docs/spec/04-implementation.md) の crate 構成と型の方針に沿い、項目1のベクタテストがすべて通る。仕様 01 の値検証（DPI の範囲外・端数の拒否など）を Rust 側のテストで確認する。
-
 ## 3. `cadrat-config` を作る
 
 目的: schema 1 の読み込み・検証・部分更新・原子的な保存・lock を実装する。
@@ -45,3 +31,11 @@
 目的: [仕様 04 §7](docs/spec/04-implementation.md#7-配布) に沿って `cadrat-tool` を配布できるようにする。
 
 達成条件: 対象の Ubuntu LTS で `.deb` をインストール・削除でき、udev ルールが有効になり、一般ユーザーで `cadrat-tool list` が動く。
+
+## 8. 実機の HID descriptor をベクタに加える
+
+目的: 合成 descriptor だけでなく、実機の descriptor でも `cadrat-proto` の長さ解析が SDK と一致することを確かめる。
+
+前提: 調査リポジトリの TODO 12（実機 descriptor の収録）。
+
+達成条件: 調査側で収録された descriptor を [vectors/README.md](vectors/README.md) の手順で取り込み、出所の commit とハッシュを記録する。個体識別子が含まれないことを確認し、ベクタテストが通る。
