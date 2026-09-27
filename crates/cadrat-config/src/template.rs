@@ -17,26 +17,27 @@ pub enum Preset {
 }
 
 const HEADER: &str = "\
-# cadrat 設定ファイル（schema 1）
-# すべてのキーが必須です。値の範囲と意味は docs/spec/01-config.md を参照してください。
+# cadrat configuration (schema 1)
+# Every key is required. Ranges and meanings:
+# https://github.com/nejiman10/cadrat/blob/main/docs/spec/01-config.md
 ";
 
 const EMPTY_NOTE: &str = "\
-# 値を決めてから各行のコメントを外してください。値が欠けている間は送信できません。
+# Choose each value and uncomment its line. Nothing is sent while a value is missing.
 ";
 
 const BASELINE_NOTE: &str = "\
-# 調査SDKの latest_software_baseline() と同じ値です（--preset=research-baseline）。
-# 実機から読み取った値でも、工場出荷時の値でもありません。
-# 送信するとマウスの現在の設定を上書きします。
+# Values from the research SDK's latest_software_baseline() (--preset=research-baseline).
+# They were not read from a device and are not factory defaults.
+# Sending them overwrites the mouse's current settings.
 ";
 
 fn comment(key: Key) -> Option<&'static str> {
     match key {
-        Key::Dpi => Some("50..8200、50刻み"),
+        Key::Dpi => Some("50..8200, in steps of 50"),
         Key::PollingRate => Some("125 | 250 | 500 | 1000"),
         Key::Wheel => Some("\"normal\" | \"inertial\""),
-        Key::LiftThreshold => Some("0..255。enabled = true のときだけ使う"),
+        Key::LiftThreshold => Some("0..255, used only when enabled = true"),
         Key::LiftEnabled | Key::Button(_) => None,
     }
 }
@@ -80,14 +81,14 @@ pub fn template(preset: Preset) -> String {
     for key in [Key::Dpi, Key::PollingRate, Key::Wheel] {
         line(&mut out, key, 0);
     }
-    out.push_str("\n[mouse.lift]            # C658では実験的。送信時に警告を出します\n");
+    out.push_str("\n[mouse.lift]            # experimental on C658; sending it warns\n");
     for key in [Key::LiftEnabled, Key::LiftThreshold] {
         line(&mut out, key, 0);
     }
     out.push_str(
         "\n[buttons]\n\
-         # 書き方: mouse:left | mouse:right | mouse:middle | mouse:backward | mouse:forward\n\
-         #         unknown:6 | host:<0..215> | raw:<0x10..0x27>\n",
+         # actions: mouse:left | mouse:right | mouse:middle | mouse:backward | mouse:forward\n\
+         #          unknown:6 | host:<0..215> | raw:<0x10..0x27>\n",
     );
     for name in ButtonName::ALL {
         line(&mut out, Key::Button(name), 7);
@@ -105,9 +106,9 @@ mod tests {
         let text = template(Preset::ResearchBaseline);
         let config = Document::parse(&text).unwrap().config().unwrap();
         assert_eq!(config, Config::research_baseline());
-        assert!(text.contains("工場出荷時の値でもありません"));
+        assert!(text.contains("are not factory defaults"));
         assert!(text.contains("forward = \"mouse:forward\"\nback    = \"mouse:backward\"\n"));
-        assert!(text.contains("dpi = 1400              # 50..8200、50刻み\n"));
+        assert!(text.contains("dpi = 1400              # 50..8200, in steps of 50\n"));
     }
 
     #[test]

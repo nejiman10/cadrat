@@ -21,15 +21,15 @@
 schema = 1
 
 [mouse]
-dpi = 1600              # 50..8200、50刻み
+dpi = 1600              # 50..8200, in steps of 50
 polling_rate = 1000     # 125 | 250 | 500 | 1000
 wheel = "normal"        # "normal" | "inertial"
 
-[mouse.lift]            # C658では実験的（§4.4）
+[mouse.lift]            # experimental on C658 (§4.4)
 enabled = false
-threshold = 31          # 0..255。enabled = true のときだけ使う
+threshold = 31          # 0..255, used only when enabled = true
 
-[buttons]               # 7 entryすべて必須
+[buttons]               # all 7 entries are required
 left    = "mouse:left"
 right   = "mouse:right"
 middle  = "mouse:middle"
@@ -139,4 +139,5 @@ wire reportは `0x10` とblobを連結した32 byteになる。
 - `--preset=research-baseline` を付けたときだけ、調査SDKの `latest_software_baseline()` と同じ値で埋める。ファイル冒頭には、実機から取得した値でも工場出荷値でもない旨のコメントを入れる。
   - 値: dpi 1400、lift無効、wheel normal、polling 1000、ボタンは left / right / middle / middle / forward / backward / middle。
   - 調査SDKの順序では第5 entryがforward、第6 entryがbackwardになる。本仕様の物理名対応では、`forward = "mouse:forward"`、`back = "mouse:backward"` になる。
+- テンプレートのコメントは英語で書く（[03 §5](03-cli.md#5-出力)）。
 - 既にファイルがあれば上書きせずにエラーにする（`--force` で上書き）。

@@ -62,7 +62,7 @@ cadrat-tool receiver pair [--receiver=<key>] [--timeout=<秒>] [--poll-interval=
 2. slot snapshot S0 を読む
 3. SIGINT / SIGTERM のハンドラを設定する（以降の中断は必ず手順6に進む）
 4. SET 41 02 02 00 00（pairing開始）                 失敗 → 6へ進み、ReceiverCommandFailed
-5. 「マウスをペアリング操作してください」と表示し、
+5. "put the mouse in pairing mode" と表示し、
    poll間隔ごとにslotを読み、S0で空きだったslotが占有になるまで待つ
      見つかった → 6へ
      timeoutまたは中断 → 6へ

@@ -100,7 +100,7 @@ $ cadrat-tool set mouse.dpi=1000 buttons.radial=host:1
 
 - 変更はまとめて1回だけ送る。
 - `--dry-run`: 送信も保存もしない。変更後のwire reportとフィールドの対応、変更箇所を表示する。**デバイスI/Oは一切しない。**
-- `--no-save`: 送信だけして保存しない。成功したら警告 `W-NOT-SAVED` を出す（「マウスの設定とTOMLが食い違っています。`cadrat-tool apply` で戻せます」）。
+- `--no-save`: 送信だけして保存しない。成功したら警告 `W-NOT-SAVED` を出す（"the mouse and the TOML file now differ; run `cadrat-tool apply` to resend the file"）。
 - `--dry-run` と `--no-save` は同時に指定できない。
 
 ### `apply [--dry-run]`
@@ -156,6 +156,8 @@ pairing modeを開始し、新しいslotが占有されるまで待つ。終了�
 
 ## 5. 出力
 
+- 出力する文言（結果、警告、エラー、確認プロンプト、ヒント）と、`init` が作るテンプレートのコメントはすべて英語にする。仕様中の日本語の文言は意味を示すもので、そのまま出力しない。
+
 ### 人間向け（`set` の成功例）
 
 ```
@@ -163,7 +165,7 @@ mouse   1  c658:0a1b2c3d4e5f  via wired (MI_01)
 change  mouse.dpi=1600 → 1000
 sent    10 00 14 1f 01 ff 00 00 00 … 1e 00 00 00 01
 saved   ~/.config/cadrat/default.toml
-note    receiver経路は待機中です。モードを切り替えたら `cadrat-tool apply` を実行してください
+note    the receiver route is on standby; run `cadrat-tool apply` after switching modes
 ```
 
 ### `--json`

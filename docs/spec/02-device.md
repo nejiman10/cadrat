@@ -128,7 +128,7 @@ Receiver（key = recv:port-<USBポートパス>）
 
 Phase 1では次のように扱う。
 - 送信は有効な経路だけに行う（§6）。
-- `set` / `apply` の成功時、そのマウスに `standby` の経路があれば、「モードを切り替えたら `cadrat-tool apply` を実行してください」と注記する（`-q` のときは出さない）。
+- `set` / `apply` の成功時、そのマウスに `standby` の経路があれば、"the <route> route is on standby; run `cadrat-tool apply` after switching modes" と注記する（`<route>` は待機中の経路名）（`-q` のときは出さない）。
 
 ## 8. 読み戻し
 

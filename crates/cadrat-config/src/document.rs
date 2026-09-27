@@ -415,15 +415,15 @@ mod tests {
     const FULL: &str = r#"schema = 1
 
 [mouse]
-dpi = 1600              # 50..8200、50刻み
+dpi = 1600              # 50..8200, in steps of 50
 polling_rate = 1000     # 125 | 250 | 500 | 1000
 wheel = "normal"        # "normal" | "inertial"
 
-[mouse.lift]            # C658では実験的（§4.4）
+[mouse.lift]            # experimental on C658 (§4.4)
 enabled = false
-threshold = 31          # 0..255。enabled = true のときだけ使う
+threshold = 31          # 0..255, used only when enabled = true
 
-[buttons]               # 7 entryすべて必須
+[buttons]               # all 7 entries are required
 left    = "mouse:left"
 right   = "mouse:right"
 middle  = "mouse:middle"
