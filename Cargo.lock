@@ -30,6 +30,17 @@ dependencies = [
 ]
 
 [[package]]
+name = "cadrat-hidraw"
+version = "0.1.0"
+dependencies = [
+ "cadrat-hidraw",
+ "cadrat-proto",
+ "rustix",
+ "tempfile",
+ "thiserror",
+]
+
+[[package]]
 name = "cadrat-proto"
 version = "0.1.0"
 dependencies = [

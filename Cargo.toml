@@ -1,6 +1,6 @@
 [workspace]
 resolver = "3"
-members = ["crates/cadrat-proto", "crates/cadrat-config"]
+members = ["crates/cadrat-proto", "crates/cadrat-config", "crates/cadrat-hidraw"]
 
 [workspace.package]
 version = "0.1.0"
@@ -10,7 +10,7 @@ repository = "https://github.com/nejiman10/cadrat"
 publish = false
 
 [workspace.lints.rust]
-unsafe_code = "forbid"
+unsafe_code = "deny"
 missing_docs = "warn"
 
 [workspace.lints.clippy]

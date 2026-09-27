@@ -2,12 +2,6 @@
 
 このファイルは未完了項目と達成条件の正本です。項目番号は再開時の参照に使うため、完了や並べ替えの後も再利用しません。
 
-## 4. `cadrat-hidraw` を作る
-
-目的: 列挙、役割判定、機器IDによるマウスの組み立て、選択、送信直前の宛先確認、送信、Receiver 管理を実装する。
-
-達成条件: [仕様 02・05](docs/spec/02-device.md) の各分岐を、fake の sysfs・descriptor・ioctl で確認する（[仕様 04 §4](docs/spec/04-implementation.md#4-テスト階層)）。
-
 ## 5. `cadrat-tool` を作る
 
 目的: [仕様 03](docs/spec/03-cli.md) のコマンド、出力、終了コードを実装する。

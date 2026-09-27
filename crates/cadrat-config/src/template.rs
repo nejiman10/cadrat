@@ -1,5 +1,7 @@
 //! Templates written by `init` (spec 01 §8).
 
+use std::fmt::Write as _;
+
 use cadrat_proto::ButtonName;
 
 use crate::config::Config;
@@ -65,16 +67,11 @@ pub fn template(preset: Preset) -> String {
         };
         let name = key.path().1;
         let assignment = format!("{prefix}{name:width$} = {value}");
-        match comment(key) {
-            Some(comment) => out.push_str(&format!(
-                "{assignment:<24}# {comment}
-"
-            )),
-            None => out.push_str(&format!(
-                "{assignment}
-"
-            )),
-        }
+        // Writing to a String cannot fail.
+        let _ = match comment(key) {
+            Some(comment) => writeln!(out, "{assignment:<24}# {comment}"),
+            None => writeln!(out, "{assignment}"),
+        };
     };
 
     out.push_str("\n[mouse]\n");
