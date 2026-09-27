@@ -1,6 +1,6 @@
 [workspace]
 resolver = "3"
-members = ["crates/cadrat-proto"]
+members = ["crates/cadrat-proto", "crates/cadrat-config"]
 
 [workspace.package]
 version = "0.1.0"

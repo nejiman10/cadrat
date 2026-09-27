@@ -2,11 +2,12 @@
 
 /// Parses a non-negative integer written in decimal or as `0x` hexadecimal.
 ///
-/// This matches the integer forms accepted in the TOML file (spec 01 §2.1):
+/// These are the integer forms accepted in command-line values (spec 03 §2):
 /// decimal without sign or leading zeros, or a lowercase `0x` prefix followed
-/// by hexadecimal digits. Returns `None` for anything else, including values
+/// by hexadecimal digits. The TOML file itself accepts every TOML notation. Returns `None` for anything else, including values
 /// that do not fit in `u32`.
-pub(crate) fn parse_u32(s: &str) -> Option<u32> {
+#[must_use]
+pub fn parse_u32(s: &str) -> Option<u32> {
     if let Some(hex) = s.strip_prefix("0x") {
         if hex.is_empty() || !hex.bytes().all(|b| b.is_ascii_hexdigit()) {
             return None;
