@@ -44,14 +44,24 @@ packaging/build-deb.sh [試験番号]       # 既定は 1
 
 ## 確認の記録
 
-### 試験ビルド test1（commit `a751a96`、2026-09-27）
+### 試験ビルド test2（`0.1.0~test2+gf84162a`、2026-09-27）
 
-- ビルド環境: Ubuntu 24.04 LTS（amd64）のコンテナ。依存は `libc6 (>= 2.34)` になった。
-- `dpkg-deb -c` で、上の表のファイルがすべて入っていることを確認した。
-- `dpkg -i` → 依存（`udev`）の解決 → `install ok installed` まで進んだ。コンテナではudevが動いていないため、`postinst` の `udevadm` は実行されない分岐を通った。
-- インストール後、一般ユーザー（`nobody`）で `cadrat-tool list` が終了コード0で動いた（デバイスが無いので `no mice found`）。
+- コミット済みのツリー（commit `f84162a`）から `packaging/build-deb.sh 2` で作った。
+- ビルド環境は Ubuntu 24.04 LTS（amd64）のコンテナ。依存は `libc6 (>= 2.34), udev` になった。
+- `dpkg-deb -c` で、上の表のファイルがすべて入っていることを確認した（manページ11枚を含む）。
+- `dpkg -i` で `install ok installed` になった。コンテナではudevが動いていないので、`postinst` は `udevadm` を呼ばない分岐を通った。
+- インストール後の確認:
+  - 一般ユーザー（`nobody`）で `cadrat-tool --version` が `0.1.0~test2+gf84162a (test build)` を表示した。
+  - `cadrat-tool list` は終了コード0だった（デバイスが無いので `no mice found`）。
+  - zshの補完ファイルが所定の場所に入った。
+  - manページは入らなかった。このコンテナは最小構成のUbuntuで、dpkgの設定（`path-exclude=/usr/share/man/*`）がmanページをすべて除外するためで、パッケージ側の問題ではない。
 - `dpkg -r` でバイナリとudevルールが消えた。
-- 実機のUbuntuでのインストール、udevルールの反映、実機を使った `list` は未確認（[TODO.md の 7](../TODO.md#7-deb-パッケージを作る)）。
+- 未確認のこと（[TODO.md の 7](../TODO.md#7-deb-パッケージを作る)）:
+  - 実機のUbuntuでのインストールと、そこでmanページが入ること
+  - udevルールの反映
+  - 実機を使った `list`
+
+これより前の test1（commit `a751a96` に未コミットの変更を加えたツリーから作ったもの）は、版の表記が中身と一致しないので記録から外した。
 
 ## リリースまでに残ること
 

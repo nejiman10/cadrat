@@ -16,7 +16,7 @@
 
 達成条件: 対象の Ubuntu LTS で `.deb` をインストール・削除でき、udev ルールが有効になり、一般ユーザーで `cadrat-tool list` が動く。
 
-現状: 試験ビルドの仕組み（`packaging/build-deb.sh`）を用意し、コンテナで試験ビルド test1 のインストール・削除と `list` を確認した（[docs/packaging.md](docs/packaging.md)）。残りは、実機の Ubuntu でのインストール・削除、udev ルールの反映、実機を使った `list` の確認。リリース用のビルド（最も古い対象 LTS 上）とリリースは、項目 6 の後に行う。
+現状: 試験ビルドの仕組み（`packaging/build-deb.sh`）を用意し、コンテナで試験ビルド test2 のインストール・削除と `list` を確認した（[docs/packaging.md](docs/packaging.md)）。残りは、実機の Ubuntu でのインストール・削除、udev ルールの反映、実機を使った `list` の確認。リリース用のビルド（最も古い対象 LTS 上）とリリースは、項目 6 の後に行う。
 
 ## 8. 実機の HID descriptor をベクタに加える
 
