@@ -1,0 +1,4 @@
+# cadrat: allow the active local user to access C658 wired and C652 receiver hidraw nodes.
+# The 69- prefix ensures TAG+="uaccess" is set before the standard 70-uaccess rule.
+SUBSYSTEM=="hidraw", ATTRS{idVendor}=="256f", ATTRS{idProduct}=="c658", TAG+="uaccess"
+SUBSYSTEM=="hidraw", ATTRS{idVendor}=="256f", ATTRS{idProduct}=="c652", TAG+="uaccess"
