@@ -16,7 +16,7 @@ docs/spec/
 
 | crate | 責務 | 後のデーモンで再利用するか |
 |---|---|---|
-| `cadrat-proto` | `Report10Config`、actionのenum、blob・wireの生成と `inspect`、HID descriptorの長さ解析、Report `0x03` のparser、Receiver管理packet（`41 02 …` / `41 04 …`）の生成、slot応答の解析 | する |
+| `cadrat-proto` | `Report10Config`、actionのenum、blob・wireの生成と `inspect`、HID descriptorの長さ解析、Report `0x03` のparser、Receiver管理packet（`41 02 …` / `41 04 …`）の生成、slot応答とIDプローブ応答（GET `0x08`）の解析 | する |
 | `cadrat-hidraw` | 列挙、ioctl、候補の判定・選択、送信、Receiver管理（管理nodeの選択、slotのpoll、pair/unpairの手順）。I/Oと時計はtraitの裏に隠し、テストではfakeに差し替える | する（hold-openとudev監視を追加する） |
 | `cadrat-config` | schema 1の型、検証、`toml_edit` での部分更新、原子的な保存、lock | する |
 | `cadrat-tool` | clap、出力の整形、終了コード | 独立ツールとして残す（デーモンのフロントエンド `cadratctl` とは別） |
@@ -26,33 +26,31 @@ docs/spec/
 ## 2. 型の方針
 
 - 検証済みの値だけを型で表す（例: `Dpi` は50..8200の50刻みしか作れない）。blob生成関数は失敗しない（`Result` を返さない）ようにする。
-- `Action` は `Direct(DirectAction)`、`HostRouted(u8)`、`Raw(u8)` とする。`DirectAction` に code 6 を `Unknown6` として含める。
+- `Action` は `Direct(DirectAction)`、`HostRouted(HostIndex)`、`Raw(RawWire)` とする。`HostIndex` は0..215、`RawWire` は `0x10`..`0x27` しか作れない。どのwire値も書き方が1つに決まる。`DirectAction` に code 6 を `Unknown6` として含める。
+- `cadrat-proto` は `core` だけに依存し、allocも使わない。
+- descriptorの解析は調査SDKの `hid_descriptor.py` と同じ規則に従う。ただし、HIDの仕様上1 byteに収まらないReport ID（256以上）と、16段を超えるPUSHの入れ子はエラーにする。調査SDKはどちらも受け付ける。
 - TOMLの文字列表現とJSONの表現は、どちらも同じ `Display` / `FromStr` を使う。
 
 ## 3. テストベクタ
 
-調査リポジトリ側に、Python SDKからJSONを生成するツールを追加する（調査側の新しいTODO）。Rust側はそのファイルを `vectors/` に版を固定して取り込む。
+調査リポジトリのPython SDKには、固定入力からJSONを書き出す `threedx_report10.test_vectors` がある（出力 `format_version` 1）。Rust側はその出力を `vectors/` に版を固定して取り込み、`crates/cadrat-proto/tests/vectors.rs` で照合する。出所の commit、再生成の手順、ハッシュは [vectors/README.md](../../vectors/README.md) に記録する。
 
-```json
-{
-  "source": {"repo": "3dx-hid-research", "commit": "…", "generator": "tools/export_vectors.py"},
-  "report10_encode": [
-    {"config": {"dpi": 1400, "lift": null, "wheel": "normal",
-                "buttons": ["0x0a","0x0b","0x0c","0x0c","0x0e","0x0d","0x0c"],
-                "polling_rate": 1000},
-     "wire_hex": "10001c1f01ff0000…"}
-  ],
-  "report10_inspect": [{"wire_hex": "…", "expect": {…}}, {"wire_hex": "…", "error": "unknown wheel mode"}],
-  "descriptor_lengths": [{"descriptor_hex": "…", "feature": {"16": 32, "8": 8}, "input": {"3": 2}}],
-  "report03_parse": [{"prev": 0, "raw_hex": "0340", "bitmap": 64, "pressed": 64, "released": 0}],
-  "receiver_packets": [{"op": "pair_start", "hex": "4102020000"}, {"op": "unpair", "slot": 2, "hex": "4104020000"}],
-  "receiver_slot_parse": [{"raw_hex": "4500000000000000", "occupied": false}]
-}
-```
+| 組 | 入力 | 内容 |
+|---|---|---|
+| `research` | 調査側が公開した入力（`sdk/python/vectors/`）をそのまま複製 | 各種類の代表例 |
+| `boundary` | 本リポジトリが用意した合成入力を、調査側のexporterで変換 | 境界値。dpi 50 / 8200、lift 0 / 31 / 255、全polling rate、全direct action、host 0 / 1 / 7 / 8 / 214 / 215、offset 18..24それぞれへの `host:1`、descriptorのPUSH/POP・long item・複数item合算・Report IDなし、Report `0x03` の遷移と上位bitの切り捨て、全slotのunpair packet |
 
-- 実機のdescriptorは、調査の証拠に載っているSHA-256と一致するものを匿名化して収録する。descriptorに個体識別子が含まれないことを、調査側で確認してから収録する。
-- 境界値も必ず入れる。例: dpi 50 / 8200、host 0 / 7 / 215、予約byteが0でないもの。
-- DPIについて: Python SDKはclampと切り捨てをするが、本CLIは範囲外や端数をエラーにする（[01 §4.1](01-config.md#41-dpi)）。ベクタは50の倍数で範囲内のものに限り、拒否する挙動はRust側だけのテストで確かめる。
+照合する項目: wire値と `inspect` の結果、descriptorのFeature / Input wire長、Report `0x03` のbitmapと押下・解放mask、Receiver packet。descriptorの `top_level_usages` は `cadrat-proto` の責務に含めないので照合しない。
+
+- ベクタは調査SDKの挙動を示すもので、プロトコルの新しい根拠ではない。
+- exporterは設定から作ったwireしか検査しないため、次のものはベクタで表せない。Rust側だけのテストで確かめる。
+  - `raw:` のボタン（`0x10`..`0x27`）と、actionに対応しないwire値（`0x00`..`0x09`）
+  - 予約byteが0でないもの、offset 26が `0x1e` でないもの、`inspect` のエラー（長さ、Report ID、未知のwheel・polling）
+  - slot応答とIDプローブ応答の解析
+  - 調査SDKと意図して異なる挙動（DPIの拒否、256以上のReport ID、深すぎるPUSH）
+- DPIについて: Python SDKはclampと切り捨てをするが、本CLIは範囲外や端数をエラーにする（[01 §4.1](01-config.md#41-dpi)）。ベクタは50の倍数で範囲内のものに限る。
+- 実機のdescriptorは、調査側TODO 12で収録されてから取り込む。調査の証拠に載っているSHA-256と一致し、個体識別子が含まれないことを調査側で確認したものに限る。
+- ベクタを取り込み直すときは、どちらの組にも個体識別子とローカル環境の情報（パス、ユーザー名、hidraw node、シリアル）が無いことを確かめる。
 
 ## 4. テスト階層
 
@@ -85,7 +83,7 @@ CLIのテストでfakeのtransportを差し込めるよう、環境変数か隠�
 
 ## 6. 未決事項
 
-調査の結果は調査リポジトリ commit `8c8d423` による。
+調査の結果は調査リポジトリ commit `6b151ae` による。
 
 | # | 論点 | 状態 | 扱い |
 |---|---|---|---|

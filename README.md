@@ -2,7 +2,7 @@
 
 CadMouse Compact Wireless（C658）と Universal Receiver（C652）を Linux で設定・利用するための非公式ソフトウェアです。3Dconnexion とは無関係です（[NOTICE.md](NOTICE.md)）。
 
-現在は実装前の仕様策定段階です。
+現在は Phase 1 の実装を始めた段階で、使えるコマンドはまだありません。
 
 ## 構成
 
@@ -25,6 +25,15 @@ CadMouse Compact Wireless（C658）と Universal Receiver（C652）を Linux で
 ## プロトコルの根拠
 
 デバイスのプロトコルに関する事実は、調査リポジトリ [nejiman10/3dx-hid-research](https://github.com/nejiman10/3dx-hid-research) の `SPEC.md` を正本とします。本リポジトリの仕様は、それを参照する調査側のcommitを明記したうえで引用します。
+
+## 開発
+
+ツールチェーンは [rust-toolchain.toml](rust-toolchain.toml) で固定しています。
+
+```sh
+cargo test
+cargo clippy --all-targets
+```
 
 ## 権限
 

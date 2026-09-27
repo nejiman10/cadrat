@@ -1,0 +1,142 @@
+{
+  "format_version": 1,
+  "wire": [
+    {
+      "name": "synthetic_host_index_1",
+      "input": {
+        "dpi": 1400,
+        "lift_threshold": null,
+        "wheel_mode": "NORMAL",
+        "buttons": [
+          {
+            "host_index": 1
+          },
+          {
+            "direct": "HID_MOUSE_RIGHT"
+          },
+          {
+            "direct": "HID_MOUSE_MIDDLE_OR_WHEEL_BUTTON"
+          },
+          {
+            "direct": "HID_MOUSE_MIDDLE_OR_WHEEL_BUTTON"
+          },
+          {
+            "direct": "HID_MOUSE_FORWARD"
+          },
+          {
+            "direct": "HID_MOUSE_BACKWARD"
+          },
+          {
+            "direct": "HID_MOUSE_MIDDLE_OR_WHEEL_BUTTON"
+          }
+        ],
+        "polling_hz": 1000
+      },
+      "wire_hex": "10 00 1c 1f 01 ff 00 00 00 00 00 00 00 00 00 00 00 00 00 29 0b 0c 0c 0e 0d 0c 00 1e 00 00 00 01",
+      "parsed": {
+        "dpi_encoded": 28,
+        "nominal_dpi": 1400,
+        "lift_enabled": false,
+        "lift_threshold": 31,
+        "wheel_mode": "NORMAL",
+        "buttons": [
+          {
+            "wire_value": "0x29",
+            "name": "HOST_ROUTED_INDEX_1",
+            "supported_for_encoding": true
+          },
+          {
+            "wire_value": "0x0b",
+            "name": "HID_MOUSE_RIGHT",
+            "supported_for_encoding": true
+          },
+          {
+            "wire_value": "0x0c",
+            "name": "HID_MOUSE_MIDDLE_OR_WHEEL_BUTTON",
+            "supported_for_encoding": true
+          },
+          {
+            "wire_value": "0x0c",
+            "name": "HID_MOUSE_MIDDLE_OR_WHEEL_BUTTON",
+            "supported_for_encoding": true
+          },
+          {
+            "wire_value": "0x0e",
+            "name": "HID_MOUSE_FORWARD",
+            "supported_for_encoding": true
+          },
+          {
+            "wire_value": "0x0d",
+            "name": "HID_MOUSE_BACKWARD",
+            "supported_for_encoding": true
+          },
+          {
+            "wire_value": "0x0c",
+            "name": "HID_MOUSE_MIDDLE_OR_WHEEL_BUTTON",
+            "supported_for_encoding": true
+          }
+        ],
+        "polling_divider": 1,
+        "reserved_bytes_are_zero": true,
+        "fixed_field_is_valid": true
+      }
+    }
+  ],
+  "descriptors": [
+    {
+      "name": "synthetic_feature_10_input_03",
+      "input_hex": "05 01 09 02 a1 01 85 10 75 08 95 1f b1 02 85 03 75 08 95 02 81 02 c0",
+      "feature_wire_lengths": {
+        "0x10": 32
+      },
+      "input_wire_lengths": {
+        "0x03": 3
+      },
+      "top_level_usages": [
+        {
+          "page": "0x0001",
+          "usage": "0x0002"
+        }
+      ]
+    }
+  ],
+  "report03": [
+    {
+      "name": "press_index_1",
+      "input_hex": "03 01 00",
+      "previous_bitmap": 0,
+      "bitmap": 1,
+      "pressed_mask": 1,
+      "released_mask": 0
+    },
+    {
+      "name": "release_index_1",
+      "input_hex": "03 00 00",
+      "previous_bitmap": 1,
+      "bitmap": 0,
+      "pressed_mask": 0,
+      "released_mask": 1
+    }
+  ],
+  "receiver": [
+    {
+      "input": {
+        "operation": "pair_start"
+      },
+      "packet_hex": "41 02 02 00 00"
+    },
+    {
+      "input": {
+        "operation": "pair_stop"
+      },
+      "packet_hex": "41 02 00 00 00"
+    },
+    {
+      "input": {
+        "operation": "unpair",
+        "slot": 2
+      },
+      "packet_hex": "41 04 02 00 00"
+    }
+  ]
+}

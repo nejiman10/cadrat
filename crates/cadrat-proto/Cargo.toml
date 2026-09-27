@@ -1,0 +1,14 @@
+[package]
+name = "cadrat-proto"
+description = "I/O-free protocol core for the C658 mouse and the C652 Universal Receiver"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+publish.workspace = true
+
+[lints]
+workspace = true
+
+[dev-dependencies]
+serde_json = "1"
