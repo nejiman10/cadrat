@@ -497,8 +497,8 @@ fn list_shows_one_mouse_over_two_routes() {
 1  c658:0a1b2c3d4e5f  wired     wired (/dev/hidraw5, MI_01)
                                 receiver standby (recv:port-1-4 slot 3, /dev/hidraw9, MI_03)
 
-RECEIVER        SLOTS  MANAGEMENT
-recv:port-1-4   1/5    /dev/hidraw6 (MI_00)
+RECEIVER       SLOTS  MANAGEMENT
+recv:port-1-4  1/5    /dev/hidraw6 (MI_00)
 "
     );
     let out = h.run(&["list", "--redact", "--nodes"]);
@@ -506,7 +506,7 @@ recv:port-1-4   1/5    /dev/hidraw6 (MI_00)
     assert!(out.stdout.contains("c658:id-1"));
     assert!(
         out.stdout
-            .contains("/dev/hidraw6    MI_00  256f:c652  candidate (management)")
+            .contains("/dev/hidraw6  MI_00  256f:c652  candidate (management)")
     );
 
     let json = h.run(&["list", "--json"]).json();
@@ -514,6 +514,19 @@ recv:port-1-4   1/5    /dev/hidraw6 (MI_00)
     assert_eq!(json["mice"][0]["routes"][1]["state"], "standby");
     assert_eq!(json["receivers"][0]["slots"][3]["mouse"]["number"], 1);
     assert!(json.get("nodes").is_none());
+}
+
+#[test]
+fn list_columns_fit_long_keys() {
+    let nodes = vec![FakeNode::receiver("hidraw9", "9-1.3.4", 0, None, true).slots([&[None]; 5])];
+    let out = Harness::new(nodes).run(&["list"]);
+    assert!(
+        out.stdout.contains(
+            "RECEIVER           SLOTS  MANAGEMENT\nrecv:port-9-1.3.4  0/5    /dev/hidraw9 (MI_00)\n"
+        ),
+        "{}",
+        out.stdout
+    );
 }
 
 #[test]

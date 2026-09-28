@@ -38,6 +38,7 @@ pub fn inventory(ctx: &mut Ctx) -> Result<Inventory, Failure> {
     Ok(inventory)
 }
 
+#[allow(clippy::too_many_lines)]
 pub fn run(ctx: &mut Ctx, nodes: bool, redact: bool) -> Result<(), Failure> {
     let inventory = inventory(ctx)?;
     let mut redactor = Redactor::new(redact);
@@ -82,7 +83,14 @@ pub fn run(ctx: &mut Ctx, nodes: bool, redact: bool) -> Result<(), Failure> {
     }
     if !inventory.receivers.is_empty() {
         ctx.out("");
-        ctx.out("RECEIVER        SLOTS  MANAGEMENT");
+        let width = inventory
+            .receivers
+            .iter()
+            .map(|r| r.key.to_string().len())
+            .max()
+            .unwrap_or(0)
+            .max("RECEIVER".len());
+        ctx.out(format!("{:<width$}  SLOTS  MANAGEMENT", "RECEIVER"));
         for receiver in &inventory.receivers {
             let slots = match &receiver.slots {
                 SlotsRead::Read(slots) => {
@@ -102,7 +110,7 @@ pub fn run(ctx: &mut Ctx, nodes: bool, redact: bool) -> Result<(), Failure> {
                 },
             );
             ctx.out(format!(
-                "{:<15} {slots:<6} {management}",
+                "{:<width$}  {slots:<5}  {management}",
                 receiver.key.to_string()
             ));
         }
@@ -111,7 +119,14 @@ pub fn run(ctx: &mut Ctx, nodes: bool, redact: bool) -> Result<(), Failure> {
     if nodes {
         let mut rows = Vec::new();
         ctx.out("");
-        ctx.out("NODE            IF     PRODUCT    STATUS");
+        let width = inventory
+            .nodes
+            .iter()
+            .map(|n| n.info.path.display().to_string().len())
+            .max()
+            .unwrap_or(0)
+            .max("NODE".len());
+        ctx.out(format!("{:<width$}  IF     PRODUCT    STATUS", "NODE"));
         for node in &inventory.nodes {
             let (status, detail) = node_status(&node.status, &mut redactor);
             let interface = node
@@ -127,7 +142,7 @@ pub fn run(ctx: &mut Ctx, nodes: bool, redact: bool) -> Result<(), Failure> {
                 format!("{status} ({detail})")
             };
             ctx.out(format!(
-                "{:<15} {interface:<6} {product:<10} {line}",
+                "{:<width$}  {interface:<6} {product:<10} {line}",
                 node.info.path.display().to_string()
             ));
             rows.push(json!({

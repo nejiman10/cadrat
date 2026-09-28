@@ -74,19 +74,32 @@ ct() { cadrat-tool --config "$T/test.toml" "$@"; }
 
 `host:N` の効果は、Input Report `0x03` のbitmapで確かめる（`host:1` → `03 01`）。
 
-1. 入力nodeは、調査リポジトリのtoolの `scan --json` で特定する。有線とReceiverで別のnodeになる。
+1. 入力nodeを特定する必要はない。次のスクリプトは、指定したnodeをすべて同時に見て、Report `0x03` を受け取ったnodeと内容を表示する。有線ではC658の全nodeを、ReceiverではC652の全nodeを渡す（`ct list --nodes` に出るpath）。
 2. 次のスクリプトを `$T/watch03.py` として置く。
 
 ```python
-# usage: python3 watch03.py /dev/hidrawINPUT SECONDS
+# usage: python3 watch03.py SECONDS /dev/hidrawA [/dev/hidrawB ...]
 import os, select, sys, time
-fd = os.open(sys.argv[1], os.O_RDONLY | os.O_NONBLOCK)
-end = time.monotonic() + float(sys.argv[2])
+seconds, paths = float(sys.argv[1]), sys.argv[2:]
+fds = {}
+for path in paths:
+    try:
+        fds[os.open(path, os.O_RDONLY | os.O_NONBLOCK)] = path
+    except OSError as e:
+        print(f"{path}: {e}", file=sys.stderr)
+counts = {}
+end = time.monotonic() + seconds
 while (left := end - time.monotonic()) > 0:
-    if select.select([fd], [], [], left)[0]:
-        data = os.read(fd, 64)
+    for fd in select.select(list(fds), [], [], left)[0]:
+        try:
+            data = os.read(fd, 64)
+        except BlockingIOError:
+            continue
         if data[:1] == b"\x03":
-            print(time.strftime("%H:%M:%S"), data.hex(" "), flush=True)
+            key = data[:2].hex(" ")
+            counts[key] = counts.get(key, 0) + 1
+            print(time.strftime("%H:%M:%S"), fds[fd], data.hex(" "), flush=True)
+print("summary:", ", ".join(f"{k} x{n}" for k, n in sorted(counts.items())) or "no Report 0x03")
 ```
 
 DPIの効果は、カーソルの速さの違いとして試験者が判断する。その旨を記録する。
@@ -110,7 +123,7 @@ DPIの効果は、カーソルの速さの違いとして試験者が判断す�
 | B1 | `ct set mouse.dpi=<試験値>` | 終了コード0。`sent` と `saved` が出る |
 | B2 | カーソルを動かす | 速さが変わる（試験者の判断を記録） |
 | B3 | `ct set buttons.radial=host:1` | 終了コード0 |
-| B4 | `python3 $T/watch03.py /dev/hidrawINPUT 30` を動かし、radialを10回押す | `03 01` の押下と `03 00` の解放が10組 |
+| B4 | `python3 $T/watch03.py 30 <C658の全node>` を動かし、radialを10回押す | `03 01` の押下と `03 00` の解放が10組 |
 | B5 | `cadrat-tool --config "$T/restore.toml" apply` | 終了コード0。DPIとradialが元に戻る（B2、B4と同じ方法で確かめる） |
 | B6 | `ct get` | B1、B3の値が保存されている。コメントと並びは変わっていない（`diff "$T/restore.toml" "$T/test.toml"` で、変わったのが2行だけであること） |
 
@@ -260,4 +273,8 @@ F6〜F10の結果（slotの空き→再占有、入力と設定の反映）を�
 
 | # | 結果 | 観察 |
 |---|---|---|
-
+| A1 | （結果待ち） | |
+| A2 | PASS | マウス1台。有効な経路は wired。Receiver経路（slot 4、MI_04）も standby として同じマウスにまとまった |
+| A3 | PASS | 有線: MI_01が設定node、MI_00は `no-feature-0x10`（調査側Q2と一致）。Receiver: MI_00〜MI_04すべてが管理候補、MI_04がslot 4の設定node（MI_N ↔ slot N と一致）。管理nodeにはMI_00を選んだ |
+| A4 | PASS | `ok` |
+| A5 | PASS | dry-runのwireが復元値と完全に一致 |
