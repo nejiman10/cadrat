@@ -387,3 +387,11 @@ F6の修正（commit `2657786`、試験ビルド test4）の後、unpair → pai
 
 実施 1 と 2 で、仕様 04 §5 の条件 1〜11 をすべて満たした（条件 6・7 は承認済みの代替手順）。ただし条件 3a の記録から、Q7（Receiverへの初回送信）の方針の見直しが要る。
 
+### 調査リポジトリへの報告
+
+実施 1・2 で見た新しいデバイスの挙動は、調査リポジトリに Issue として報告した（2026-09-28）。
+
+- [#1](https://github.com/nejiman10/3dx-hid-research/issues/1): slot の変化の後に C652 の hidraw node が作り直され、開いていた fd が `ENODEV` になる。slot の割り当ての順序（F6〜F7′、R1〜R6）
+- [#2](https://github.com/nejiman10/3dx-hid-research/issues/2): 再ペアリング直後の最初の Report `0x10` が効かず、送り直すと効いた。効果の遅れ（C-B5、F10、F10′、R7、R8）
+- [#3](https://github.com/nejiman10/3dx-hid-research/issues/3): 待機中の経路への送信が効かず、設定が経路ごとに保持されているように見える（D6、F0）
+
