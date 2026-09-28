@@ -96,7 +96,7 @@ CLIのテストでは、`cadrat-tool` のライブラリの入口 `run(args, env
 | Q5 | ライセンス | 決定 | MIT（調査リポジトリと同じ） |
 | Q6 | `--deny-warnings` を用意するか | 決定 | 用意しない |
 | Q7 | Receiver経由の送信で、再送や適用確認をするか | 決定 | 1回だけ送り、送信直前に同じfdで宛先を確認する。自動では再送せず、Receiver経由の送信の成功時と `receiver pair` の成功時に、効いていなければ送り直すよう案内する（[02 §7](02-device.md#7-送信) 手順7、[05 §3](05-receiver.md#3-pair)）。実機確認（[実施 2](../hardware-test.md)）で、再ペアリング直後の最初の送信が約5分たっても効かず、送り直すと効く事例を再現したが、再現の条件が分からないため、原因の調査（調査側 [Issue #2](https://github.com/nejiman10/3dx-hid-research/issues/2)）を待たずに案内で対処する。原因が分かれば見直す |
-| Q8 | MSRVと配布の形 | 決定 | Ubuntu LTSを対象に、`.deb` をGitHub Releasesで配布する（§7）。MSRVは定めず、`rust-toolchain.toml` でツールチェーンを固定する |
+| Q8 | MSRVと配布の形 | 決定 | Ubuntu LTS（最小18.04）を対象に、`.deb` をGitHub Releasesで配布する（§7）。MSRVは定めず、`rust-toolchain.toml` でツールチェーンを固定する |
 | Q9 | デーモン導入時に、CLIとデーモンが同じTOMLへ同時に書かない方法 | 方針決定 | `cadratd` が動いていれば、`cadrat-tool` の送信系コマンドは拒否する（[01 §1.1](01-config.md#11-複数の設定ファイル)）。検出方法や終了コードなどの詳細はPhase 2の仕様で決める。`cadratd` がまだ無いので、Phase 1の `cadrat-tool` は検出しない |
 | Q10 | Receiverの管理nodeの選び方 | 決定（根拠は限定的） | interface番号が最小のもの。MI_02で効くことは観測済み、MI_00は状況証拠。純正の規則は不明。slotが変わると管理nodeが作り直されるので、pair / unpair の途中で消えたら同じ規則で選び直して開き直す（[05 §6](05-receiver.md#6-管理nodeの開き直し)） |
 | Q11 | slot byte1で占有を判定してよいか | 決定（根拠は限定的） | `0x00` ↔ 空き、`0x59` ↔ 占有を観測。任意の非0値を占有とする一般則は未検証なので、HYPOTHESISと明記して使う |
@@ -110,7 +110,12 @@ CLIのテストでは、`cadrat-tool` のライブラリの入口 `run(args, env
 ## 7. 配布
 
 - 形式: `.deb`。`cargo-deb` で作り、GitHub Releasesに置く。
-- 対象: Ubuntu LTS（amd64）。glibcの互換性のため、サポートする最も古いLTS上でビルドする。対象とするLTSの版は、リリース時点で確認して決める。
+- 対象: Ubuntu LTS（amd64）。**最小サポートはUbuntu 18.04**（glibc 2.27、dpkg 1.19）。18.04の標準サポートは終わっている（ESMのみ）が、所有者の判断で対象に含める。
+- **リリース用ビルド。** glibcの互換性のため、Ubuntu 18.04上で `packaging/build-release.sh` を実行して作る。スクリプトは次を確かめ、満たさなければ止まる。
+  - 実行環境がUbuntu 18.04であること、未コミットの変更が無いこと、`target/` が無いこと（別の環境でビルドした物を使い回さないため）
+  - バイナリが要求するglibcのsymbol versionが2.27以下であること（`objdump -T`）
+  - `.deb` のdataがxz圧縮であること。18.04のdpkgはzstdを展開できない
+- リリース用ビルドの版は `Cargo.toml` の版そのままで、`--version` にも印を付けない。
 - `.deb` に含めるもの:
   - `/usr/bin/cadrat-tool`
   - `/usr/lib/udev/rules.d/69-cadrat.rules`（hidrawの `uaccess`）。インストール後に `udevadm control --reload` と `udevadm trigger` を実行する

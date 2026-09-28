@@ -2,11 +2,13 @@
 
 [仕様 04 §7](spec/04-implementation.md#7-配布) に沿って、`cadrat-tool` を `.deb` にする手順です。
 
-## 現状: 試験ビルドのみ
+## 現状
 
-**これまでに作った `.deb` はすべて試験ビルドで、リリースではありません。** Phase 1 の実機確認（[hardware-test.md](hardware-test.md)）を終えるまで、GitHub Releases には置きません。
+Phase 1 の実機確認（[hardware-test.md](hardware-test.md)）は終わった。リリース用ビルドの手順（下の「リリース用ビルド」）を用意し、Ubuntu 18.04 で確認した。**GitHub Releases にはまだ何も置いていない。** これまでに所有者の PC へ入れた `.deb` はすべて試験ビルドである。
 
-試験ビルドは次の3か所で区別できます。
+## 試験ビルド
+
+開発中の確認に使う `.deb` です。リリースしません。試験ビルドは次の3か所で区別できます。
 
 | 場所 | 表記 |
 |---|---|
@@ -16,7 +18,7 @@
 
 Debianの版の比較では `~` は何よりも前に並ぶので、`0.1.0~test1+…` は正式版 `0.1.0` より古いとみなされる。正式版を入れれば、試験ビルドはそのまま上書きされる。
 
-## 作り方
+### 作り方
 
 ```sh
 cargo install cargo-deb --locked       # 初回だけ
@@ -27,6 +29,36 @@ packaging/build-deb.sh [試験番号]       # 既定は 1
 - `cargo deb` で `target/debian/` に `.deb` を作る。メタデータは `crates/cadrat-tool/Cargo.toml` の `[package.metadata.deb]` にある。
 - 同じ試験番号・同じcommitなら、同じ版になる。作り直すときは試験番号を上げる。
 - 未コミットの変更があるツリーでビルドすると、版の末尾に `.dirty` が付く。記録に残す試験ビルドは、コミット済みのツリーから作る。
+- 試験ビルドはビルドした環境の glibc を要求する（24.04 でビルドすると `libc6 (>= 2.34)`）。古い Ubuntu に入れるものはリリース用ビルドで作る。
+
+## リリース用ビルド
+
+最小サポートの Ubuntu 18.04 上で、新しく clone したツリーから作ります（[仕様 04 §7](spec/04-implementation.md#7-配布)）。18.04 の標準サポートは終わっていて ESM だけが続いていますが、対象に含めます。
+
+```sh
+packaging/build-release.sh
+```
+
+スクリプトは Ubuntu 18.04 以外、`target/` がある、未コミットの変更がある、のいずれかなら何もせずに止まります。ビルド後は、バイナリが要求する glibc が 2.27 以下であることと、`.deb` が xz 圧縮であること（18.04 の dpkg 1.19 は zstd を展開できない）を確かめます。最後に版、commit、要求する glibc と、`.deb` の SHA-256 を表示します。版は `Cargo.toml` の版そのままで、`--version` にも印は付きません。
+
+### 18.04 の環境の用意
+
+18.04 の PC が無ければコンテナを使います。Docker の例（Podman でも同じ）:
+
+```sh
+docker run --rm -it ubuntu:18.04 bash
+# ここからコンテナの中
+apt-get update
+apt-get install -y build-essential ca-certificates curl git xz-utils binutils
+curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y --default-toolchain none
+. "$HOME/.cargo/env"
+cargo install cargo-deb --locked --version 3.8.0
+git clone --branch <tag> https://github.com/nejiman10/cadrat.git
+cd cadrat
+packaging/build-release.sh              # rust-toolchain.toml の版を rustup が入れる
+```
+
+できた `.deb` は `docker cp` などでコンテナの外へ出します。
 
 ## 中身
 
@@ -76,7 +108,15 @@ packaging/build-deb.sh [試験番号]       # 既定は 1
 - test5（commit `2a45ea6`）を `apt install` で入れ、`--version`、udevルール、`man -w cadrat-tool` を確認した。
 - ビルド時に `cargo deb` が、`target/dist/` の資産について「Cargo の target ディレクトリとして扱わない」という警告を出す。資産は `xtask` が先に作るので、パッケージには入る。
 
+### リリース用ビルドの確認（Ubuntu 18.04、2026-09-28）
+
+- 開発用のクラウド環境で、`debootstrap` で作った Ubuntu 18.04（bionic、glibc 2.27、dpkg 1.19.0.5）の chroot に、commit 済みのツリーを clone して `packaging/build-release.sh` を実行した。Rust は `rust-toolchain.toml` の 1.94.1、`cargo-deb` は 3.8.0 を chroot の中でビルドしたもの。
+- 結果は `cadrat-tool_0.1.0_amd64.deb`。バイナリが要求する glibc は 2.25 以上で、依存は `libc6 (>= 2.25), udev`。`control.tar.xz` と `data.tar.xz` で、18.04 の dpkg で扱える。
+- 同じ chroot で `dpkg -i` して、上の表のファイルがすべて入り、man-db がmanページを登録した（`man -w cadrat-tool-apply` で見つかる）。一般ユーザーで `cadrat-tool --version` が `cadrat-tool 0.1.0`（印なし）を表示し、`cadrat-tool list` は終了コード0（`no mice found`）だった。`dpkg -r` でバイナリとudevルールが消えた。
+- chroot では udev が動いていないので、`postinst` / `postrm` は `udevadm` を呼ばない分岐を通った。udev ルールの反映と実機での動作は、24.04 の試験ビルドで確認済み（上の test3〜test5）。18.04 の実機では確認していない。
+- この確認で作った `.deb` は公開していない。Docker Hub から `ubuntu:18.04` を取得できない環境だったため、コンテナではなく chroot を使った。
+
 ## リリースまでに残ること
 
-- リリースのビルドは、サポートする最も古いUbuntu LTS上で行う（glibcの互換性のため）。対象とするLTSの版は、リリース時点で決める。24.04でビルドした試験ビルドは、22.04では依存を満たさない。
-- 版から `~test…` を外し、GitHub Releasesに置く。
+- 公開する commit に tag を付け、そこからリリース用ビルドを作る。
+- GitHub Releases に `.deb` と SHA-256 を置く（所有者の指示を待つ）。

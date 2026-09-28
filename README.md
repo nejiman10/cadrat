@@ -8,15 +8,15 @@ CadMouse Compact Wireless（C658）と Universal Receiver（C652）を Linux で
 
 ## Status
 
-> **Phase 1, not yet verified on hardware.** Every command in the specification is implemented and tested against a simulated device, but none has been run against a real mouse yet. Packages built so far are **test builds** (version `…~test…`), not releases.
+> **Phase 1, verified on hardware; no release published yet.** Every command in the specification is implemented, tested against a simulated device and checked with a real mouse and Receiver on Ubuntu 24.04. Release packages support Ubuntu 18.04 and later.
 
-現在は Phase 1 の実装段階です。`cadrat-tool` は仕様のコマンドをすべて実装し、模擬デバイスでテストしていますが、実機での確認はまだです（手順: [docs/hardware-test.md](docs/hardware-test.md)）。これまでに作った `.deb` はすべて試験ビルドで、リリースではありません。
+現在は Phase 1 です。`cadrat-tool` は仕様のコマンドをすべて実装し、模擬デバイスでのテストと実機での確認（[docs/hardware-test.md](docs/hardware-test.md)）を終えました。リリース用の `.deb` は Ubuntu 18.04 以降を対象にしますが、まだ公開していません。
 
 ## Components
 
 | Name | Role（役割） | Status |
 |---|---|---|
-| `cadrat-tool` | Stand-alone CLI. 独立設定ツール。hidrawを直接操作し、設定はTOMLファイルだけが持つ | Implemented, hardware check pending |
+| `cadrat-tool` | Stand-alone CLI. 独立設定ツール。hidrawを直接操作し、設定はTOMLファイルだけが持つ | Implemented, hardware-verified |
 | `cadratd` | Daemon. デーモン。hidrawを保持し、設定を管理し、D-Busで公開する | Planned |
 | `cadratctl` | Front end for `cadratd`. `cadratd` のフロントエンド。D-Bus経由でだけ操作する | Planned |
 | cadrat Radial | GNOME Shell extension. GNOME Shell拡張。`cadratd` とD-Busでつなぐ | Planned |
@@ -36,6 +36,17 @@ cadrat-tool receiver slots             # Receiver slots / Receiverのslot
 All output is in English. Commands, options and exit codes: [docs/spec/03-cli.md](docs/spec/03-cli.md)（コマンドの詳細）.
 
 ## Installation
+
+### Release package (Ubuntu 18.04 or later)
+
+Build it on Ubuntu 18.04 from a fresh clone, then install it on any supported Ubuntu:
+
+```sh
+packaging/build-release.sh             # writes target/debian/cadrat-tool_<version>_amd64.deb
+sudo apt install ./target/debian/cadrat-tool_<version>_amd64.deb
+```
+
+See [docs/packaging.md](docs/packaging.md) for a container recipe. リリース用の `.deb` は Ubuntu 18.04 上で作ります（手順は [docs/packaging.md](docs/packaging.md)）。
 
 ### Test build package (Ubuntu)
 

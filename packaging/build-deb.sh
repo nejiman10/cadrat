@@ -4,8 +4,8 @@
 # The version gets a "~test" suffix, which sorts before the plain release
 # version, so a later release upgrades it. A test build has not passed the
 # Phase 1 hardware checks (docs/hardware-test.md) and is not published as a
-# release. Official releases are built on the oldest supported Ubuntu LTS
-# (spec 04 §7), which this script does not check.
+# release. Releases are built with packaging/build-release.sh on Ubuntu 18.04
+# (spec 04 §7).
 #
 # Usage: packaging/build-deb.sh [TEST_NUMBER]
 set -eu
