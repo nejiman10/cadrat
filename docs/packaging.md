@@ -63,8 +63,15 @@ packaging/build-deb.sh [試験番号]       # 既定は 1
 
 これより前の test1（commit `a751a96` に未コミットの変更を加えたツリーから作ったもの）は、版の表記が中身と一致しないので記録から外した。
 
+### 試験ビルド test3 / test4（実機の Ubuntu 24.04.5、2026-09-28）
+
+- 所有者の PC（Ubuntu 24.04.5 LTS、カーネル 7.0.0-34-generic）で `packaging/build-deb.sh` を実行してビルドし、`apt install` で入れた（test3: commit `4174787`、test4: commit `2657786`）。
+- `cadrat-tool --version` が試験ビルドの版を表示した。
+- udev ルールが有効に働き、一般ユーザーで `list` と送信ができた。ルールを外すと開けなくなり、戻すと元どおり使えた（実機確認 E1）。`dpkg -V cadrat-tool` も異常なし。
+- 実機での削除は、所有者が使い続けるため未確認。
+
 ## リリースまでに残ること
 
-- 実機のUbuntu LTSで、インストール・削除とudevルールの反映を確認する。
+- 実機のUbuntu LTSで、削除を確認する（インストールとudevルールの反映は test3 / test4 で確認済み）。
 - リリースのビルドは、サポートする最も古いUbuntu LTS上で行う（glibcの互換性のため）。対象とするLTSの版は、リリース時点で決める。24.04でビルドした試験ビルドは、22.04では依存を満たさない。
 - 版から `~test…` を外し、GitHub Releasesに置く。

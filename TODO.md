@@ -8,7 +8,7 @@
 
 達成条件: 手順と結果を `docs/hardware-test.md` に記録する。識別子の実値は記録しない。調査リポジトリの知見と食い違う挙動があれば、調査リポジトリへ報告する。
 
-現状: 手順書は [docs/hardware-test.md](docs/hardware-test.md)。2026-09-28 に実施指示・復元値・条件6・7の承認を受け、実施 1 を開始した。
+現状: 手順書と実施 1 の記録は [docs/hardware-test.md](docs/hardware-test.md)。実施 1（2026-09-28）で条件 8 以外は満たした。条件 8 は、unpair / pair でslotが変わった後に管理nodeのfdが `ENODEV` を返し続け、成否判定を誤ったため未達。管理nodeの扱いを直してから、条件 8 を再試験する（所有者の実施指示が要る）。実施 1 で見た新しいデバイスの挙動は、調査リポジトリへ報告する。
 
 ## 7. `.deb` パッケージを作る
 
@@ -16,7 +16,7 @@
 
 達成条件: 対象の Ubuntu LTS で `.deb` をインストール・削除でき、udev ルールが有効になり、一般ユーザーで `cadrat-tool list` が動く。
 
-現状: 試験ビルドの仕組み（`packaging/build-deb.sh`）を用意し、コンテナで試験ビルド test2 のインストール・削除と `list` を確認した（[docs/packaging.md](docs/packaging.md)）。残りは、実機の Ubuntu でのインストール・削除、udev ルールの反映、実機を使った `list` の確認。リリース用のビルド（最も古い対象 LTS 上）とリリースは、項目 6 の後に行う。
+現状: 試験ビルドの仕組み（`packaging/build-deb.sh`）を用意した。コンテナで試験ビルド test2 のインストール・削除を、実機の Ubuntu 24.04.5 で test3 / test4 のインストールと udev ルールの反映（実機確認 E1）、実機を使った `list` を確認した（[docs/packaging.md](docs/packaging.md)）。実機での削除は、所有者が使い続けるため未確認。残りは、実機での削除の確認と、リリース用のビルド（最も古い対象 LTS 上）とリリースで、項目 6 の後に行う。
 
 ## 8. 実機の HID descriptor をベクタに加える
 

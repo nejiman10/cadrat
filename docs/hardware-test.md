@@ -324,3 +324,38 @@ F6〜F10の結果（slotの空き→再占有、入力と設定の反映）を�
 - 条件 4b: 古いhidraw pathは終了コード7で止まった。
 - F10の観察: 再ペアリング直後のReceiver経由の送信は、約10秒遅れて効いた（条件 3a と同様、送り直しは不要）。
 - F0とD6の観察: 設定が経路ごとに保持されているように見える（調査側 TODO 13 / Q16）。調査リポジトリへ報告する。
+
+F6の修正（commit `2657786`、試験ビルド test4）の後、unpair → pair の1サイクルを再試験した。マウスは slot 0（設定nodeは MI_00）にいた。
+
+| # | 結果 | 観察 |
+|---|---|---|
+| F6′ | FAIL | `receiver unpair 0` に `y`。管理nodeには MI_00 が選ばれた（unpair対象の slot 0 の設定nodeと同じinterface）。解除後、そのfdへのslotのGETは timeoutまでの31回すべて `ENODEV` で、終了コード15（`did not become empty before the timeout`）。実際には解除されていた（マウスはReceiverで動かなくなり、F8′で slot 0 は空き） |
+| F7′ | FAIL | `receiver pair`。待機中のGETは55回すべて `ENODEV` で、新しいslotを検出できないまま timeout。停止のSETも `ENODEV` で失敗し、終了コード13とヒントを表示した。マウスは slot 1 に結合され、動くようになったが、Receiverのpairing表示はReceiver自身のtimeoutまで続いた |
+| F8′ | PASS | マウスは slot 1（設定nodeは MI_01）で見え、keyの指紋はD1と一致 |
+| F10′ | PASS | `apply`（dpi 400、radial `host:1`）。マウスを動かしたりクリックしたりしても、効くまで約30秒かかった。その後は遅くなり、Report `0x03` も確認できた |
+| G1 | PASS | Receiver経路に復元値を送り、すぐにDPIとradial（中クリック）が元に戻った |
+| G2 | PASS | 有線経路にも復元値を送り、元どおりであることを確認した |
+
+- 条件 8: 実施 1 では未達。slotの空化・再占有と、その後の入力・設定反映は2サイクルとも起きたが、cadratの成否判定が2サイクルとも実際と食い違った（F6: 17、F6′: 15、F7′: 13）。
+- F6′とF7′の観察: slotが変わった後、開いていた管理nodeのfdが `ENODEV` を返し続けた。F6（slot 4 の解除、管理nodeは MI_00）では `EPIPE` が1回だけだったので、解除したslotと管理nodeのinterfaceが同じだったことが関係している可能性がある。F7′では、新しいslot（1）と管理node（MI_00）のinterfaceが違ってもfdが使えなくなった。hidraw nodeの再作成か、Receiver全体の再列挙かは、この記録からは区別できない。調査リポジトリへ報告する。
+- 遅延の観察: 再ペアリング後のReceiver経由の送信は、効くまでに約10秒（F10）と約30秒（F10′）かかった。いずれも送り直しは要らなかった。
+- 後片付け: 両経路を復元した。`.deb`（試験ビルド test4）は所有者の希望で入れたまま使い続ける。
+
+### 実施 1 のまとめ
+
+| 条件 | 結果 |
+|---|---|
+| 1 ベクタテスト | PASS（A1） |
+| 2 有線での送信 | PASS（B） |
+| 3 Receiver経由の送信 | PASS（C） |
+| 3a 初回送信の効果 | 記録済み（C、F10、F10′。いずれも送り直し不要、効果の遅れあり） |
+| 4 同時接続と有効な経路 | PASS（D） |
+| 4a 識別キーの安定 | PASS（D、F8、F8′） |
+| 4b 古いhidraw pathの拒否 | PASS（F9） |
+| 5 udevルールなし | PASS（E1） |
+| 6 送信中の切断 | PASS（E2、承認済みの代替手順） |
+| 7 同時編集 | PASS（E3、承認済みの代替手順） |
+| 8 unpair → pair の1サイクル | **未達**（管理nodeのfdがslotの変化の後に使えなくなる。修正と再試験が必要） |
+| 9 pair待機中のCtrl-C | PASS（F4） |
+| 10 unpair確認の拒否 | PASS（F3） |
+| 11 記録 | この文書 |
