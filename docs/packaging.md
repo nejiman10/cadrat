@@ -41,7 +41,18 @@ packaging/build-release.sh
 
 スクリプトは Ubuntu 22.04 以外、`target/` がある、未コミットの変更がある、のいずれかなら何もせずに止まります。ビルド後は、バイナリが要求する glibc が 2.35 以下であることと、`.deb` が xz 圧縮であること（zstd に対応しない古い dpkg でも中身を確かめられるように）を確かめます。最後に版、commit、要求する glibc と、`.deb` の SHA-256 を表示します。版は `Cargo.toml` の版そのままで、`--version` にも印は付きません。
 
-### 22.04 の環境の用意
+### GitHub Actions（通常の方法）
+
+リリースは [`.github/workflows/release.yml`](../.github/workflows/release.yml) で作ります。
+
+1. main の、リリースする commit に注釈付き tag を付けて push する（`git tag -a v0.1.0 -m "cadrat-tool 0.1.0"`、`git push origin v0.1.0`）。tag は `Cargo.toml` の版に `v` を付けたものにする。一致しなければ workflow が止まる。
+2. workflow が `ubuntu:22.04` コンテナで `packaging/build-release.sh` を実行し、同じコンテナでインストール・実行・削除を試す。
+3. `.deb` に build provenance の attestation を付け、`.deb` と `SHA256SUMS` を載せた**下書き**の Release を作る。
+4. 所有者が下書きを確かめて公開する。
+
+pull request でも同じビルドと試験が走ります（Release は作らない）。できた `.deb` は workflow の artifact `deb` から取り出せます。利用者は `sha256sum -c SHA256SUMS` か `gh attestation verify <file> --repo nejiman10/cadrat` で確かめられます。
+
+### 22.04 の環境の用意（手元で作る場合）
 
 22.04 の PC が無ければコンテナを使います。Docker の例（Podman でも同じ）:
 

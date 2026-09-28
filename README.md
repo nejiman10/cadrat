@@ -39,7 +39,7 @@ All output is in English. Commands, options and exit codes: [docs/spec/03-cli.md
 
 ### Release package (Ubuntu 22.04 or later)
 
-Build it on Ubuntu 22.04 from a fresh clone, then install it on any supported Ubuntu:
+Download the `.deb` from [GitHub Releases](https://github.com/nejiman10/cadrat/releases) once one is published, or build it on Ubuntu 22.04 from a fresh clone:
 
 ```sh
 packaging/build-release.sh             # writes target/debian/cadrat-tool_<version>_amd64.deb

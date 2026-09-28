@@ -116,6 +116,8 @@ CLIのテストでは、`cadrat-tool` のライブラリの入口 `run(args, env
   - バイナリが要求するglibcのsymbol versionが2.35以下であること（`objdump -T`）
   - `.deb` のdataがxz圧縮であること。zstdに対応しない古いdpkgでも中身を確かめられるようにする
 - リリース用ビルドの版は `Cargo.toml` の版そのままで、`--version` にも印を付けない。
+- リリース用ビルドはGitHub Actions（`.github/workflows/release.yml`）の `ubuntu:22.04` コンテナで行う。pull requestではビルドと、同じコンテナでのインストール・実行・削除までを行う。`v<版>` のtagをpushすると、tagと版の一致を確かめたうえで、build provenanceのattestationを付け、`.deb` と `SHA256SUMS` を載せた**下書き**のGitHub Releaseを作る。公開は所有者が下書きを確かめてから行う。
+- 書式・lint・テスト（`cargo fmt --check`、`cargo clippy -D warnings`、`cargo test`）は `.github/workflows/ci.yml` がpull requestとmainへのpushで実行する。
 - `.deb` に含めるもの:
   - `/usr/bin/cadrat-tool`
   - `/usr/lib/udev/rules.d/69-cadrat.rules`（hidrawの `uaccess`）。インストール後に `udevadm control --reload` と `udevadm trigger` を実行する
