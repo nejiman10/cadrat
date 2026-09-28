@@ -88,6 +88,7 @@ cadrat-tool receiver pair [--receiver=<key>] [--timeout=<秒>] [--poll-interval=
 - 成功は「slotが占有された」ことまでしか意味しない。入力が来るかどうかは確かめない（調査のpair CLIと同じ境界）。成功時には次の手順を案内する。
   - `cadrat-tool list` で新しいマウスが現れたかを確認する。設定nodeは、新しいslot番号と同じinterface（MI_N）に現れると見込まれる（OBSERVED）。
   - `cadrat-tool apply --mouse=<番号またはkey>` で設定を送る。
+  - pair後の最初の送信は失われることがあるので、変化がなければ送り直す（Q7、[02 §7](02-device.md#7-送信) 手順7）。
 - 再ペアリング後、設定nodeはslotに合わせて別のinterfaceへ移る（調査では MI_03 → MI_04）。以前のhidraw pathを使い回さない。
 
 ## 4. unpair

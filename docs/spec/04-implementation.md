@@ -95,7 +95,7 @@ CLIのテストでは、`cadrat-tool` のライブラリの入口 `run(args, env
 | Q4 | 名称 | 決定 | プロジェクト名 cadrat。独立ツール `cadrat-tool`、デーモン `cadratd`、フロントエンド `cadratctl`（[README §0](README.md#0-cadrat-プロジェクトの構成)） |
 | Q5 | ライセンス | 決定 | MIT（調査リポジトリと同じ） |
 | Q6 | `--deny-warnings` を用意するか | 決定 | 用意しない |
-| Q7 | Receiver経由の送信で、再送や適用確認をするか | 見直し中 | 1回だけ送り、送信直前に同じfdで宛先を確認する（[02 §7](02-device.md#7-送信)）。実機確認（[実施 2](../hardware-test.md)）で、再ペアリング直後の最初の送信が約5分たっても効かず、送り直すと効く事例を再現した（それ以前の送信は、10〜30秒の遅れはあっても1回で効いた）。対処（再ペアリング後の送信の案内、再送の要否など）を決める。原因は調査リポジトリで調べる |
+| Q7 | Receiver経由の送信で、再送や適用確認をするか | 決定 | 1回だけ送り、送信直前に同じfdで宛先を確認する。自動では再送せず、Receiver経由の送信の成功時と `receiver pair` の成功時に、効いていなければ送り直すよう案内する（[02 §7](02-device.md#7-送信) 手順7、[05 §3](05-receiver.md#3-pair)）。実機確認（[実施 2](../hardware-test.md)）で、再ペアリング直後の最初の送信が約5分たっても効かず、送り直すと効く事例を再現したが、再現の条件が分からないため、原因の調査（調査側 [Issue #2](https://github.com/nejiman10/3dx-hid-research/issues/2)）を待たずに案内で対処する。原因が分かれば見直す |
 | Q8 | MSRVと配布の形 | 決定 | Ubuntu LTSを対象に、`.deb` をGitHub Releasesで配布する（§7）。MSRVは定めず、`rust-toolchain.toml` でツールチェーンを固定する |
 | Q9 | デーモン導入時に、CLIとデーモンが同じTOMLへ同時に書かない方法 | 方針決定 | `cadratd` が動いていれば、`cadrat-tool` の送信系コマンドは拒否する（[01 §1.1](01-config.md#11-複数の設定ファイル)）。検出方法や終了コードなどの詳細はPhase 2の仕様で決める。`cadratd` がまだ無いので、Phase 1の `cadrat-tool` は検出しない |
 | Q10 | Receiverの管理nodeの選び方 | 決定（根拠は限定的） | interface番号が最小のもの。MI_02で効くことは観測済み、MI_00は状況証拠。純正の規則は不明。slotが変わると管理nodeが作り直されるので、pair / unpair の途中で消えたら同じ規則で選び直して開き直す（[05 §6](05-receiver.md#6-管理nodeの開き直し)） |

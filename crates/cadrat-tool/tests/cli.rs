@@ -450,6 +450,13 @@ fn apply_sends_the_file_as_is() {
     assert_eq!(h.run(&["apply"]).code, 3);
 }
 
+/// Mouse A connected only through a Receiver.
+fn receiver_only() -> Vec<FakeNode> {
+    let mut nodes = two_routes();
+    nodes.remove(0);
+    nodes
+}
+
 fn two_routes() -> Vec<FakeNode> {
     vec![
         wired(),
@@ -481,6 +488,31 @@ fn standby_route_note() {
     assert_eq!(out.code, 0);
     assert!(out.stderr.contains("warning: W-INACTIVE-ROUTE"));
     assert!(out.stdout.contains("via receiver (MI_03)"));
+    assert!(
+        out.stdout
+            .contains("if nothing changes, run the same command again")
+    );
+}
+
+#[test]
+fn resend_note_only_for_receiver_sends() {
+    let h = Harness::new(two_routes());
+    h.write_config(&baseline());
+    let out = h.run(&["apply"]);
+    assert_eq!(out.code, 0);
+    assert!(!out.stdout.contains("through the Receiver"));
+
+    let h = Harness::new(receiver_only());
+    h.write_config(&baseline());
+    let out = h.run(&["set", "mouse.dpi=1000"]);
+    assert_eq!(out.code, 0, "{}", out.stderr);
+    assert!(out.stdout.contains(
+        "note    a send through the Receiver can take about 30 s to show and is sometimes lost;\n        \
+         if nothing changes, run the same command again\n"
+    ));
+    let out = h.run(&["apply", "-q"]);
+    assert_eq!(out.code, 0);
+    assert_eq!(out.stdout, "");
 }
 
 // --- list ---
@@ -593,6 +625,10 @@ fn receiver_pair() {
     let out = h.run(&["receiver", "pair"]);
     assert_eq!(out.code, 0, "{}", out.stderr);
     assert!(out.stdout.contains("paired  slot 2"));
+    assert!(
+        out.stdout
+            .contains("the first send after pairing is sometimes lost")
+    );
     assert!(out.stderr.contains("put the mouse in pairing mode"));
     assert_eq!(node.sets(), [START.to_vec(), STOP.to_vec()]);
 

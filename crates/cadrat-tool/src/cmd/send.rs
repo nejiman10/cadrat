@@ -1,7 +1,7 @@
 //! `set` and `apply`, following the order in spec 03 §4.
 
 use cadrat_config::{ConfigLock, parse_assignments};
-use cadrat_hidraw::{RouteState, SendError, Target, select_mouse, select_node};
+use cadrat_hidraw::{Route, RouteState, SendError, Target, select_mouse, select_node};
 use serde_json::json;
 
 use crate::cmd::config::{load, read, warn_config};
@@ -169,6 +169,12 @@ fn run(
             "note    the {} route is on standby; run `cadrat-tool apply` after switching modes",
             standby.route
         ));
+    }
+    if target.route.route == Route::Receiver {
+        // Spec 02 §7 step 7 (Q7): a send through the Receiver is sometimes
+        // lost, and cadrat-tool cannot read the setting back to tell.
+        ctx.info("note    a send through the Receiver can take about 30 s to show and is sometimes lost;");
+        ctx.info("        if nothing changes, run the same command again");
     }
     Ok(())
 }

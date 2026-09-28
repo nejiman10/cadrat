@@ -169,6 +169,7 @@ fn pair(ctx: &mut Ctx, receiver: &ReceiverArg, polling: Polling) -> Result<(), F
             ctx.info(
                 "        then send your settings with `cadrat-tool apply --mouse=<number or key>`",
             );
+            ctx.info("        the first send after pairing is sometimes lost; if nothing changes, send it again");
             Ok(())
         }
         PairResult::Timeout => Err(Failure::new(
