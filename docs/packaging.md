@@ -120,6 +120,11 @@ packaging/build-release.sh              # rust-toolchain.toml の版を rustup �
 - test5（commit `2a45ea6`）を `apt install` で入れ、`--version`、udevルール、`man -w cadrat-tool` を確認した。
 - ビルド時に `cargo deb` が、`target/dist/` の資産について「Cargo の target ディレクトリとして扱わない」という警告を出す。資産は `xtask` が先に作るので、パッケージには入る。
 
+### 試験ビルド test6（実機、2026-09-28）
+
+- hold-open を含む commit `36f0ba7` から作り、所有者の PC に入れた。`/usr/lib/systemd/user/cadrat-hold-open.service` が入り、既定で無効であることを確認した（実機確認 実施 3 の H0）。
+- 所有者はその後 `cadrat-hold-open.service` を有効にし、普段使いにしている。
+
 ### リリース用ビルドの確認（Ubuntu 22.04、2026-09-28）
 
 - 開発用のクラウド環境で、`debootstrap` で作った Ubuntu 22.04（jammy、glibc 2.35、dpkg 1.21.1）の chroot に、commit 済みのツリーを clone して `packaging/build-release.sh` を実行した。Rust は `rust-toolchain.toml` の 1.94.1、`cargo-deb` は 3.8.0 を chroot の中でビルドしたもの。

@@ -8,9 +8,9 @@ CadMouse Compact Wireless（C658）と Universal Receiver（C652）を Linux で
 
 ## Status
 
-> **Phase 1, first release in preparation.** Settings and Receiver management are implemented, tested against a simulated device and checked with a real mouse and Receiver on Ubuntu 24.04. `hold-open`, which keeps a wired C658 working (see [Wired use](#wired-use-hold-open)), is implemented and tested against a simulated device; its hardware check is pending. Release packages support Ubuntu 22.04 and later; on older systems, build from source.
+> **Phase 1, first release in preparation.** Settings and Receiver management are implemented, tested against a simulated device and checked with a real mouse and Receiver on Ubuntu 24.04. `hold-open`, which keeps a wired C658 working (see [Wired use](#wired-use-hold-open)), has been checked on the same hardware, including unplugging and reconnecting. Release packages support Ubuntu 22.04 and later; on older systems, build from source.
 
-現在は Phase 1 で、最初のリリースを準備しています。設定の送信と Receiver 管理は、模擬デバイスでのテストと実機での確認（[docs/hardware-test.md](docs/hardware-test.md)）を終えました。有線の C658 を使い続けるための `hold-open` は実装と模擬デバイスでのテストを終え、実機での確認を待っています。リリース用の `.deb` は Ubuntu 22.04 以降が対象で、それより古い環境ではソースからビルドしてください。
+現在は Phase 1 で、最初のリリースを準備しています。設定の送信と Receiver 管理は、模擬デバイスでのテストと実機での確認（[docs/hardware-test.md](docs/hardware-test.md)）を終えました。有線の C658 を使い続けるための `hold-open` も、抜き差しを含めて実機で確認しました。リリース用の `.deb` は Ubuntu 22.04 以降が対象で、それより古い環境ではソースからビルドしてください。
 
 ## Components
 
@@ -79,7 +79,7 @@ sed 's#/usr/bin/cadrat-tool#%h/.cargo/bin/cadrat-tool#' packaging/systemd/cadrat
 
 ## Wired use: hold-open
 
-On the tested host, a **wired** C658 stops responding a few seconds after it is plugged in unless some process keeps its hidraw nodes open. The cause is unknown; keeping the nodes open is a workaround that worked there. The package ships a systemd user service for this. It is **disabled by default**; if you use the mouse by cable, enable it once:
+On the tested host, a **wired** C658 stops responding a few seconds after it is plugged in unless some process keeps its hidraw nodes open. The cause is unknown; keeping the nodes open is a workaround that worked there, and this service is what the author uses day to day. The package ships a systemd user service for this. It is **disabled by default**; if you use the mouse by cable, enable it once:
 
 ```sh
 systemctl --user enable --now cadrat-hold-open.service
