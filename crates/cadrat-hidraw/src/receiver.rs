@@ -84,6 +84,35 @@ fn set(device: &mut dyn Device, packet: [u8; PAIRING_REPORT_LEN]) -> SetResult {
     }
 }
 
+/// Counts slot reads that failed with an errno while polling. Right after
+/// an unpair request the Receiver has been seen to answer a slot GET with
+/// `EPIPE` once; such failures are retried, not treated as the result.
+#[derive(Debug, Default)]
+struct Retries {
+    count: usize,
+    last: Option<SlotReadError>,
+}
+
+impl Retries {
+    /// Whether `error` may be retried; records it if so.
+    fn retry(&mut self, error: &SlotReadError) -> bool {
+        if matches!(error, SlotReadError::Io { .. }) {
+            self.count += 1;
+            self.last = Some(error.clone());
+            true
+        } else {
+            false
+        }
+    }
+
+    fn warning(self) -> Option<Warning> {
+        self.last.map(|last| Warning::SlotReadRetried {
+            count: self.count,
+            last: last.to_string(),
+        })
+    }
+}
+
 /// Timing of a polling procedure.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct Polling {
@@ -117,7 +146,8 @@ pub enum PairResult {
     Interrupted,
     /// `ReceiverCommandFailed` (14): the start SET failed.
     StartFailed(SetResult),
-    /// `ReceiverProtocolError` (17): a slot read failed while waiting.
+    /// `ReceiverProtocolError` (17): a slot report was malformed while
+    /// waiting. Failed reads (errno) are retried until the timeout.
     SlotReadFailed(SlotReadError),
     /// `PairStopFailed` (13): the stop SET failed. Takes precedence over
     /// every other result; pairing mode may still be on.
@@ -159,6 +189,7 @@ pub fn pair(
     let before = read_slots(device)?;
     let start = set(device, PAIR_START);
     let mut after = None;
+    let mut retries = Retries::default();
     let mut result = if start == SetResult::Ok {
         waiting();
         let deadline = clock.now() + polling.timeout;
@@ -182,6 +213,7 @@ pub fn pair(
                         break PairResult::Paired(new);
                     }
                 }
+                Err(e) if retries.retry(&e) => {}
                 Err(e) => break PairResult::SlotReadFailed(e),
             }
         }
@@ -192,7 +224,7 @@ pub fn pair(
     if stop != SetResult::Ok {
         result = PairResult::StopFailed(stop);
     }
-    let mut warnings = Vec::new();
+    let mut warnings: Vec<Warning> = retries.warning().into_iter().collect();
     if let PairResult::Paired(slots) = &result
         && slots.len() > 1
     {
@@ -221,7 +253,8 @@ pub enum UnpairResult {
     CommandFailed(SetResult),
     /// `UnpairNotConfirmed` (15): the slot did not empty before the timeout.
     NotConfirmed,
-    /// `ReceiverProtocolError` (17): a slot read failed after the request.
+    /// `ReceiverProtocolError` (17): a slot report was malformed after the
+    /// request. Failed reads (errno) are retried until the timeout.
     SlotReadFailed(SlotReadError),
 }
 
@@ -283,10 +316,12 @@ pub fn unpair(
         }
     }
     let deadline = clock.now() + polling.timeout;
+    let mut retries = Retries::default();
     outcome.result = loop {
         match read_slot(device, slot) {
             Ok(report) if !report.occupied() => break UnpairResult::Unpaired,
             Ok(_) => {}
+            Err(e) if retries.retry(&e) => {}
             Err(e) => break UnpairResult::SlotReadFailed(e),
         }
         if clock.now() >= deadline {
@@ -294,6 +329,7 @@ pub fn unpair(
         }
         clock.sleep(polling.interval);
     };
+    outcome.warnings.extend(retries.warning());
     if outcome.result == UnpairResult::Unpaired {
         // The slot is already confirmed empty; the snapshot is informational.
         outcome.after = read_slots(device).ok();

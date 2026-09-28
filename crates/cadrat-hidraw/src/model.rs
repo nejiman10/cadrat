@@ -292,6 +292,13 @@ pub enum Warning {
     PairMultiple(Vec<Slot>),
     /// `W-UNPAIR-EPIPE`: the unpair SET returned `EPIPE`.
     UnpairEpipe,
+    /// `W-SLOT-READ-RETRY`: slot reads failed while waiting and were retried.
+    SlotReadRetried {
+        /// How many reads failed.
+        count: usize,
+        /// The last failure.
+        last: String,
+    },
 }
 
 impl Warning {
@@ -304,6 +311,7 @@ impl Warning {
             Self::InactiveRoute(_) => "W-INACTIVE-ROUTE",
             Self::PairMultiple(_) => "W-PAIR-MULTIPLE",
             Self::UnpairEpipe => "W-UNPAIR-EPIPE",
+            Self::SlotReadRetried { .. } => "W-SLOT-READ-RETRY",
         }
     }
 }
@@ -335,6 +343,10 @@ impl fmt::Display for Warning {
             Self::UnpairEpipe => {
                 f.write_str("the unpair request returned EPIPE; checking whether the slot empties")
             }
+            Self::SlotReadRetried { count, last } => write!(
+                f,
+                "{count} slot read(s) failed while waiting and were retried (last: {last})"
+            ),
         }
     }
 }

@@ -84,7 +84,7 @@ cadrat-tool receiver pair [--receiver=<key>] [--timeout=<秒>] [--poll-interval=
 - 新たに占有されたslotが2つ以上あれば、すべて表示する。成功として扱うが、警告 `W-PAIR-MULTIPLE` を出す。
 - 手順2のslot読み取りに失敗したら、何も送らずに `ReceiverProtocolError`（17）で終える。
 - 手順4が失敗した場合は、手順5の案内を表示しない。
-- 手順5の待機中にslotの読み取りに失敗したら、待機をやめて手順6に進み、`ReceiverProtocolError`（17）とする。停止の失敗はこれより優先する。
+- 手順5の待機中に、slotのGETがerrnoで失敗した場合は、timeoutまで読み続ける（警告 `W-SLOT-READ-RETRY`）。応答の長さやReport IDが違う場合だけ、待機をやめて手順6に進み、`ReceiverProtocolError`（17）とする。停止の失敗はこれより優先する。
 - 成功は「slotが占有された」ことまでしか意味しない。入力が来るかどうかは確かめない（調査のpair CLIと同じ境界）。成功時には次の手順を案内する。
   - `cadrat-tool list` で新しいマウスが現れたかを確認する。設定nodeは、新しいslot番号と同じinterface（MI_N）に現れると見込まれる（OBSERVED）。
   - `cadrat-tool apply --mouse=<番号またはkey>` で設定を送る。
@@ -125,7 +125,9 @@ cadrat-tool receiver unpair <slot> [--receiver=<key>] [--yes]
 - **確認と照合の分担。** 利用者は、画面の内容を見て `y` を押すだけでよい。確認を表示してから実行するまでにslotが変わっていないかは、CLIが手順4で自動的に照合する。調査の手順（dry-runで出た生の値を人が照合して、実行コマンドに渡す）と同じ安全性を、手入力なしで保つためである。
 - **EPIPEだけで成功とも失敗とも判定しない。** 調査の実装はEPIPEの後もslotを見続けており、HARDWARE_TESTでも「EPIPEだけでunpair成功扱いしない」とされている。判定は手順6のslotの空化だけで行う。
 - 空化を確かめた後、全slotのsnapshotも表示する。このsnapshotの読み取りに失敗しても、結果は成功のままとする（空化は手順6で確認済みのため）。
-- 手順2と4のslot読み取りに失敗したら、何も送らずに `ReceiverProtocolError`（17）で終える。手順6の読み取りに失敗した場合も17とする。
+- 手順2と4のslot読み取りに失敗したら、何も送らずに `ReceiverProtocolError`（17）で終える。
+- 手順6で、slotのGETがerrnoで失敗した場合は、timeoutまで読み続ける（警告 `W-SLOT-READ-RETRY`）。timeoutまでに空きを確認できなければ `UnpairNotConfirmed`（15）とする。応答の長さやReport IDが違う場合は、17とする。
+  - 経緯: 実機確認（実施 1、F6）で、解除要求が `EPIPE` を返した直後の slot の GET が一度 `EPIPE` で失敗し、次の読み取りでは空いていた。読み取りの失敗1回で打ち切ると、解除できているのに失敗と判定してしまう。
 - 検証を飛ばす手段（`--no-verify` など）は用意しない。
 
 ## 5. 共通事項

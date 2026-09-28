@@ -740,11 +740,67 @@ fn pair_multiple_new_slots() {
 }
 
 #[test]
-fn pair_slot_read_failure_still_stops() {
+fn pair_retries_failed_slot_reads() {
+    // Slot 1 cannot be read once while waiting, then slot 3 becomes occupied.
+    let (node, mut device) = management(
+        FakeNode::receiver("hidraw6", "1-4", 0, None, true)
+            .slots([&[None], &[None], &[None], &[None, None, Some(A)], &[None]])
+            .get(
+                0x44,
+                &[
+                    Ok(slot_response(1, None)),
+                    Err(EPIPE),
+                    Ok(slot_response(1, None)),
+                ],
+            ),
+    );
+    let outcome = receiver::pair(
+        device.as_mut(),
+        &FakeClock::default(),
+        fast(),
+        &mut || {},
+        &|| false,
+    )
+    .unwrap();
+    assert_eq!(
+        outcome.result,
+        PairResult::Paired(vec![Slot::new(3).unwrap()])
+    );
+    let codes: Vec<&str> = outcome
+        .warnings
+        .iter()
+        .map(cadrat_hidraw::Warning::code)
+        .collect();
+    assert_eq!(codes, ["W-SLOT-READ-RETRY"]);
+    assert_eq!(node.sets(), [START.to_vec(), STOP.to_vec()]);
+}
+
+#[test]
+fn pair_slot_reads_failing_until_timeout() {
     let (node, mut device) = management(
         FakeNode::receiver("hidraw6", "1-4", 0, None, true)
             .slots(empty_slots())
             .get(0x44, &[Ok(slot_response(1, None)), Err(EIO)]),
+    );
+    let outcome = receiver::pair(
+        device.as_mut(),
+        &FakeClock::default(),
+        fast(),
+        &mut || {},
+        &|| false,
+    )
+    .unwrap();
+    assert_eq!(outcome.result, PairResult::Timeout);
+    assert_eq!(outcome.warnings.len(), 1);
+    assert_eq!(node.sets(), [START.to_vec(), STOP.to_vec()]);
+}
+
+#[test]
+fn pair_malformed_slot_report_still_stops() {
+    let (node, mut device) = management(
+        FakeNode::receiver("hidraw6", "1-4", 0, None, true)
+            .slots(empty_slots())
+            .get(0x44, &[Ok(slot_response(1, None)), Ok(vec![0x44, 0])]),
     );
     let outcome = receiver::pair(
         device.as_mut(),
@@ -841,6 +897,68 @@ fn unpair_epipe_then_empty() {
         .map(cadrat_hidraw::Warning::code)
         .collect();
     assert_eq!(codes, ["W-UNPAIR-EPIPE"]);
+}
+
+/// Hardware test run 1, F6: the unpair request returned EPIPE and the first
+/// read of the slot afterwards failed with EPIPE, although the slot emptied.
+#[test]
+fn unpair_epipe_then_failed_read_then_empty() {
+    let (node, mut device) = management(
+        FakeNode::receiver("hidraw6", "1-4", 0, None, true)
+            .slots([&[None], &[None], &[None], &[None], &[None]])
+            .get(
+                0x47,
+                &[
+                    Ok(slot_response(4, Some(A))),
+                    Ok(slot_response(4, Some(A))),
+                    Err(EPIPE),
+                    Ok(slot_response(4, None)),
+                ],
+            )
+            .set(&[Err(EPIPE)]),
+    );
+    let outcome = receiver::unpair(
+        device.as_mut(),
+        Slot::new(4).unwrap(),
+        &FakeClock::default(),
+        fast(),
+        &mut yes,
+    )
+    .unwrap();
+    assert_eq!(outcome.result, UnpairResult::Unpaired);
+    let codes: Vec<&str> = outcome
+        .warnings
+        .iter()
+        .map(cadrat_hidraw::Warning::code)
+        .collect();
+    assert_eq!(codes, ["W-UNPAIR-EPIPE", "W-SLOT-READ-RETRY"]);
+    assert_eq!(node.sets(), [vec![0x41, 0x04, 0x04, 0x00, 0x00]]);
+}
+
+#[test]
+fn unpair_malformed_read_after_request() {
+    let (_, mut device) = management(
+        FakeNode::receiver("hidraw6", "1-4", 0, None, true)
+            .slots(empty_slots())
+            .get(
+                0x45,
+                &[
+                    Ok(slot_response(2, Some(A))),
+                    Ok(slot_response(2, Some(A))),
+                    Ok(vec![0x45, 0]),
+                ],
+            ),
+    );
+    let outcome = receiver::unpair(
+        device.as_mut(),
+        slot2(),
+        &FakeClock::default(),
+        fast(),
+        &mut yes,
+    )
+    .unwrap();
+    assert!(matches!(outcome.result, UnpairResult::SlotReadFailed(_)));
+    assert!(outcome.sent);
 }
 
 #[test]
