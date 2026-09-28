@@ -11,7 +11,7 @@ use std::time::Duration;
 use cadrat_hidraw::fake::{
     FakeClock, FakeNode, FakeSystem, Request, probe_response, slot_response,
 };
-use cadrat_hidraw::receiver::{self, PairResult, Polling, SetResult, UnpairResult};
+use cadrat_hidraw::receiver::{self, Fixed, PairResult, Polling, SetResult, UnpairResult};
 use cadrat_hidraw::{
     Inventory, NodeStatus, Route, RouteState, SelectError, SendError, SendFailure, SlotMatch,
     SlotsRead, System, enumerate, select_management_node, select_mouse, select_node,
@@ -611,7 +611,7 @@ fn pair_success() {
     let clock = FakeClock::default();
     let mut prompted = 0;
     let outcome = receiver::pair(
-        device.as_mut(),
+        &mut Fixed(device.as_mut()),
         &clock,
         fast(),
         &mut || prompted += 1,
@@ -640,7 +640,14 @@ fn pair_timeout_still_stops() {
     let (node, mut device) =
         management(FakeNode::receiver("hidraw6", "1-4", 0, None, true).slots(empty_slots()));
     let clock = FakeClock::default();
-    let outcome = receiver::pair(device.as_mut(), &clock, fast(), &mut || {}, &|| false).unwrap();
+    let outcome = receiver::pair(
+        &mut Fixed(device.as_mut()),
+        &clock,
+        fast(),
+        &mut || {},
+        &|| false,
+    )
+    .unwrap();
     assert_eq!(outcome.result, PairResult::Timeout);
     assert!(outcome.stop_sent);
     assert_eq!(node.sets(), [START.to_vec(), STOP.to_vec()]);
@@ -659,9 +666,13 @@ fn pair_interrupt_still_stops() {
             flag.set(true);
         }
     });
-    let outcome = receiver::pair(device.as_mut(), &clock, fast(), &mut || {}, &|| {
-        interrupted.get()
-    })
+    let outcome = receiver::pair(
+        &mut Fixed(device.as_mut()),
+        &clock,
+        fast(),
+        &mut || {},
+        &|| interrupted.get(),
+    )
     .unwrap();
     assert_eq!(outcome.result, PairResult::Interrupted);
     assert_eq!(node.sets(), [START.to_vec(), STOP.to_vec()]);
@@ -676,7 +687,7 @@ fn pair_stop_failure_wins() {
             .set(&[Ok(5), Err(EIO)]),
     );
     let outcome = receiver::pair(
-        device.as_mut(),
+        &mut Fixed(device.as_mut()),
         &FakeClock::default(),
         fast(),
         &mut || {},
@@ -698,7 +709,7 @@ fn pair_start_failure_still_stops() {
     );
     let mut prompted = false;
     let outcome = receiver::pair(
-        device.as_mut(),
+        &mut Fixed(device.as_mut()),
         &FakeClock::default(),
         fast(),
         &mut || prompted = true,
@@ -720,7 +731,7 @@ fn pair_multiple_new_slots() {
         &[None],
     ]));
     let outcome = receiver::pair(
-        device.as_mut(),
+        &mut Fixed(device.as_mut()),
         &FakeClock::default(),
         fast(),
         &mut || {},
@@ -755,7 +766,7 @@ fn pair_retries_failed_slot_reads() {
             ),
     );
     let outcome = receiver::pair(
-        device.as_mut(),
+        &mut Fixed(device.as_mut()),
         &FakeClock::default(),
         fast(),
         &mut || {},
@@ -783,7 +794,7 @@ fn pair_slot_reads_failing_until_timeout() {
             .get(0x44, &[Ok(slot_response(1, None)), Err(EIO)]),
     );
     let outcome = receiver::pair(
-        device.as_mut(),
+        &mut Fixed(device.as_mut()),
         &FakeClock::default(),
         fast(),
         &mut || {},
@@ -803,7 +814,7 @@ fn pair_malformed_slot_report_still_stops() {
             .get(0x44, &[Ok(slot_response(1, None)), Ok(vec![0x44, 0])]),
     );
     let outcome = receiver::pair(
-        device.as_mut(),
+        &mut Fixed(device.as_mut()),
         &FakeClock::default(),
         fast(),
         &mut || {},
@@ -822,7 +833,7 @@ fn pair_initial_read_failure_sends_nothing() {
             .get(0x46, &[Ok(vec![0x46, 0])]),
     );
     let err = receiver::pair(
-        device.as_mut(),
+        &mut Fixed(device.as_mut()),
         &FakeClock::default(),
         fast(),
         &mut || {},
@@ -857,10 +868,16 @@ fn unpair_success() {
         ]));
     let clock = FakeClock::default();
     let mut shown = None;
-    let outcome = receiver::unpair(device.as_mut(), slot2(), &clock, fast(), &mut |s| {
-        shown = Some(*s);
-        true
-    })
+    let outcome = receiver::unpair(
+        &mut Fixed(device.as_mut()),
+        slot2(),
+        &clock,
+        fast(),
+        &mut |s| {
+            shown = Some(*s);
+            true
+        },
+    )
     .unwrap();
     assert_eq!(outcome.result, UnpairResult::Unpaired);
     assert_eq!(shown.unwrap().id_candidate().0, A);
@@ -883,7 +900,7 @@ fn unpair_epipe_then_empty() {
             .set(&[Err(EPIPE)]),
     );
     let outcome = receiver::unpair(
-        device.as_mut(),
+        &mut Fixed(device.as_mut()),
         slot2(),
         &FakeClock::default(),
         fast(),
@@ -918,7 +935,7 @@ fn unpair_epipe_then_failed_read_then_empty() {
             .set(&[Err(EPIPE)]),
     );
     let outcome = receiver::unpair(
-        device.as_mut(),
+        &mut Fixed(device.as_mut()),
         Slot::new(4).unwrap(),
         &FakeClock::default(),
         fast(),
@@ -950,7 +967,7 @@ fn unpair_malformed_read_after_request() {
             ),
     );
     let outcome = receiver::unpair(
-        device.as_mut(),
+        &mut Fixed(device.as_mut()),
         slot2(),
         &FakeClock::default(),
         fast(),
@@ -969,7 +986,14 @@ fn unpair_epipe_never_empty() {
             .set(&[Err(EPIPE)]),
     );
     let clock = FakeClock::default();
-    let outcome = receiver::unpair(device.as_mut(), slot2(), &clock, fast(), &mut yes).unwrap();
+    let outcome = receiver::unpair(
+        &mut Fixed(device.as_mut()),
+        slot2(),
+        &clock,
+        fast(),
+        &mut yes,
+    )
+    .unwrap();
     assert_eq!(outcome.result, UnpairResult::NotConfirmed);
     assert!(outcome.sent);
     assert_eq!(clock_secs(&clock), 5);
@@ -983,7 +1007,7 @@ fn unpair_other_errors_fail() {
             .set(&[Err(EIO)]),
     );
     let outcome = receiver::unpair(
-        device.as_mut(),
+        &mut Fixed(device.as_mut()),
         slot2(),
         &FakeClock::default(),
         fast(),
@@ -1002,7 +1026,7 @@ fn unpair_refuses_empty_or_changed_slot() {
         management(FakeNode::receiver("hidraw6", "1-4", 0, None, true).slots(empty_slots()));
     let mut asked = false;
     let outcome = receiver::unpair(
-        device.as_mut(),
+        &mut Fixed(device.as_mut()),
         slot2(),
         &FakeClock::default(),
         fast(),
@@ -1025,7 +1049,7 @@ fn unpair_refuses_empty_or_changed_slot() {
             &[None],
         ]));
     let outcome = receiver::unpair(
-        device.as_mut(),
+        &mut Fixed(device.as_mut()),
         slot2(),
         &FakeClock::default(),
         fast(),
@@ -1047,7 +1071,7 @@ fn unpair_confirmation_refused() {
             &[None],
         ]));
     let outcome = receiver::unpair(
-        device.as_mut(),
+        &mut Fixed(device.as_mut()),
         slot2(),
         &FakeClock::default(),
         fast(),
@@ -1057,4 +1081,120 @@ fn unpair_confirmation_refused() {
     assert_eq!(outcome.result, UnpairResult::Aborted);
     assert!(node.sets().is_empty());
     assert_eq!(node.log(), [Request::Get(0x45)]);
+}
+
+// --- reopening the management node (hardware test run 1, F6′ and F7′) ---
+
+const ENODEV_: i32 = 19;
+
+fn codes(warnings: &[cadrat_hidraw::Warning]) -> Vec<&'static str> {
+    warnings.iter().map(cadrat_hidraw::Warning::code).collect()
+}
+
+/// The management node's GETs fail with ENODEV after the request until it
+/// is reopened; the enumeration inside the reopen sees the slot empty.
+#[test]
+fn unpair_reopens_a_vanished_management_node() {
+    let node = FakeNode::receiver("hidraw9", "1-4", 0, Some(A), true)
+        .slots(empty_slots())
+        .get(
+            0x43,
+            &[
+                Ok(slot_response(0, Some(A))),
+                Ok(slot_response(0, Some(A))),
+                Ok(slot_response(0, Some(A))),
+                Err(ENODEV_),
+                Err(ENODEV_),
+                Ok(slot_response(0, None)),
+            ],
+        );
+    let system = FakeSystem::new(vec![node.clone()]);
+    let mut inv = enumerate(&system).unwrap();
+    let mut target = select_receiver(&mut inv, None, true).unwrap();
+    let outcome = receiver::unpair(
+        &mut target.link(&system, true),
+        Slot::new(0).unwrap(),
+        &FakeClock::default(),
+        fast(),
+        &mut yes,
+    )
+    .unwrap();
+    assert_eq!(outcome.result, UnpairResult::Unpaired);
+    assert_eq!(
+        codes(&outcome.warnings),
+        ["W-SLOT-READ-RETRY", "W-MANAGEMENT-REOPENED"]
+    );
+    assert_eq!(node.sets(), [vec![0x41, 0x04, 0x00, 0x00, 0x00]]);
+}
+
+#[test]
+fn pair_reopens_and_still_stops() {
+    // Slot 1 becomes occupied while the node is gone; the stop SET first
+    // fails with ENODEV and is sent again after reopening.
+    let node = FakeNode::receiver("hidraw9", "1-4", 0, None, true)
+        .slots([&[None], &[None], &[None], &[None], &[None]])
+        .get(
+            0x43,
+            &[
+                Ok(slot_response(0, None)),
+                Ok(slot_response(0, None)),
+                Err(ENODEV_),
+                Ok(slot_response(0, None)),
+            ],
+        )
+        .get(
+            0x44,
+            &[
+                Ok(slot_response(1, None)),
+                Ok(slot_response(1, None)),
+                Ok(slot_response(1, Some(A))),
+            ],
+        )
+        .set(&[Ok(5), Err(ENODEV_), Ok(5)]);
+    let system = FakeSystem::new(vec![node.clone()]);
+    let mut inv = enumerate(&system).unwrap();
+    let mut target = select_receiver(&mut inv, None, true).unwrap();
+    let outcome = receiver::pair(
+        &mut target.link(&system, true),
+        &FakeClock::default(),
+        fast(),
+        &mut || {},
+        &|| false,
+    )
+    .unwrap();
+    assert_eq!(
+        outcome.result,
+        PairResult::Paired(vec![Slot::new(1).unwrap()])
+    );
+    assert_eq!(
+        codes(&outcome.warnings),
+        ["W-SLOT-READ-RETRY", "W-MANAGEMENT-REOPENED"]
+    );
+    assert_eq!(node.sets(), [START.to_vec(), STOP.to_vec(), STOP.to_vec()]);
+}
+
+#[test]
+fn pair_stop_fails_when_the_node_cannot_be_reopened() {
+    let (node, mut device) = management(
+        FakeNode::receiver("hidraw6", "1-4", 0, None, true)
+            .slots([&[None], &[None], &[None], &[None, Some(A)], &[None]])
+            .set(&[Ok(5), Err(ENODEV_)]),
+    );
+    let clock = FakeClock::default();
+    let outcome = receiver::pair(
+        &mut Fixed(device.as_mut()),
+        &clock,
+        fast(),
+        &mut || {},
+        &|| false,
+    )
+    .unwrap();
+    assert_eq!(
+        outcome.result,
+        PairResult::StopFailed(SetResult::Errno(cadrat_hidraw::Errno(ENODEV_)))
+    );
+    assert_eq!(codes(&outcome.warnings), ["W-MANAGEMENT-REOPENED"]);
+    // It kept trying for STOP_RETRY, then gave up.
+    assert!(cadrat_hidraw::Clock::now(&clock) >= receiver::STOP_RETRY);
+    assert_eq!(node.sets(), [START.to_vec(), STOP.to_vec()]);
 }

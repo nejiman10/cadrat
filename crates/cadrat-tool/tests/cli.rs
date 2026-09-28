@@ -769,3 +769,35 @@ fn help_and_version() {
     assert!(out.stdout.contains("Usage: cadrat-tool"));
     assert_eq!(h.run(&["--version"]).code, 0);
 }
+
+/// Hardware test run 1, F6′: after the unpair request the management node
+/// answered ENODEV until it was opened again.
+#[test]
+fn unpair_survives_a_vanished_management_node() {
+    let node = management([
+        &[None],
+        &[None],
+        &[None],
+        &[Some(A), Some(A), Some(A)],
+        &[None],
+    ])
+    .get(
+        0x46,
+        &[
+            Ok(cadrat_hidraw::fake::slot_response(3, Some(A))),
+            Ok(cadrat_hidraw::fake::slot_response(3, Some(A))),
+            Ok(cadrat_hidraw::fake::slot_response(3, Some(A))),
+            Err(19),
+            Ok(cadrat_hidraw::fake::slot_response(3, None)),
+        ],
+    );
+    let out = Harness::new(vec![node.clone()]).run(&["receiver", "unpair", "3", "--yes"]);
+    assert_eq!(out.code, 0, "{}", out.stderr);
+    assert!(
+        out.stderr.contains("warning: W-MANAGEMENT-REOPENED"),
+        "{}",
+        out.stderr
+    );
+    assert!(out.stdout.contains("unpaired slot 3"));
+    assert_eq!(node.sets(), [UNPAIR_3.to_vec()]);
+}

@@ -339,6 +339,48 @@ impl ManagementTarget {
     pub fn device(&mut self) -> &mut dyn Device {
         self.device.as_mut()
     }
+
+    /// A [`Link`](crate::receiver::Link) that reopens this Receiver's
+    /// management node when it disappears: it enumerates again and chooses
+    /// by the same rules (spec 05 §1), keyed by the Receiver's USB port.
+    pub fn link<'a>(
+        &'a mut self,
+        system: &'a dyn System,
+        require_pairing: bool,
+    ) -> ManagementLink<'a> {
+        ManagementLink {
+            target: self,
+            system,
+            require_pairing,
+        }
+    }
+}
+
+/// See [`ManagementTarget::link`].
+pub struct ManagementLink<'a> {
+    target: &'a mut ManagementTarget,
+    system: &'a dyn System,
+    require_pairing: bool,
+}
+
+impl crate::receiver::Link for ManagementLink<'_> {
+    fn device(&mut self) -> &mut dyn Device {
+        self.target.device.as_mut()
+    }
+
+    fn reopen(&mut self) -> Result<(), String> {
+        let mut inventory = crate::enumerate(self.system).map_err(|e| e.to_string())?;
+        let key = self.target.receiver.key.to_string();
+        let fresh = select_receiver(&mut inventory, Some(&key), self.require_pairing)
+            .map_err(|e| e.to_string())?;
+        if fresh.receiver.key != self.target.receiver.key {
+            return Err(format!("{key} is no longer connected"));
+        }
+        self.target.path = fresh.path;
+        self.target.interface = fresh.interface;
+        self.target.device = fresh.device;
+        Ok(())
+    }
 }
 
 /// Chooses the Receiver (`--receiver`) and its management node: the

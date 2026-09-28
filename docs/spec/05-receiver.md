@@ -60,7 +60,7 @@ cadrat-tool receiver pair [--receiver=<key>] [--timeout=<秒>] [--poll-interval=
 処理順序:
 
 ```
-1. 管理nodeを選び、そのfdを最後まで開いたままにする
+1. 管理nodeを選び、そのfdを開いたまま使う（ただし §6 の開き直しを行う）
 2. slot snapshot S0 を読む
 3. SIGINT / SIGTERM のハンドラを設定する（以降の中断は必ず手順6に進む）
 4. SET 41 02 02 00 00（pairing開始）                 失敗 → 6へ進み、ReceiverCommandFailed
@@ -79,7 +79,7 @@ cadrat-tool receiver pair [--receiver=<key>] [--timeout=<秒>] [--poll-interval=
 | 新たに占有されたslotがあり、停止も成功 | 成功。新しいslot番号を表示 | 0 |
 | timeoutまたは中断で、停止は成功 | `PairTimeout` | 12 |
 | 開始のSETが失敗 | `ReceiverCommandFailed` | 14 |
-| 停止のSETが失敗（他の結果より優先） | `PairStopFailed`。pairing modeが続いている可能性と、Receiverを抜き差しして解除する方法を表示 | 13 |
+| 停止のSETが失敗（§6 の開き直しの後も失敗した場合。他の結果より優先） | `PairStopFailed`。pairing modeが続いている可能性と、Receiverを抜き差しして解除する方法を表示 | 13 |
 
 - 新たに占有されたslotが2つ以上あれば、すべて表示する。成功として扱うが、警告 `W-PAIR-MULTIPLE` を出す。
 - 手順2のslot読み取りに失敗したら、何も送らずに `ReceiverProtocolError`（17）で終える。
@@ -102,7 +102,7 @@ cadrat-tool receiver unpair <slot> [--receiver=<key>] [--yes]
 処理順序:
 
 ```
-1. 管理nodeを選び、fdを最後まで開いたままにする
+1. 管理nodeを選び、fdを開いたまま使う（ただし §6 の開き直しを行う）
 2. 対象slotを読み、その生の値を S として控える     空き → SlotChanged（16）
 3. 確認を取る
      対象slot、機種種別、識別子、対応するマウスの番号とkeyを表示する。
@@ -136,3 +136,18 @@ cadrat-tool receiver unpair <slot> [--receiver=<key>] [--yes]
 - `--json` は[03 §5](03-cli.md#5-出力)の共通の外枠に従い、`receiver`、`slots_before`、`slots_after`、`new_slots`、`stop_sent` などを載せる。`--json` のときの `unpair` は対話しないので、`--yes` が必須になる。
 - 自動再試行はしない。
 - 管理nodeへのSETはすべて、Feature Reportの宣言長（`0x41` は5 byte）どおりに送る。宣言長と違う長さでは送らない。
+
+## 6. 管理nodeの開き直し
+
+slotが変わった後、開いていた管理nodeのfdが使えなくなることがある。実機確認（実施 1、F6′・F7′）では、unpairやpairの後にそのfdへのGETとSETが `ENODEV` を返し続けた。一方、同じReceiverの管理nodeは列挙し直せば再び見つかった。hidraw nodeの再作成かReceiver全体の再列挙かは区別できていない（調査リポジトリへ報告する）。
+
+そこで、pair（§3）とunpair（§4）では、次の規則で管理nodeを開き直して続行する。
+
+- **対象**: 手順5（pairの待機）、pairの手順6（停止）、unpairの手順6（待機）で、デバイスが消えたことを示すerrno（`ENODEV`、`ENXIO`、`ESHUTDOWN`、`ENOENT`）が返った場合。
+- **開き直し方**: 列挙をやり直し、同じReceiver（同じ識別キー、つまり同じUSBポート）の管理nodeを §1 の規則（interface番号が最小の候補）で選び直して開く。選び直したnodeとinterfaceは、以前と違ってよい。
+- **待機中**: 開き直せたら、次のpollからそのfdで読む。開き直せなければ、次のpollでまた試す。timeoutの扱いは変えない。
+- **停止**: 停止のSETがこれらのerrnoで失敗したら、開き直して停止を送り直す。最長10秒まで繰り返す。それでも送れなければ `PairStopFailed`（13）とする。停止packetを必ず送るという §3 の原則を保つためである。
+- **送らないもの**: 開き直した後に、pair開始（`41 02 02 …`）やunpair（`41 04 …`）を送り直すことはしない。すでに送った要求の結果は、slotの変化だけで判定する（P7）。
+- **表示**: 開き直した場合は警告 `W-MANAGEMENT-REOPENED` を出す（回数と、最後に失敗した試みがあればその理由）。
+- **対象外**: slotの読み取り（`receiver slots`）と、要求を送る前の読み取り（pairの手順2、unpairの手順2と4）では開き直さない。失敗したら何も送らずに17で終える。
+

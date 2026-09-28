@@ -121,8 +121,9 @@ fn pair(ctx: &mut Ctx, receiver: &ReceiverArg, polling: Polling) -> Result<(), F
     let stderr = &mut ctx.io.stderr;
     let quiet = ctx.global.quiet;
     interrupt.arm();
+    let system = ctx.env.system;
     let outcome = receiver::pair(
-        target.device(),
+        &mut target.link(system, true),
         clock,
         polling,
         &mut || {
@@ -215,7 +216,9 @@ fn unpair(
     let clock = ctx.env.clock;
     let io = &mut ctx.io;
     let mut shown = None;
-    let outcome = receiver::unpair(target.device(), slot, clock, polling, &mut |report| {
+    let system = ctx.env.system;
+    let mut management = target.link(system, true);
+    let outcome = receiver::unpair(&mut management, slot, clock, polling, &mut |report| {
         let mouse = render::mouse_for_slot(&inventory, report);
         let line = render::slot_line(report, mouse, &mut redactor);
         let _ = writeln!(io.stderr, "{line}");

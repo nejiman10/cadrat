@@ -226,9 +226,23 @@ impl FakeNode {
     }
 }
 
+/// Like a real hidraw descriptor, a fake device that once answered `ENODEV`
+/// stays dead; opening the node again gives a working descriptor.
 #[derive(Debug)]
 struct FakeDevice {
     node: FakeNode,
+    dead: bool,
+}
+
+const ENODEV: i32 = 19;
+
+impl FakeDevice {
+    fn check<T>(&mut self, reply: Reply<T>) -> io::Result<T> {
+        if reply.as_ref().is_err_and(|&errno| errno == ENODEV) {
+            self.dead = true;
+        }
+        reply.map_err(os_error)
+    }
 }
 
 fn os_error(errno: i32) -> io::Error {
@@ -245,7 +259,11 @@ impl Device for FakeDevice {
     }
 
     fn get_feature(&mut self, report_id: u8, len: usize) -> io::Result<Vec<u8>> {
-        let mut state = self.node.state.borrow_mut();
+        if self.dead {
+            return Err(os_error(ENODEV));
+        }
+        let node = self.node.clone();
+        let mut state = node.state.borrow_mut();
         state.log.push(Request::Get(report_id));
         let epipe = rustix::io::Errno::PIPE.raw_os_error();
         let reply = state
@@ -253,21 +271,26 @@ impl Device for FakeDevice {
             .get_mut(&report_id)
             .and_then(next)
             .unwrap_or(Err(epipe));
-        reply.map_err(os_error).map(|mut data| {
+        drop(state);
+        self.check(reply).map(|mut data| {
             data.truncate(len);
             data
         })
     }
 
     fn set_feature(&mut self, data: &[u8]) -> io::Result<usize> {
-        let mut state = self.node.state.borrow_mut();
+        if self.dead {
+            return Err(os_error(ENODEV));
+        }
+        let node = self.node.clone();
+        let mut state = node.state.borrow_mut();
         state.log.push(Request::Set(data.to_vec()));
         if let Some(hook) = state.on_set.as_mut() {
             hook(data);
         }
-        next(&mut state.sets)
-            .unwrap_or(Ok(data.len()))
-            .map_err(os_error)
+        let reply = next(&mut state.sets).unwrap_or(Ok(data.len()));
+        drop(state);
+        self.check(reply)
     }
 }
 
@@ -307,7 +330,10 @@ impl System for FakeSystem {
         if let Some(errno) = node.open_error {
             return Err(os_error(errno));
         }
-        Ok(Box::new(FakeDevice { node: node.clone() }))
+        Ok(Box::new(FakeDevice {
+            node: node.clone(),
+            dead: false,
+        }))
     }
 }
 

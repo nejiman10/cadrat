@@ -27,7 +27,7 @@ pub use model::{
     RejectReason, Route, RouteState, SlotMatch, SlotsRead, Warning,
 };
 pub use select::{
-    ManagementTarget, SelectError, SendError, SendFailure, Target, select_management_node,
-    select_mouse, select_node, select_receiver,
+    ManagementLink, ManagementTarget, SelectError, SendError, SendFailure, Target,
+    select_management_node, select_mouse, select_node, select_receiver,
 };
 pub use sys::{Clock, Device, Errno, NodeInfo, RawInfo, System, SystemClock};

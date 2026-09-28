@@ -242,6 +242,7 @@ note    the receiver route is on standby; run `cadrat-tool apply` after switchin
 | `W-SLOT-IF-MISMATCH` | Receiverの設定nodeのinterface番号が、機器IDで対応付けたslot番号と一致しない |
 | `W-INACTIVE-ROUTE` | `--route` で待機中（standby）の経路へ送った |
 | `W-SLOT-READ-RETRY` | pairまたはunpairの待機中にslotの読み取りがerrnoで失敗し、読み直した |
+| `W-MANAGEMENT-REOPENED` | pairまたはunpairの途中で管理nodeが使えなくなり、開き直した（[05 §6](05-receiver.md#6-管理nodeの開き直し)） |
 | `W-INACCESSIBLE` | 列挙で、permission不足で開けないnodeがあった（udevルールのヒントを添える） |
 
 警告は送信を止めない。止める設定（`--deny-warnings`）を用意するかは未決（[Q6](04-implementation.md#6-未決事項)）。

@@ -292,6 +292,14 @@ pub enum Warning {
     PairMultiple(Vec<Slot>),
     /// `W-UNPAIR-EPIPE`: the unpair SET returned `EPIPE`.
     UnpairEpipe,
+    /// `W-MANAGEMENT-REOPENED`: the management node disappeared while
+    /// waiting and was opened again.
+    ManagementReopened {
+        /// How many times it was reopened.
+        count: usize,
+        /// The last failed attempt, if any.
+        last_failure: Option<String>,
+    },
     /// `W-SLOT-READ-RETRY`: slot reads failed while waiting and were retried.
     SlotReadRetried {
         /// How many reads failed.
@@ -312,6 +320,7 @@ impl Warning {
             Self::PairMultiple(_) => "W-PAIR-MULTIPLE",
             Self::UnpairEpipe => "W-UNPAIR-EPIPE",
             Self::SlotReadRetried { .. } => "W-SLOT-READ-RETRY",
+            Self::ManagementReopened { .. } => "W-MANAGEMENT-REOPENED",
         }
     }
 }
@@ -342,6 +351,19 @@ impl fmt::Display for Warning {
             }
             Self::UnpairEpipe => {
                 f.write_str("the unpair request returned EPIPE; checking whether the slot empties")
+            }
+            Self::ManagementReopened {
+                count,
+                last_failure,
+            } => {
+                write!(
+                    f,
+                    "the management node disappeared while waiting; reopened it {count} time(s)"
+                )?;
+                match last_failure {
+                    Some(failure) => write!(f, " (last failed attempt: {failure})"),
+                    None => Ok(()),
+                }
             }
             Self::SlotReadRetried { count, last } => write!(
                 f,
