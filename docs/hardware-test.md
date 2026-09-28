@@ -2,7 +2,7 @@
 
 [仕様 04 §5](spec/04-implementation.md#5-phase-1-の達成条件) の達成条件を、実機で確かめる手順です。記録の形式は調査リポジトリの `HARDWARE_TEST.md` に倣います。
 
-**状態: 実施 1〜3 を完了（2026-09-28）。実施 3（§H、hold-open）は H5 を除いて行った。** 実施には、所有者の明示的な指示、復元値の記録、この手順書の3つが要る（[AGENTS.md](../AGENTS.md)「Safety」）。3つとも揃った（下の「記録」）。
+**状態: 実施 1〜3 を完了（2026-09-28）。** 実施には、所有者の明示的な指示、復元値の記録、この手順書の3つが要る（[AGENTS.md](../AGENTS.md)「Safety」）。3つとも揃った（下の「記録」）。
 
 ## 0. 実施の前提
 
@@ -414,16 +414,17 @@ F6の修正（commit `2657786`、試験ビルド test4）の後、unpair → pai
 | H2 | `cadrat-hold-open.service` を有効にすると、journal に MI_00 と MI_01 の `held` が出て、入力が使えた |
 | H3 | 抜き差しの後も入力は止まらず、journal に `released` と、続く `held` が出た |
 | H4 | サービスが動いたままで `apply` が成功した（hold-open との共存） |
-| H5 | 実機では行っていない。サービス停止時に保持中の fd を閉じることは、fake を使ったテスト（`release_all`、`hold_open_holds_until_interrupted`）と、実バイナリが SIGTERM で終了コード0になること（デバイスの無い環境）で確かめている |
+| H5 | サービスを止めると保持中の fd が解放され、接続したまま（抜き差しなし）でマウスが動かなくなった。新しい観察なので調査リポジトリへ報告した（[#4](https://github.com/nejiman10/3dx-hid-research/issues/4)） |
 | H6 | 所有者は `cadrat-hold-open.service` を普段使う方にし、調査側の service は無効のまま |
 
-条件 12 のうち、入力が止まらないことと journal の記録は実機で満たした。サービス停止時の解放は、上のとおり実機以外で確かめた。
+条件 12 を満たした。H5 から、保持は再接続の直後だけでなく、有線で使う間ずっと必要と考えられる（1回の観察）。
 
 ### 調査リポジトリへの報告
 
-実施 1・2 で見た新しいデバイスの挙動は、調査リポジトリに Issue として報告した（2026-09-28）。
+実施 1〜3 で見た新しいデバイスの挙動は、調査リポジトリに Issue として報告した（2026-09-28）。
 
 - [#1](https://github.com/nejiman10/3dx-hid-research/issues/1): slot の変化の後に C652 の hidraw node が作り直され、開いていた fd が `ENODEV` になる。slot の割り当ての順序（F6〜F7′、R1〜R6）
 - [#2](https://github.com/nejiman10/3dx-hid-research/issues/2): 再ペアリング直後の最初の Report `0x10` が効かず、送り直すと効いた。効果の遅れ（C-B5、F10、F10′、R7、R8）
 - [#3](https://github.com/nejiman10/3dx-hid-research/issues/3): 待機中の経路への送信が効かず、設定が経路ごとに保持されているように見える（D6、F0）
+- [#4](https://github.com/nejiman10/3dx-hid-research/issues/4): 有線 C658 の hidraw を接続中に閉じると、抜き差しなしでも入力が止まる（実施 3 の H5）
 

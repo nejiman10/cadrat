@@ -159,5 +159,5 @@ GET `0x10` による読み戻しは行わない。調査で32-byteの現在設�
   - 保持中のfdに `HIDIOCGRAWINFO` を発行し、失敗したら閉じる。抜き差しが1回の間隔内に起き、同じpathが新しいデバイスに使われた場合に、古いfdを持ち続けないためである（調査側の実装にない追加。ioctlはデバイスと通信しない）。
   - 新しい対象を開く。開けなければ、pathとerrnoの組が変わったときだけ警告し（`W-HOLD-OPEN-FAILED`）、次の周期でまた試す。
   - sysfsを列挙できなければ一度だけ警告し（`W-HOLD-ENUMERATE-FAILED`）、保持中のfdはそのままにして次の周期でまた試す。
-- **終了**: SIGINTまたはSIGTERMで、保持中のfdをすべて閉じて終了コード0で終わる。
+- **終了**: SIGINTまたはSIGTERMで、保持中のfdをすべて閉じて終了コード0で終わる。接続中に閉じると、抜き差しをしなくても入力が止まった（cadratの実機確認 実施 3、1回。調査側 [Issue #4](https://github.com/nejiman10/3dx-hid-research/issues/4)）。したがって有線で使う間はserviceを動かし続けるよう案内する。
 - **共存**: 他の `cadrat-tool` コマンドや調査側のuser serviceと同時に動いてよい。hidrawは複数のプロセスが同時に開ける。ただし二重に動かす意味はないので、調査側のserviceは止めるよう案内する。

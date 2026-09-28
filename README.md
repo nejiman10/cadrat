@@ -86,9 +86,9 @@ systemctl --user enable --now cadrat-hold-open.service
 journalctl --user -u cadrat-hold-open.service     # shows "held /dev/hidrawN (MI_0x)" lines
 ```
 
-It only opens the nodes and never sends anything to the mouse. It is not needed if you use the mouse only through the Receiver. If you installed the research project's `c658-hidraw-hold-open.service`, disable it: `systemctl --user disable --now c658-hidraw-hold-open.service`.
+It only opens the nodes and never sends anything to the mouse. Keep it running while you use the mouse by cable: stopping it made the mouse stop responding on the tested host, even without unplugging. It is not needed if you use the mouse only through the Receiver. If you installed the research project's `c658-hidraw-hold-open.service`, disable it: `systemctl --user disable --now c658-hidraw-hold-open.service`.
 
-有線で使うと、hidraw をどのプロセスも開いていない場合に接続後数秒で入力が止まる事例がありました。`.deb` に入っている user service（既定で無効）を有効にすると、nodeを開いたままにして回避します。Receiver だけで使うなら不要です。
+有線で使うと、hidraw をどのプロセスも開いていない場合に接続後数秒で入力が止まる事例がありました。`.deb` に入っている user service（既定で無効）を有効にすると、nodeを開いたままにして回避します。有線で使う間は動かし続けてください（止めると、抜き差ししなくても入力が止まりました）。Receiver だけで使うなら不要です。
 
 ## Permissions
 
