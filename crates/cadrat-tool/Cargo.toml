@@ -36,13 +36,15 @@ extended-description = """\
 Unofficial command-line tool that configures the CadMouse Compact Wireless \
 (C658) and its Universal Receiver (C652) on Linux through hidraw. It sends \
 DPI, polling rate, wheel mode and button assignments kept in a TOML file, \
-and reads, pairs and unpairs Receiver slots. Not affiliated with \
+reads, pairs and unpairs Receiver slots, and can keep a wired C658's hidraw \
+nodes open with an optional systemd user service. Not affiliated with \
 3Dconnexion.
 """
 maintainer-scripts = "../../packaging/debian"
 assets = [
     ["target/release/cadrat-tool", "usr/bin/", "755"],
     ["../../udev/69-cadrat.rules", "usr/lib/udev/rules.d/", "644"],
+    ["../../packaging/systemd/cadrat-hold-open.service", "usr/lib/systemd/user/", "644"],
     ["../../target/dist/man/*.1.gz", "usr/share/man/man1/", "644"],
     ["../../target/dist/completions/cadrat-tool", "usr/share/bash-completion/completions/", "644"],
     ["../../target/dist/completions/_cadrat-tool", "usr/share/zsh/vendor-completions/", "644"],

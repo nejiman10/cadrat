@@ -10,6 +10,7 @@ use std::rc::Rc;
 use std::time::Duration;
 
 use cadrat_config::{ConfigLock, Preset, template};
+use cadrat_hidraw::Clock;
 use cadrat_hidraw::fake::{FakeClock, FakeNode, FakeSystem, probe_response};
 use cadrat_tool::{Env, Interrupt, Io, run};
 use serde_json::Value;
@@ -836,4 +837,77 @@ fn unpair_survives_a_vanished_management_node() {
     );
     assert!(out.stdout.contains("unpaired slot 3"));
     assert_eq!(node.sets(), [UNPAIR_3.to_vec()]);
+}
+
+// --- hold-open ---
+
+/// Raises the interrupt after `polls` sleeps.
+fn interrupt_after(h: &Harness, polls: u32) {
+    let set = Rc::clone(&h.interrupt.set);
+    let count = Cell::new(0);
+    h.clock.on_sleep(move |_| {
+        count.set(count.get() + 1);
+        if count.get() == polls {
+            set.set(true);
+        }
+    });
+}
+
+#[test]
+fn hold_open_holds_until_interrupted() {
+    let node = wired();
+    let h = Harness::new(vec![node.clone()]);
+    interrupt_after(&h, 3);
+    let out = h.run(&["hold-open", "--poll-interval=2"]);
+    assert_eq!(out.code, 0, "{}", out.stderr);
+    assert_eq!(
+        out.stdout,
+        "held      /dev/hidraw5 (MI_01)\nreleased  /dev/hidraw5\n"
+    );
+    assert!(
+        out.stderr
+            .contains("keeping the wired C658's hidraw nodes open")
+    );
+    assert_eq!(h.clock.now(), Duration::from_secs(6));
+    assert_eq!(node.open_count(), 0);
+    assert!(node.log().is_empty(), "hold-open must not send anything");
+
+    // -q drops the note but keeps the log lines.
+    let h = Harness::new(vec![wired()]);
+    interrupt_after(&h, 1);
+    let out = h.run(&["hold-open", "-q"]);
+    assert_eq!(out.code, 0);
+    assert_eq!(out.stderr, "");
+    assert!(out.stdout.starts_with("held "));
+}
+
+#[test]
+fn hold_open_warns_once_about_an_inaccessible_node() {
+    let mut node = wired();
+    node.open_error = Some(EACCES);
+    let h = Harness::new(vec![node]);
+    interrupt_after(&h, 3);
+    let out = h.run(&["hold-open"]);
+    assert_eq!(out.code, 0);
+    assert_eq!(out.stdout, "");
+    assert_eq!(
+        out.stderr.matches("warning: W-HOLD-OPEN-FAILED: cannot open /dev/hidraw5 (EACCES); check that the udev rule is installed").count(),
+        1,
+        "{}",
+        out.stderr
+    );
+}
+
+#[test]
+fn hold_open_rejects_target_and_json_options() {
+    let h = Harness::new(vec![wired()]);
+    for args in [
+        &["hold-open", "--json"][..],
+        &["hold-open", "--mouse=1"],
+        &["hold-open", "--hidraw=/dev/hidraw5"],
+    ] {
+        let out = h.run(args);
+        assert_eq!(out.code, 2, "{args:?}");
+    }
+    assert_eq!(h.run(&["hold-open", "--poll-interval=0"]).code, 2);
 }

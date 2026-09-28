@@ -82,6 +82,7 @@ CLIのテストでは、`cadrat-tool` のライブラリの入口 `run(args, env
 9. `receiver pair` の待機中にCtrl-Cを押しても、停止packetが送られて終了コード12になる。
 10. unpairの確認プロンプトで `n` を押すと、何もせず終了コード18になる。
 11. 実機試験の手順と結果を `docs/hardware-test.md` に記録する。記録の形式は調査リポジトリの `HARDWARE_TEST.md` に倣う。
+12. 有線C658で、調査側のuser serviceを止めて `cadrat-hold-open.service` を有効にすると、USBの抜き差しの後も入力が止まらず、journalに保持と解放の行が残る。serviceを止めると保持中のfdが閉じられる（[02 §9](02-device.md#9-hold-open)）。
 
 ## 6. 未決事項
 
@@ -121,8 +122,9 @@ CLIのテストでは、`cadrat-tool` のライブラリの入口 `run(args, env
 - `.deb` に含めるもの:
   - `/usr/bin/cadrat-tool`
   - `/usr/lib/udev/rules.d/69-cadrat.rules`（hidrawの `uaccess`）。インストール後に `udevadm control --reload` と `udevadm trigger` を実行する
+  - `/usr/lib/systemd/user/cadrat-hold-open.service`（[02 §9](02-device.md#9-hold-open)）。インストールしても有効にしない。有線で使う利用者が `systemctl --user enable --now cadrat-hold-open.service` で有効にする
   - manページとシェル補完（bash / zsh / fish）
-  - 後のPhaseでは、systemdのuser unit（`/usr/lib/systemd/user/`）とGNOME Shell拡張（`/usr/share/gnome-shell/extensions/`）を同じパッケージか別パッケージで追加する
+  - 後のPhaseでは、`cadratd` のsystemd user unit（`/usr/lib/systemd/user/`）とGNOME Shell拡張（`/usr/share/gnome-shell/extensions/`）を同じパッケージか別パッケージで追加する
 - manページとシェル補完は、CLIの定義から `cargo run -p xtask -- dist` で生成する。
 - **試験ビルド。** Phase 1の実機確認（§5）を終えるまでに作る `.deb` は試験ビルドとし、リリースしない。版を `<版>~test<番号>+g<commit>` とし、`--version` にも `(test build)` と表示する。作り方と確認の記録は [docs/packaging.md](../packaging.md) に置く。
 - flatpakとAppImageは採用しない。

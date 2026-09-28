@@ -74,6 +74,7 @@ pub fn run(args: impl IntoIterator<Item = OsString>, env: &Env, io: Io) -> i32 {
         Command::Receiver(cli::ReceiverCommand::Slots { .. }) => "receiver slots",
         Command::Receiver(cli::ReceiverCommand::Pair { .. }) => "receiver pair",
         Command::Receiver(cli::ReceiverCommand::Unpair { .. }) => "receiver unpair",
+        Command::HoldOpen { .. } => "hold-open",
     };
     let mut ctx = ctx::Ctx::new(env, io, cli.global.clone());
     let result = match &cli.command {
@@ -92,6 +93,7 @@ pub fn run(args: impl IntoIterator<Item = OsString>, env: &Env, io: Io) -> i32 {
         } => cmd::send::set(&mut ctx, assignments, *dry_run, *no_save),
         Command::Apply { dry_run } => cmd::send::apply(&mut ctx, *dry_run),
         Command::Receiver(command) => cmd::receiver::run(&mut ctx, command),
+        Command::HoldOpen { poll_interval } => cmd::hold::run(&mut ctx, *poll_interval),
     };
     ctx.finish(name, &result)
 }

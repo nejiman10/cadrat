@@ -8,16 +8,16 @@ CadMouse Compact Wireless（C658）と Universal Receiver（C652）を Linux で
 
 ## Status
 
-> **Phase 1, verified on hardware; no release published yet.** Every command in the specification is implemented, tested against a simulated device and checked with a real mouse and Receiver on Ubuntu 24.04. Release packages support Ubuntu 22.04 and later; on older systems, build from source.
+> **Phase 1, first release in preparation.** Settings and Receiver management are implemented, tested against a simulated device and checked with a real mouse and Receiver on Ubuntu 24.04. `hold-open`, which keeps a wired C658 working (see [Wired use](#wired-use-hold-open)), has been checked on the same hardware, including unplugging and reconnecting. Release packages support Ubuntu 22.04 and later; on older systems, build from source.
 
-現在は Phase 1 です。`cadrat-tool` は仕様のコマンドをすべて実装し、模擬デバイスでのテストと実機での確認（[docs/hardware-test.md](docs/hardware-test.md)）を終えました。リリース用の `.deb` は Ubuntu 22.04 以降を対象にしますが、まだ公開していません。それより古い環境ではソースからビルドしてください。
+現在は Phase 1 で、最初のリリースを準備しています。設定の送信と Receiver 管理は、模擬デバイスでのテストと実機での確認（[docs/hardware-test.md](docs/hardware-test.md)）を終えました。有線の C658 を使い続けるための `hold-open` も、抜き差しを含めて実機で確認しました。リリース用の `.deb` は Ubuntu 22.04 以降が対象で、それより古い環境ではソースからビルドしてください。
 
 ## Components
 
 | Name | Role（役割） | Status |
 |---|---|---|
 | `cadrat-tool` | Stand-alone CLI. 独立設定ツール。hidrawを直接操作し、設定はTOMLファイルだけが持つ | Implemented, hardware-verified |
-| `cadratd` | Daemon. デーモン。hidrawを保持し、設定を管理し、D-Busで公開する | Planned |
+| `cadratd` | Daemon. デーモン。hidrawを保持し、設定を管理し、D-Busで公開する（`hold-open` の役目も引き継ぐ） | Planned |
 | `cadratctl` | Front end for `cadratd`. `cadratd` のフロントエンド。D-Bus経由でだけ操作する | Planned |
 | cadrat Radial | GNOME Shell extension. GNOME Shell拡張。`cadratd` とD-Busでつなぐ | Planned |
 
@@ -31,6 +31,7 @@ cadrat-tool init                       # create the settings file / 設定ファ
 cadrat-tool set mouse.dpi=1600 buttons.radial=host:1
 cadrat-tool apply                      # send the file as it is / 設定ファイルをそのまま送る
 cadrat-tool receiver slots             # Receiver slots / Receiverのslot
+cadrat-tool hold-open                  # keep a wired C658 working (usually run by the user service)
 ```
 
 All output is in English. Commands, options and exit codes: [docs/spec/03-cli.md](docs/spec/03-cli.md)（コマンドの詳細）.
@@ -55,9 +56,9 @@ packaging/build-deb.sh                 # writes target/debian/cadrat-tool_<versi
 sudo apt install ./target/debian/cadrat-tool_*~test*_amd64.deb
 ```
 
-The package installs the binary, the udev rule, manual pages and shell completions. It is a **test build**; see [docs/packaging.md](docs/packaging.md).
+The package installs the binary, the udev rule, the `hold-open` user service (disabled), manual pages and shell completions. It is a **test build**; see [docs/packaging.md](docs/packaging.md).
 
-`.deb` はバイナリ、udevルール、manページ、シェル補完を含みます。試験ビルドです（[docs/packaging.md](docs/packaging.md)）。
+`.deb` はバイナリ、udevルール、`hold-open` の user service（無効のまま）、manページ、シェル補完を含みます。試験ビルドです（[docs/packaging.md](docs/packaging.md)）。
 
 ### From source
 
@@ -67,6 +68,27 @@ sudo install -m 0644 udev/69-cadrat.rules /usr/lib/udev/rules.d/
 sudo udevadm control --reload
 sudo udevadm trigger
 ```
+
+For the `hold-open` user service, install the unit with the binary's path adjusted:
+
+```sh
+mkdir -p ~/.config/systemd/user
+sed 's#/usr/bin/cadrat-tool#%h/.cargo/bin/cadrat-tool#' packaging/systemd/cadrat-hold-open.service \
+    > ~/.config/systemd/user/cadrat-hold-open.service
+```
+
+## Wired use: hold-open
+
+On the tested host, a **wired** C658 stops responding a few seconds after it is plugged in unless some process keeps its hidraw nodes open. The cause is unknown; keeping the nodes open is a workaround that worked there, and this service is what the author uses day to day. The package ships a systemd user service for this. It is **disabled by default**; if you use the mouse by cable, enable it once:
+
+```sh
+systemctl --user enable --now cadrat-hold-open.service
+journalctl --user -u cadrat-hold-open.service     # shows "held /dev/hidrawN (MI_0x)" lines
+```
+
+It only opens the nodes and never sends anything to the mouse. Keep it running while you use the mouse by cable: stopping it made the mouse stop responding on the tested host, even without unplugging. It is not needed if you use the mouse only through the Receiver. If you installed the research project's `c658-hidraw-hold-open.service`, disable it: `systemctl --user disable --now c658-hidraw-hold-open.service`.
+
+有線で使うと、hidraw をどのプロセスも開いていない場合に接続後数秒で入力が止まる事例がありました。`.deb` に入っている user service（既定で無効）を有効にすると、nodeを開いたままにして回避します。有線で使う間は動かし続けてください（止めると、抜き差ししなくても入力が止まりました）。Receiver だけで使うなら不要です。
 
 ## Permissions
 

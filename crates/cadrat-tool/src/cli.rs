@@ -121,6 +121,16 @@ pub enum Command {
     /// Manage the C652 Receiver
     #[command(subcommand)]
     Receiver(ReceiverCommand),
+    /// Keep the wired C658's hidraw nodes open until stopped
+    ///
+    /// Without this, a wired C658 was seen to stop sending input a few
+    /// seconds after it was plugged in. Runs in the foreground; the
+    /// cadrat-hold-open.service user unit runs it in the background.
+    HoldOpen {
+        /// Seconds between checks for plugged and unplugged nodes
+        #[arg(long, default_value = "1.0", value_parser = seconds)]
+        poll_interval: f64,
+    },
 }
 
 /// `init --preset` values.

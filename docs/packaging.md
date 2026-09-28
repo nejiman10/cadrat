@@ -77,6 +77,7 @@ packaging/build-release.sh              # rust-toolchain.toml の版を rustup �
 |---|---|
 | `/usr/bin/cadrat-tool` | 本体 |
 | `/usr/lib/udev/rules.d/69-cadrat.rules` | hidrawの `uaccess`（[udev/69-cadrat.rules](../udev/69-cadrat.rules)） |
+| `/usr/lib/systemd/user/cadrat-hold-open.service` | 有線C658の hold-open（[packaging/systemd/](../packaging/systemd/cadrat-hold-open.service)、仕様 02 §9）。**有効にしない**。利用者が `systemctl --user enable --now cadrat-hold-open.service` で有効にする |
 | `/usr/share/man/man1/cadrat-tool*.1.gz` | manページ |
 | `/usr/share/bash-completion/completions/cadrat-tool` | bash補完 |
 | `/usr/share/zsh/vendor-completions/_cadrat-tool` | zsh補完 |
@@ -118,6 +119,11 @@ packaging/build-release.sh              # rust-toolchain.toml の版を rustup �
 - `apt remove cadrat-tool` で test4 を削除し、`/usr/bin/cadrat-tool` と `/usr/lib/udev/rules.d/69-cadrat.rules` が消えたことを確認した。`dpkg -s` は `deinstall ok config-files`（削除後の通常の状態）。
 - test5（commit `2a45ea6`）を `apt install` で入れ、`--version`、udevルール、`man -w cadrat-tool` を確認した。
 - ビルド時に `cargo deb` が、`target/dist/` の資産について「Cargo の target ディレクトリとして扱わない」という警告を出す。資産は `xtask` が先に作るので、パッケージには入る。
+
+### 試験ビルド test6（実機、2026-09-28）
+
+- hold-open を含む commit `36f0ba7` から作り、所有者の PC に入れた。`/usr/lib/systemd/user/cadrat-hold-open.service` が入り、既定で無効であることを確認した（実機確認 実施 3 の H0）。
+- 所有者はその後 `cadrat-hold-open.service` を有効にし、普段使いにしている。
 
 ### リリース用ビルドの確認（Ubuntu 22.04、2026-09-28）
 
