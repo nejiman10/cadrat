@@ -1,0 +1,101 @@
+# Builds the release .deb on Ubuntu 22.04, the oldest supported LTS
+# (spec 04 §7), and tries it in the same container.
+#
+# - Pull request: build and try only.
+# - Tag v<version>: also attest the build and create a DRAFT GitHub Release.
+#   The owner reviews the draft and publishes it.
+name: Release
+
+on:
+  push:
+    tags: ["v*"]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: ubuntu-24.04
+    container: ubuntu:22.04
+    permissions:
+      contents: read
+      id-token: write
+      attestations: write
+    env:
+      DEBIAN_FRONTEND: noninteractive
+    steps:
+      - name: Install build tools
+        run: |
+          apt-get update
+          apt-get install -y --no-install-recommends \
+              build-essential ca-certificates curl git xz-utils binutils
+      - uses: actions/checkout@v5
+      - name: Trust the checkout
+        # The workspace is owned by the runner user, not the container's root.
+        run: git config --global --add safe.directory "$GITHUB_WORKSPACE"
+      - name: Install Rust and cargo-deb
+        run: |
+          curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs \
+              | sh -s -- -y --profile minimal --default-toolchain none
+          echo "$HOME/.cargo/bin" >> "$GITHUB_PATH"
+          # The toolchain pinned in rust-toolchain.toml.
+          "$HOME/.cargo/bin/rustup" toolchain install
+          "$HOME/.cargo/bin/cargo" install cargo-deb --locked --version 3.8.0
+      - name: Check the tag against the package version
+        if: github.ref_type == 'tag'
+        run: |
+          version=$(cargo metadata --format-version 1 --no-deps \
+              | sed -n 's/.*"name":"cadrat-tool","version":"\([^"]*\)".*/\1/p')
+          if [ "$GITHUB_REF_NAME" != "v$version" ]; then
+              echo "tag $GITHUB_REF_NAME does not match cadrat-tool $version" >&2
+              exit 1
+          fi
+      - name: Build
+        run: sh packaging/build-release.sh
+      - name: Checksum
+        run: |
+          cd target/debian
+          sha256sum cadrat-tool_*.deb > SHA256SUMS
+          cat SHA256SUMS
+      - name: Install, run and remove
+        run: |
+          apt-get install -y ./target/debian/cadrat-tool_*.deb
+          useradd --create-home tester
+          su tester -c 'cadrat-tool --version'
+          # No devices here: list succeeds and finds nothing.
+          su tester -c 'cadrat-tool list'
+          test -f /usr/lib/udev/rules.d/69-cadrat.rules
+          dpkg -r cadrat-tool
+          test ! -e /usr/bin/cadrat-tool
+      - name: Attest build provenance
+        if: github.ref_type == 'tag'
+        uses: actions/attest-build-provenance@v2
+        with:
+          subject-path: target/debian/cadrat-tool_*.deb
+      - uses: actions/upload-artifact@v4
+        with:
+          name: deb
+          path: |
+            target/debian/cadrat-tool_*.deb
+            target/debian/SHA256SUMS
+          if-no-files-found: error
+
+  draft-release:
+    if: github.ref_type == 'tag'
+    needs: build
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: deb
+      - name: Create a draft release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release create "$GITHUB_REF_NAME" --repo "$GITHUB_REPOSITORY" \
+              --draft --verify-tag --title "cadrat-tool ${GITHUB_REF_NAME#v}" \
+              --notes "Debian package for Ubuntu 22.04 or later (amd64). Built by the Release workflow; see docs/packaging.md. Verify with \`sha256sum -c SHA256SUMS\` or \`gh attestation verify <file> --repo $GITHUB_REPOSITORY\`." \
+              cadrat-tool_*.deb SHA256SUMS

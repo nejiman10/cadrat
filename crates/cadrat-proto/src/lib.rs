@@ -25,6 +25,7 @@ pub mod report10;
 pub use action::{Action, DirectAction, HostIndex, ParseActionError, RawWire};
 pub use descriptor::{DescriptorError, ReportLengths};
 pub use device_id::{DeviceId, DeviceIdError};
+pub use int::parse_u32;
 pub use receiver::{Slot, SlotError, SlotReport};
 pub use report03::{Report03Error, Report03Frame};
 pub use report10::{

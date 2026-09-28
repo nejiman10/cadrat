@@ -39,10 +39,12 @@ docs/spec/
 |---|---|---|
 | `research` | 調査側が公開した入力（`sdk/python/vectors/`）をそのまま複製 | 各種類の代表例 |
 | `boundary` | 本リポジトリが用意した合成入力を、調査側のexporterで変換 | 境界値。dpi 50 / 8200、lift 0 / 31 / 255、全polling rate、全direct action、host 0 / 1 / 7 / 8 / 214 / 215、offset 18..24それぞれへの `host:1`、descriptorのPUSH/POP・long item・複数item合算・Report IDなし、Report `0x03` の遷移と上位bitの切り捨て、全slotのunpair packet |
+| `real` | 調査側が収録した実機のdescriptor（`sdk/python/tests/data/real_hid_descriptors.json`）の `descriptor_hex` だけを取り出し、調査側のexporterで変換 | C652のMI_00・MI_02と、有線C658のMI_00・MI_01。descriptorだけでwire・Report `0x03`・Receiverは空 |
 
 照合する項目: wire値と `inspect` の結果、descriptorのFeature / Input wire長、Report `0x03` のbitmapと押下・解放mask、Receiver packet。descriptorの `top_level_usages` は `cadrat-proto` の責務に含めないので照合しない。
 
 - ベクタは調査SDKの挙動を示すもので、プロトコルの新しい根拠ではない。
+- `real` のdescriptorは `cadrat-hidraw` のfakeにも使い、nodeの分類（02 §4、05 §1）と選択を確かめる（`crates/cadrat-hidraw/tests/fake.rs`）。
 - exporterは設定から作ったwireしか検査しないため、次のものはベクタで表せない。Rust側だけのテストで確かめる。
   - `raw:` のボタン（`0x10`..`0x27`）と、actionに対応しないwire値（`0x00`..`0x09`）
   - 予約byteが0でないもの、offset 26が `0x1e` でないもの、`inspect` のエラー（長さ、Report ID、未知のwheel・polling）
@@ -62,7 +64,7 @@ docs/spec/
 | CLI | 一時ディレクトリで `set` の各分岐（dry-run、no-save、送信失敗時にTOMLが変わらないこと、H0不一致で終了コード9になること、lock競合） | 不要（fake transport） |
 | 実機 | §5の達成条件 | 必要 |
 
-CLIのテストでfakeのtransportを差し込めるよう、環境変数か隠しオプションでtransportを切り替えられるようにする。リリースビルドからは除く。
+CLIのテストでは、`cadrat-tool` のライブラリの入口 `run(args, env, io)` に、fakeのtransport・時計・シグナルと標準入出力を渡して、プログラム全体を動かす。バイナリ（`main.rs`）は実物を渡すだけで、fakeを含まない。fakeは `cadrat-hidraw` の `fake` featureで、開発時の依存からだけ使う。そのため、環境変数や隠しオプションによる切り替えは用意しない。
 
 ## 5. Phase 1 の達成条件
 
@@ -93,10 +95,10 @@ CLIのテストでfakeのtransportを差し込めるよう、環境変数か隠�
 | Q4 | 名称 | 決定 | プロジェクト名 cadrat。独立ツール `cadrat-tool`、デーモン `cadratd`、フロントエンド `cadratctl`（[README §0](README.md#0-cadrat-プロジェクトの構成)） |
 | Q5 | ライセンス | 決定 | MIT（調査リポジトリと同じ） |
 | Q6 | `--deny-warnings` を用意するか | 決定 | 用意しない |
-| Q7 | Receiver経由の送信で、再送や適用確認をするか | 決定（原因は未解明） | 1回だけ送り、送信直前に同じfdで宛先を確認する（[02 §7](02-device.md#7-送信)）。初回で効果が見えなかった2事例は、記録上は正しいnodeへ送っており、原因は判定不能。Phase 1の実機試験で再現を記録し（§5 項目3a）、再現したら方針を見直す |
-| Q8 | MSRVと配布の形 | 決定 | Ubuntu LTSを対象に、`.deb` をGitHub Releasesで配布する（§7）。MSRVは定めず、`rust-toolchain.toml` でツールチェーンを固定する |
-| Q9 | デーモン導入時に、CLIとデーモンが同じTOMLへ同時に書かない方法 | 方針決定 | `cadratd` が動いていれば、`cadrat-tool` の送信系コマンドは拒否する（[01 §1.1](01-config.md#11-複数の設定ファイル)）。検出方法や終了コードなどの詳細はPhase 2の仕様で決める |
-| Q10 | Receiverの管理nodeの選び方 | 決定（根拠は限定的） | interface番号が最小のもの。MI_02で効くことは観測済み、MI_00は状況証拠。純正の規則は不明 |
+| Q7 | Receiver経由の送信で、再送や適用確認をするか | 決定 | 1回だけ送り、送信直前に同じfdで宛先を確認する。自動では再送せず、Receiver経由の送信の成功時と `receiver pair` の成功時に、効いていなければ送り直すよう案内する（[02 §7](02-device.md#7-送信) 手順7、[05 §3](05-receiver.md#3-pair)）。実機確認（[実施 2](../hardware-test.md)）で、再ペアリング直後の最初の送信が約5分たっても効かず、送り直すと効く事例を再現したが、再現の条件が分からないため、原因の調査（調査側 [Issue #2](https://github.com/nejiman10/3dx-hid-research/issues/2)）を待たずに案内で対処する。原因が分かれば見直す |
+| Q8 | MSRVと配布の形 | 決定 | Ubuntu LTS（最小22.04）を対象に、`.deb` をGitHub Releasesで配布する（§7）。MSRVは定めず、`rust-toolchain.toml` でツールチェーンを固定する |
+| Q9 | デーモン導入時に、CLIとデーモンが同じTOMLへ同時に書かない方法 | 方針決定 | `cadratd` が動いていれば、`cadrat-tool` の送信系コマンドは拒否する（[01 §1.1](01-config.md#11-複数の設定ファイル)）。検出方法や終了コードなどの詳細はPhase 2の仕様で決める。`cadratd` がまだ無いので、Phase 1の `cadrat-tool` は検出しない |
+| Q10 | Receiverの管理nodeの選び方 | 決定（根拠は限定的） | interface番号が最小のもの。MI_02で効くことは観測済み、MI_00は状況証拠。純正の規則は不明。slotが変わると管理nodeが作り直されるので、pair / unpair の途中で消えたら同じ規則で選び直して開き直す（[05 §6](05-receiver.md#6-管理nodeの開き直し)） |
 | Q11 | slot byte1で占有を判定してよいか | 決定（根拠は限定的） | `0x00` ↔ 空き、`0x59` ↔ 占有を観測。任意の非0値を占有とする一般則は未検証なので、HYPOTHESISと明記して使う |
 | Q12 | pair後に自動で `apply` するか | 決定 | しない |
 | Q13 | USBシリアルはあるか | 解決 | 無い（試験個体）。マウスは機器ID、Receiverはポートパスで識別する |
@@ -108,14 +110,23 @@ CLIのテストでfakeのtransportを差し込めるよう、環境変数か隠�
 ## 7. 配布
 
 - 形式: `.deb`。`cargo-deb` で作り、GitHub Releasesに置く。
-- 対象: Ubuntu LTS（amd64）。glibcの互換性のため、サポートする最も古いLTS上でビルドする。対象とするLTSの版は、リリース時点で確認して決める。
+- 対象: Ubuntu LTS（amd64）。**最小サポートはUbuntu 22.04**（glibc 2.35）。標準サポート中のLTSで、ビルド環境を再現しやすく、CADソフトの対応OSとも釣り合う範囲にした。それより古い環境では `.deb` を提供せず、利用者がソースからビルドする（下の `cargo install`）。
+- **リリース用ビルド。** glibcの互換性のため、Ubuntu 22.04上で `packaging/build-release.sh` を実行して作る。スクリプトは次を確かめ、満たさなければ止まる。
+  - 実行環境がUbuntu 22.04であること、未コミットの変更が無いこと、`target/` が無いこと（別の環境でビルドした物を使い回さないため）
+  - バイナリが要求するglibcのsymbol versionが2.35以下であること（`objdump -T`）
+  - `.deb` のdataがxz圧縮であること。zstdに対応しない古いdpkgでも中身を確かめられるようにする
+- リリース用ビルドの版は `Cargo.toml` の版そのままで、`--version` にも印を付けない。
+- リリース用ビルドはGitHub Actions（`.github/workflows/release.yml`）の `ubuntu:22.04` コンテナで行う。pull requestではビルドと、同じコンテナでのインストール・実行・削除までを行う。`v<版>` のtagをpushすると、tagと版の一致を確かめたうえで、build provenanceのattestationを付け、`.deb` と `SHA256SUMS` を載せた**下書き**のGitHub Releaseを作る。公開は所有者が下書きを確かめてから行う。
+- 書式・lint・テスト（`cargo fmt --check`、`cargo clippy -D warnings`、`cargo test`）は `.github/workflows/ci.yml` がpull requestとmainへのpushで実行する。
 - `.deb` に含めるもの:
   - `/usr/bin/cadrat-tool`
   - `/usr/lib/udev/rules.d/69-cadrat.rules`（hidrawの `uaccess`）。インストール後に `udevadm control --reload` と `udevadm trigger` を実行する
   - manページとシェル補完（bash / zsh / fish）
   - 後のPhaseでは、systemdのuser unit（`/usr/lib/systemd/user/`）とGNOME Shell拡張（`/usr/share/gnome-shell/extensions/`）を同じパッケージか別パッケージで追加する
+- manページとシェル補完は、CLIの定義から `cargo run -p xtask -- dist` で生成する。
+- **試験ビルド。** Phase 1の実機確認（§5）を終えるまでに作る `.deb` は試験ビルドとし、リリースしない。版を `<版>~test<番号>+g<commit>` とし、`--version` にも `(test build)` と表示する。作り方と確認の記録は [docs/packaging.md](../packaging.md) に置く。
 - flatpakとAppImageは採用しない。
   - flatpak: サンドボックスの中からudevルール、systemd unit、GNOME Shell拡張をホストに入れられない。hidrawへのアクセスにも `--device=all` が要る。CLIの起動も `flatpak run …` になる。
   - AppImage: udevルールとunitを別の手順で入れる必要がある。最近のUbuntuでは、AppImageの実行にlibfuse2の追加インストールが要る。
-- 開発者向けには `cargo install --path crates/cadrat-tool` も案内する。この場合、udevルールは手動で入れる。
+- 開発者と、22.04より古い環境の利用者には `cargo install --path crates/cadrat-tool` を案内する。この場合、udevルールは手動で入れる。
 

@@ -1,0 +1,52 @@
+[package]
+name = "cadrat-tool"
+description = "Stand-alone configuration tool for the C658 mouse and the C652 Receiver"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+publish.workspace = true
+
+[lints]
+workspace = true
+
+[dependencies]
+cadrat-config = { path = "../cadrat-config" }
+cadrat-hidraw = { path = "../cadrat-hidraw" }
+cadrat-proto = { path = "../cadrat-proto" }
+clap = { version = "4.6.7", features = ["derive"] }
+serde_json = "1.0.151"
+signal-hook = "0.4.4"
+
+[dev-dependencies]
+cadrat-hidraw = { path = "../cadrat-hidraw", features = ["fake"] }
+tempfile = "3.27.0"
+
+# `.deb` package (spec 04 §7). Build it with packaging/build-deb.sh, which
+# generates target/dist first and marks the version as a test build.
+[package.metadata.deb]
+name = "cadrat-tool"
+maintainer = "nejiman10 <72682963+nejiman10@users.noreply.github.com>"
+copyright = "2026, nejiman10"
+license-file = ["../../LICENSE", "0"]
+section = "utils"
+priority = "optional"
+depends = "$auto, udev"
+extended-description = """\
+Unofficial command-line tool that configures the CadMouse Compact Wireless \
+(C658) and its Universal Receiver (C652) on Linux through hidraw. It sends \
+DPI, polling rate, wheel mode and button assignments kept in a TOML file, \
+and reads, pairs and unpairs Receiver slots. Not affiliated with \
+3Dconnexion.
+"""
+maintainer-scripts = "../../packaging/debian"
+assets = [
+    ["target/release/cadrat-tool", "usr/bin/", "755"],
+    ["../../udev/69-cadrat.rules", "usr/lib/udev/rules.d/", "644"],
+    ["../../target/dist/man/*.1.gz", "usr/share/man/man1/", "644"],
+    ["../../target/dist/completions/cadrat-tool", "usr/share/bash-completion/completions/", "644"],
+    ["../../target/dist/completions/_cadrat-tool", "usr/share/zsh/vendor-completions/", "644"],
+    ["../../target/dist/completions/cadrat-tool.fish", "usr/share/fish/vendor_completions.d/", "644"],
+    ["../../README.md", "usr/share/doc/cadrat-tool/", "644"],
+    ["../../NOTICE.md", "usr/share/doc/cadrat-tool/", "644"],
+]

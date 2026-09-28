@@ -50,7 +50,7 @@ Receiver（key = recv:port-<USBポートパス>）
 
 ## 3. 列挙の手順
 
-1. `/sys/class/hidraw/*` を列挙し、ueventの `HID_ID` からVID:PIDを取る。VIDが `256f` 以外は開かずに除外する。
+1. `/sys/class/hidraw/*` を列挙し、ueventの `HID_ID` からVID:PIDを取る。VIDが `256f` 以外と、`HID_ID` が読めないnodeは開かずに除外する。VIDが `256f` でも、interface番号か親USBデバイスのポートパスがsysfsから取れないnodeは開かずに `rejected`（`sysfs-incomplete`）にする。
 2. 残ったnodeを `O_RDWR | O_CLOEXEC | O_NONBLOCK` で開く。`HIDIOCGRAWINFO` でbus type、VID、PIDを確かめる。
 3. `HIDIOCGRDESCSIZE` / `HIDIOCGRDESC` でreport descriptorを読み、Report IDごとにFeature reportとInput reportのwire長を求める。解析規則は調査SDKの `hid_descriptor.py` と同じにする（PUSH/POPを扱い、long itemは飛ばし、同じIDのFeature itemは合算する）。
 4. sysfsから `bInterfaceNumber`、親USBデバイスのパス、`HID_NAME` を集める。
@@ -73,9 +73,13 @@ Receiver（key = recv:port-<USBポートパス>）
 - 有線の設定nodeでプローブが失敗した場合、そのnodeは使えるが機器IDは無いものとして、§2.2の退避keyを使う。警告 `W-NO-DEVICE-ID` を出す。
 - Receiverの設定nodeでプローブが失敗した場合、そのnodeは `rejected` にする。
 
-判定できなかったnodeは、`rejected` と理由（例: `no-feature-0x10`、`probe-mismatch: 08 00 …`、`probe-error: EPIPE`）を `list --nodes` に表示する。
+判定できなかったnodeは、`rejected` と理由（例: `no-feature-0x10`、`probe-mismatch: 08 00 …`、`probe-error: EPIPE`、`open-error: EIO`、`rawinfo-mismatch: …`、`unsupported-product: 256f:xxxx`、`descriptor-invalid: …`）を `list --nodes` に表示する。理由には機器IDのbyteを含めない。
 
-1つのUSBデバイスに設定nodeの条件を満たすnodeが2つ以上ある場合は、そのマウスを `ambiguous-node` とし、送信を拒否する。
+Receiverの設定nodeでプローブが失敗しても、そのnodeが管理nodeの条件（[05 §1](05-receiver.md#1-管理nodeの検出)）を満たすなら、管理nodeの候補としては残す。
+
+次の場合は、その経路を `ambiguous-node` とし、その経路への送信を拒否する。
+- 1つのUSBデバイスに、有線の設定nodeが2つ以上ある。
+- 1台のマウス（同じ識別キー）に、同じ種類の経路が2つ以上ある（例: 1台のReceiverで同じ機器IDの設定nodeが2つ）。
 
 ## 5. Receiver経由の経路とslotの対応付け
 
@@ -100,6 +104,10 @@ Receiver（key = recv:port-<USBポートパス>）
   - 指定した経路が存在しなければ `NoDevice` にする。
 - 開発者向けに `--hidraw=<path>` を用意する。マウスの選択を飛ばして特定のnodeを使うが、§4の判定とIDプローブは飛ばさない。判定に通らなければ `DeviceInvalid` にする。
 - 対象の `status` が `inaccessible` なら `PermissionDenied`、`ambiguous-node` なら `DeviceInvalid` にする。
+- 開けないnode（`inaccessible`）は、別のマウスである可能性がある（P4）。
+  - selectorを省略した場合、マウスが2台以上なら `AmbiguousTarget` にする。そうでなく、`inaccessible` のnodeが1つでもあれば、マウスが1台見えていても `PermissionDenied` にする。
+  - keyや接頭辞で指定し、どれにも一致せず、`inaccessible` のnodeがあれば `PermissionDenied` にする。
+  - 番号が範囲外なら `NoDevice` にする。
 
 ## 7. 送信
 
@@ -119,8 +127,13 @@ Receiver（key = recv:port-<USBポートパス>）
 | 0以上で32以外 | `SendFailed`（`short-write: <n>`） |
 | errno | `SendFailed`（`errno: <name>`）。`ENODEV` など、デバイスが抜けたことを示すerrnoは区別して表示する |
 
+手順2のGET自体がerrnoで失敗した場合は、送信せずに `SendFailed`（8）とする。応答はあるが一致しない場合だけを `TargetChanged`（19）とする。デバイスが抜けた場合（達成条件6）を終了コード8にそろえるためである。
+
 5. 自動再送はしない。同じ内容でも送信を抑止しない。
 6. 成功はホスト側での送信完了を意味する（P6）。CLIは、マウスへの適用を待ったり確認したりしない。
+7. **Receiver経由の送信の案内（Q7）。** `set` / `apply` がReceiver経路へ送って成功したら、効果が現れるまで30秒ほどかかることがあり、失われることもあるので、変化がなければ同じコマンドをもう一度実行するよう注記する（"a send through the Receiver can take about 30 s to show and is sometimes lost; if nothing changes, run the same command again"、`-q` のときは出さない）。有線経路の送信には出さない。
+   - 根拠: 実機確認（[実施 2](../hardware-test.md)）で、再ペアリング直後の最初の送信が約5分たっても効かず、送り直すと効いた。それ以外のReceiver経由の送信も、効果が見えるまで10〜30秒かかることがあった。調査側でも同様の2事例がある（上の手順2の経緯）。再現の条件と原因は分かっていない（調査側 [Issue #2](https://github.com/nejiman10/3dx-hid-research/issues/2)）。
+   - 自動では再送しない（手順5）。読み戻しができず（§8）効いたかどうかを判定できないので、再送が要るかは利用者が効果を見て決める。送り直す内容は同じなので、効いていた場合に送り直しても設定は変わらない。
 
 ### 7.1 モード切り替えとの関係
 
@@ -128,7 +141,7 @@ Receiver（key = recv:port-<USBポートパス>）
 
 Phase 1では次のように扱う。
 - 送信は有効な経路だけに行う（§6）。
-- `set` / `apply` の成功時、そのマウスに `standby` の経路があれば、「モードを切り替えたら `cadrat-tool apply` を実行してください」と注記する（`-q` のときは出さない）。
+- `set` / `apply` の成功時、そのマウスに `standby` の経路があれば、"the <route> route is on standby; run `cadrat-tool apply` after switching modes" と注記する（`<route>` は待機中の経路名）（`-q` のときは出さない）。
 
 ## 8. 読み戻し
 
