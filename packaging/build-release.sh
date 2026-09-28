@@ -1,8 +1,8 @@
 #!/bin/sh
 # Builds the cadrat-tool .deb as a RELEASE BUILD (spec 04 §7).
 #
-# Run it on Ubuntu 18.04, the oldest supported LTS, so the binary needs no
-# newer glibc than 2.27. docs/packaging.md shows how to prepare that
+# Run it on Ubuntu 22.04, the oldest supported LTS, so the binary needs no
+# newer glibc than 2.35. docs/packaging.md shows how to prepare that
 # environment in a container. Run it in a fresh clone: the script refuses
 # an existing target/ (whose binaries may come from a newer system), other
 # systems, an uncommitted tree and a binary that needs a newer glibc.
@@ -11,8 +11,8 @@
 set -eu
 
 # The oldest supported release and its glibc.
-min_ubuntu=18.04
-max_glibc=2.27
+min_ubuntu=22.04
+max_glibc=2.35
 
 root=$(CDPATH= cd -- "$(dirname -- "$0")/.." && pwd)
 cd "$root"
@@ -32,6 +32,7 @@ version=$(cargo metadata --format-version 1 --no-deps \
     | sed -n 's/.*"name":"cadrat-tool","version":"\([^"]*\)".*/\1/p')
 
 cargo run --locked --quiet -p xtask -- dist
+# xz rather than zstd, which older dpkg cannot read.
 # CADRAT_VERSION must not carry a test-build label into a release.
 deb=$(env -u CADRAT_VERSION \
     cargo deb --locked -p cadrat-tool --deb-version "$version" --compress-type xz \

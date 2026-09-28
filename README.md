@@ -8,9 +8,9 @@ CadMouse Compact Wireless（C658）と Universal Receiver（C652）を Linux で
 
 ## Status
 
-> **Phase 1, verified on hardware; no release published yet.** Every command in the specification is implemented, tested against a simulated device and checked with a real mouse and Receiver on Ubuntu 24.04. Release packages support Ubuntu 18.04 and later.
+> **Phase 1, verified on hardware; no release published yet.** Every command in the specification is implemented, tested against a simulated device and checked with a real mouse and Receiver on Ubuntu 24.04. Release packages support Ubuntu 22.04 and later; on older systems, build from source.
 
-現在は Phase 1 です。`cadrat-tool` は仕様のコマンドをすべて実装し、模擬デバイスでのテストと実機での確認（[docs/hardware-test.md](docs/hardware-test.md)）を終えました。リリース用の `.deb` は Ubuntu 18.04 以降を対象にしますが、まだ公開していません。
+現在は Phase 1 です。`cadrat-tool` は仕様のコマンドをすべて実装し、模擬デバイスでのテストと実機での確認（[docs/hardware-test.md](docs/hardware-test.md)）を終えました。リリース用の `.deb` は Ubuntu 22.04 以降を対象にしますが、まだ公開していません。それより古い環境ではソースからビルドしてください。
 
 ## Components
 
@@ -37,16 +37,16 @@ All output is in English. Commands, options and exit codes: [docs/spec/03-cli.md
 
 ## Installation
 
-### Release package (Ubuntu 18.04 or later)
+### Release package (Ubuntu 22.04 or later)
 
-Build it on Ubuntu 18.04 from a fresh clone, then install it on any supported Ubuntu:
+Build it on Ubuntu 22.04 from a fresh clone, then install it on any supported Ubuntu:
 
 ```sh
 packaging/build-release.sh             # writes target/debian/cadrat-tool_<version>_amd64.deb
 sudo apt install ./target/debian/cadrat-tool_<version>_amd64.deb
 ```
 
-See [docs/packaging.md](docs/packaging.md) for a container recipe. リリース用の `.deb` は Ubuntu 18.04 上で作ります（手順は [docs/packaging.md](docs/packaging.md)）。
+See [docs/packaging.md](docs/packaging.md) for a container recipe. リリース用の `.deb` は Ubuntu 22.04 上で作ります。22.04 より古い環境では下の「From source」の手順を使います（手順は [docs/packaging.md](docs/packaging.md)）。
 
 ### Test build package (Ubuntu)
 

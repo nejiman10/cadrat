@@ -4,7 +4,7 @@
 
 ## 現状
 
-Phase 1 の実機確認（[hardware-test.md](hardware-test.md)）は終わった。リリース用ビルドの手順（下の「リリース用ビルド」）を用意し、Ubuntu 18.04 で確認した。**GitHub Releases にはまだ何も置いていない。** これまでに所有者の PC へ入れた `.deb` はすべて試験ビルドである。
+Phase 1 の実機確認（[hardware-test.md](hardware-test.md)）は終わった。リリース用ビルドの手順（下の「リリース用ビルド」）を用意し、Ubuntu 22.04 で確認した。**GitHub Releases にはまだ何も置いていない。** これまでに所有者の PC へ入れた `.deb` はすべて試験ビルドである。
 
 ## 試験ビルド
 
@@ -33,20 +33,20 @@ packaging/build-deb.sh [試験番号]       # 既定は 1
 
 ## リリース用ビルド
 
-最小サポートの Ubuntu 18.04 上で、新しく clone したツリーから作ります（[仕様 04 §7](spec/04-implementation.md#7-配布)）。18.04 の標準サポートは終わっていて ESM だけが続いていますが、対象に含めます。
+最小サポートの Ubuntu 22.04 上で、新しく clone したツリーから作ります（[仕様 04 §7](spec/04-implementation.md#7-配布)）。22.04 より古い Ubuntu 向けの `.deb` は作りません。その環境の利用者はソースからビルドします（README の「From source」）。
 
 ```sh
 packaging/build-release.sh
 ```
 
-スクリプトは Ubuntu 18.04 以外、`target/` がある、未コミットの変更がある、のいずれかなら何もせずに止まります。ビルド後は、バイナリが要求する glibc が 2.27 以下であることと、`.deb` が xz 圧縮であること（18.04 の dpkg 1.19 は zstd を展開できない）を確かめます。最後に版、commit、要求する glibc と、`.deb` の SHA-256 を表示します。版は `Cargo.toml` の版そのままで、`--version` にも印は付きません。
+スクリプトは Ubuntu 22.04 以外、`target/` がある、未コミットの変更がある、のいずれかなら何もせずに止まります。ビルド後は、バイナリが要求する glibc が 2.35 以下であることと、`.deb` が xz 圧縮であること（zstd に対応しない古い dpkg でも中身を確かめられるように）を確かめます。最後に版、commit、要求する glibc と、`.deb` の SHA-256 を表示します。版は `Cargo.toml` の版そのままで、`--version` にも印は付きません。
 
-### 18.04 の環境の用意
+### 22.04 の環境の用意
 
-18.04 の PC が無ければコンテナを使います。Docker の例（Podman でも同じ）:
+22.04 の PC が無ければコンテナを使います。Docker の例（Podman でも同じ）:
 
 ```sh
-docker run --rm -it ubuntu:18.04 bash
+docker run --rm -it ubuntu:22.04 bash
 # ここからコンテナの中
 apt-get update
 apt-get install -y build-essential ca-certificates curl git xz-utils binutils
@@ -108,13 +108,14 @@ packaging/build-release.sh              # rust-toolchain.toml の版を rustup �
 - test5（commit `2a45ea6`）を `apt install` で入れ、`--version`、udevルール、`man -w cadrat-tool` を確認した。
 - ビルド時に `cargo deb` が、`target/dist/` の資産について「Cargo の target ディレクトリとして扱わない」という警告を出す。資産は `xtask` が先に作るので、パッケージには入る。
 
-### リリース用ビルドの確認（Ubuntu 18.04、2026-09-28）
+### リリース用ビルドの確認（Ubuntu 22.04、2026-09-28）
 
-- 開発用のクラウド環境で、`debootstrap` で作った Ubuntu 18.04（bionic、glibc 2.27、dpkg 1.19.0.5）の chroot に、commit 済みのツリーを clone して `packaging/build-release.sh` を実行した。Rust は `rust-toolchain.toml` の 1.94.1、`cargo-deb` は 3.8.0 を chroot の中でビルドしたもの。
-- 結果は `cadrat-tool_0.1.0_amd64.deb`。バイナリが要求する glibc は 2.25 以上で、依存は `libc6 (>= 2.25), udev`。`control.tar.xz` と `data.tar.xz` で、18.04 の dpkg で扱える。
-- 同じ chroot で `dpkg -i` して、上の表のファイルがすべて入り、man-db がmanページを登録した（`man -w cadrat-tool-apply` で見つかる）。一般ユーザーで `cadrat-tool --version` が `cadrat-tool 0.1.0`（印なし）を表示し、`cadrat-tool list` は終了コード0（`no mice found`）だった。`dpkg -r` でバイナリとudevルールが消えた。
-- chroot では udev が動いていないので、`postinst` / `postrm` は `udevadm` を呼ばない分岐を通った。udev ルールの反映と実機での動作は、24.04 の試験ビルドで確認済み（上の test3〜test5）。18.04 の実機では確認していない。
-- この確認で作った `.deb` は公開していない。Docker Hub から `ubuntu:18.04` を取得できない環境だったため、コンテナではなく chroot を使った。
+- 開発用のクラウド環境で、`debootstrap` で作った Ubuntu 22.04（jammy、glibc 2.35、dpkg 1.21.1）の chroot に、commit 済みのツリーを clone して `packaging/build-release.sh` を実行した。Rust は `rust-toolchain.toml` の 1.94.1、`cargo-deb` は 3.8.0 を chroot の中でビルドしたもの。
+- 結果は `cadrat-tool_0.1.0_amd64.deb`。バイナリが要求する glibc は 2.34 以上で、依存は `libc6 (>= 2.34), udev`。`control.tar.xz` と `data.tar.xz`。
+- 同じ chroot で `dpkg -i` して、man-db がmanページを登録した（`man -w cadrat-tool-apply` で見つかる）。一般ユーザーで `cadrat-tool --version` が `cadrat-tool 0.1.0`（印なし）を表示し、`cadrat-tool list` は終了コード0（`no mice found`）だった。`dpkg -r` でバイナリとudevルールが消えた。
+- chroot では udev が動いていないので、`postinst` / `postrm` は `udevadm` を呼ばない分岐を通った。udev ルールの反映と実機での動作は、24.04 の試験ビルドで確認済み（上の test3〜test5）。22.04 の実機では確認していない。
+- この確認で作った `.deb` は公開していない。Docker Hub からイメージを取得できない環境だったため、コンテナではなく chroot を使った。
+- 経緯: 最初は最小サポートを 18.04 として同じ確認を行い通過したが、ビルド環境の再現しやすさとCADソフトの対応OSを考えて 22.04 に引き上げた。
 
 ## リリースまでに残ること
 
