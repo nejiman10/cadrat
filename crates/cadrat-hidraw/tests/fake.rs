@@ -12,9 +12,10 @@ use cadrat_hidraw::fake::{
     FakeClock, FakeNode, FakeSystem, Request, probe_response, slot_response,
 };
 use cadrat_hidraw::receiver::{self, Fixed, PairResult, Polling, SetResult, UnpairResult};
+use cadrat_hidraw::sys::{PRODUCT_C652, PRODUCT_C658};
 use cadrat_hidraw::{
-    Inventory, NodeStatus, Route, RouteState, SelectError, SendError, SendFailure, SlotMatch,
-    SlotsRead, System, enumerate, select_management_node, select_mouse, select_node,
+    Inventory, NodeStatus, RejectReason, Route, RouteState, SelectError, SendError, SendFailure,
+    SlotMatch, SlotsRead, System, enumerate, select_management_node, select_mouse, select_node,
     select_receiver,
 };
 use cadrat_proto::{Report10Config, Slot};
@@ -386,6 +387,113 @@ fn ambiguous_node_refuses_to_send() {
         select_mouse(&mut inv, None, None).unwrap_err(),
         SelectError::DeviceInvalid(m) if m.contains("ambiguous-node")
     ));
+}
+
+// --- descriptors captured from devices (vectors/real) ---
+
+/// A node carrying a descriptor from `vectors/real/` (captured from a device;
+/// see `vectors/README.md`).
+fn real(name: &str, product: u16, interface: u8, descriptor: &str) -> FakeNode {
+    let mut node = FakeNode::new(name, product, "1-2", interface, &[]);
+    node.descriptor = descriptor
+        .split_whitespace()
+        .map(|b| u8::from_str_radix(b, 16).unwrap())
+        .collect();
+    node
+}
+
+fn real_descriptors() -> Vec<(String, String)> {
+    let path = Path::new(env!("CARGO_MANIFEST_DIR")).join("../../vectors/real/input.json");
+    let input: serde_json::Value =
+        serde_json::from_str(&std::fs::read_to_string(path).unwrap()).unwrap();
+    input["descriptors"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .map(|d| {
+            (
+                d["name"].as_str().unwrap().to_owned(),
+                d["hex"].as_str().unwrap().to_owned(),
+            )
+        })
+        .collect()
+}
+
+#[test]
+fn real_descriptors_are_classified() {
+    for (name, hex) in real_descriptors() {
+        let (product, interface) = match name.as_str() {
+            "c652_receiver_mi00" => (PRODUCT_C652, 0),
+            "c652_receiver_mi02" => (PRODUCT_C652, 2),
+            "c658_wired_mi00" => (PRODUCT_C658, 0),
+            "c658_wired_mi01" => (PRODUCT_C658, 1),
+            other => panic!("unexpected descriptor {other}"),
+        };
+        let node = real("hidraw0", product, interface, &hex).get(0x08, &[Ok(probe_response(A))]);
+        let inv = inventory(vec![node]);
+        let roles = match &inv.nodes[0].status {
+            NodeStatus::Candidate {
+                setting,
+                management,
+                ..
+            } => (setting.is_some(), management.map(|m| m.pairing)),
+            NodeStatus::Rejected(RejectReason::NoFeature10) => (false, None),
+            other => panic!("{name}: {other:?}"),
+        };
+        let expected = match name.as_str() {
+            // Management only.
+            "c652_receiver_mi00" => (false, Some(true)),
+            // Receiver-route setting node that also declares management.
+            "c652_receiver_mi02" => (true, Some(true)),
+            // Standard mouse input only.
+            "c658_wired_mi00" => (false, None),
+            // Wired setting node.
+            _ => (true, None),
+        };
+        assert_eq!(roles, expected, "{name}");
+    }
+}
+
+#[test]
+fn real_descriptors_select_as_expected() {
+    let hex: std::collections::HashMap<_, _> = real_descriptors().into_iter().collect();
+    let nodes = vec![
+        real("hidraw0", PRODUCT_C658, 0, &hex["c658_wired_mi00"]),
+        real("hidraw1", PRODUCT_C658, 1, &hex["c658_wired_mi01"])
+            .get(0x08, &[Ok(probe_response(A))]),
+    ];
+    let mut inv = inventory(nodes);
+    assert_eq!(keys(&inv).len(), 1);
+    let target = select_mouse(&mut inv, None, None).unwrap();
+    assert_eq!(target.route.route, Route::Wired);
+    assert_eq!(target.route.path, Path::new("/dev/hidraw1"));
+
+    let receiver = |name, interface, id: Option<[u8; 6]>| {
+        let node = real(
+            name,
+            PRODUCT_C652,
+            interface,
+            &hex[if interface == 0 {
+                "c652_receiver_mi00"
+            } else {
+                "c652_receiver_mi02"
+            }],
+        );
+        match id {
+            Some(id) => node.get(0x08, &[Ok(probe_response(id))]),
+            None => node,
+        }
+    };
+    let nodes = vec![
+        receiver("hidraw2", 2, Some(A)),
+        receiver("hidraw0", 0, None).slots([&[None], &[None], &[Some(A)], &[None], &[None]]),
+    ];
+    let mut inv = inventory(nodes);
+    let target = select_receiver(&mut inv, None, true).unwrap();
+    assert_eq!(target.interface, 0);
+    let mouse = select_mouse(&mut inv, None, None).unwrap();
+    assert_eq!(mouse.route.route, Route::Receiver);
+    assert_eq!(mouse.route.path, Path::new("/dev/hidraw2"));
 }
 
 // --- sending ---

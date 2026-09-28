@@ -39,10 +39,12 @@ docs/spec/
 |---|---|---|
 | `research` | 調査側が公開した入力（`sdk/python/vectors/`）をそのまま複製 | 各種類の代表例 |
 | `boundary` | 本リポジトリが用意した合成入力を、調査側のexporterで変換 | 境界値。dpi 50 / 8200、lift 0 / 31 / 255、全polling rate、全direct action、host 0 / 1 / 7 / 8 / 214 / 215、offset 18..24それぞれへの `host:1`、descriptorのPUSH/POP・long item・複数item合算・Report IDなし、Report `0x03` の遷移と上位bitの切り捨て、全slotのunpair packet |
+| `real` | 調査側が収録した実機のdescriptor（`sdk/python/tests/data/real_hid_descriptors.json`）の `descriptor_hex` だけを取り出し、調査側のexporterで変換 | C652のMI_00・MI_02と、有線C658のMI_00・MI_01。descriptorだけでwire・Report `0x03`・Receiverは空 |
 
 照合する項目: wire値と `inspect` の結果、descriptorのFeature / Input wire長、Report `0x03` のbitmapと押下・解放mask、Receiver packet。descriptorの `top_level_usages` は `cadrat-proto` の責務に含めないので照合しない。
 
 - ベクタは調査SDKの挙動を示すもので、プロトコルの新しい根拠ではない。
+- `real` のdescriptorは `cadrat-hidraw` のfakeにも使い、nodeの分類（02 §4、05 §1）と選択を確かめる（`crates/cadrat-hidraw/tests/fake.rs`）。
 - exporterは設定から作ったwireしか検査しないため、次のものはベクタで表せない。Rust側だけのテストで確かめる。
   - `raw:` のボタン（`0x10`..`0x27`）と、actionに対応しないwire値（`0x00`..`0x09`）
   - 予約byteが0でないもの、offset 26が `0x1e` でないもの、`inspect` のエラー（長さ、Report ID、未知のwheel・polling）

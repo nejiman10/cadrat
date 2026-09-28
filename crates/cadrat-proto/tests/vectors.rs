@@ -12,7 +12,7 @@ use cadrat_proto::{
 };
 use serde_json::{Map, Value};
 
-const SETS: [&str; 2] = ["research", "boundary"];
+const SETS: [&str; 3] = ["research", "boundary", "real"];
 
 fn load(set: &str, file: &str) -> Value {
     let path = PathBuf::from(env!("CARGO_MANIFEST_DIR"))

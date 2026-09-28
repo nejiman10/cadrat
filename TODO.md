@@ -10,14 +10,6 @@
 
 現状: 実機の Ubuntu 24.04.5 で、試験ビルドのインストール・削除（test4 を削除して test5 を入れた）、udev ルールの反映（実機確認 E1）、man ページ、一般ユーザーでの `list` を確認した（[docs/packaging.md](docs/packaging.md)）。達成条件は試験ビルドで満たした。残りは、リリース用のビルド（サポートする最も古い Ubuntu LTS 上）と GitHub Releases への公開で、対象 LTS の決定と項目 9 の後に行う。
 
-## 8. 実機の HID descriptor をベクタに加える
-
-目的: 合成 descriptor だけでなく、実機の descriptor でも `cadrat-proto` の長さ解析が SDK と一致することを確かめる。
-
-前提: 調査リポジトリの TODO 12（実機 descriptor の収録）。
-
-達成条件: 調査側で収録された descriptor を [vectors/README.md](vectors/README.md) の手順で取り込み、出所の commit とハッシュを記録する。個体識別子が含まれないことを確認し、ベクタテストが通る。
-
 ## 9. Receiver への初回送信の方針を見直す（Q7）
 
 目的: 再ペアリング直後の最初の送信が効かず、送り直すと効いた事例（[実機確認 実施 2](docs/hardware-test.md) の R7・R8）を受けて、Q7 の方針を決め直す。

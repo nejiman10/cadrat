@@ -92,6 +92,7 @@ dependencies = [
  "cadrat-hidraw",
  "cadrat-proto",
  "rustix",
+ "serde_json",
  "tempfile",
  "thiserror",
 ]
