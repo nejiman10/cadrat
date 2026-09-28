@@ -123,6 +123,16 @@ pairing modeを開始し、新しいslotが占有されるまで待つ。終了�
 
 対象slotの内容を表示して確認を取り、解除し、slotが空になったことで成否を判定する（[05 §4](05-receiver.md#4-unpair)）。
 
+### `hold-open [--poll-interval=<秒>]`
+
+有線C658のhidraw nodeを開いたまま保持し、抜き差しに追従する（[02 §9](02-device.md#9-hold-open)）。SIGINTかSIGTERMまで前面で動き続け、systemd user unit（`cadrat-hold-open.service`）から起動することを想定する。
+
+- `--poll-interval` の既定は1秒。
+- 標準出力に、保持と解放を1行ずつ出す（`held      /dev/hidraw5 (MI_01)`、`released  /dev/hidraw5`）。journalに残すためである。開始時の案内はstderrに出し、`-q` で消える。
+- 警告（`W-HOLD-OPEN-FAILED`、`W-HOLD-ENUMERATE-FAILED`）はstderrに出す。長く動くので、最後にまとめて出すことはしない。
+- `--mouse`、`--route`、`--hidraw`、`--json` は使えない（Usage、2）。
+- 終了コードは、シグナルで止めた場合0。
+
 ### 後のPhaseで追加するコマンド
 
 `monitor`（Report `0x03` / `0x17`）。
@@ -244,5 +254,7 @@ note    the receiver route is on standby; run `cadrat-tool apply` after switchin
 | `W-SLOT-READ-RETRY` | pairまたはunpairの待機中にslotの読み取りがerrnoで失敗し、読み直した |
 | `W-MANAGEMENT-REOPENED` | pairまたはunpairの途中で管理nodeが使えなくなり、開き直した（[05 §6](05-receiver.md#6-管理nodeの開き直し)） |
 | `W-INACCESSIBLE` | 列挙で、permission不足で開けないnodeがあった（udevルールのヒントを添える） |
+| `W-HOLD-OPEN-FAILED` | `hold-open` で対象のnodeを開けなかった（pathとerrnoの組ごとに1回。permission不足ならudevルールのヒントを添える） |
+| `W-HOLD-ENUMERATE-FAILED` | `hold-open` でsysfsを列挙できなかった（回復するまで1回） |
 
 警告は送信を止めない。止める設定（`--deny-warnings`）を用意するかは未決（[Q6](04-implementation.md#6-未決事項)）。

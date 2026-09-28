@@ -66,6 +66,7 @@ jobs:
           # No devices here: list succeeds and finds nothing.
           su tester -c 'cadrat-tool list'
           test -f /usr/lib/udev/rules.d/69-cadrat.rules
+          test -f /usr/lib/systemd/user/cadrat-hold-open.service
           dpkg -r cadrat-tool
           test ! -e /usr/bin/cadrat-tool
       - name: Attest build provenance

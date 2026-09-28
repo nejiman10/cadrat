@@ -77,6 +77,7 @@ packaging/build-release.sh              # rust-toolchain.toml の版を rustup �
 |---|---|
 | `/usr/bin/cadrat-tool` | 本体 |
 | `/usr/lib/udev/rules.d/69-cadrat.rules` | hidrawの `uaccess`（[udev/69-cadrat.rules](../udev/69-cadrat.rules)） |
+| `/usr/lib/systemd/user/cadrat-hold-open.service` | 有線C658の hold-open（[packaging/systemd/](../packaging/systemd/cadrat-hold-open.service)、仕様 02 §9）。**有効にしない**。利用者が `systemctl --user enable --now cadrat-hold-open.service` で有効にする |
 | `/usr/share/man/man1/cadrat-tool*.1.gz` | manページ |
 | `/usr/share/bash-completion/completions/cadrat-tool` | bash補完 |
 | `/usr/share/zsh/vendor-completions/_cadrat-tool` | zsh補完 |

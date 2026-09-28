@@ -1,6 +1,6 @@
 # cadrat-tool 仕様（Phase 1: 独立設定ツール）
 
-状態: **草案 v0.19**（2026-09-28）。実装前の合意用。
+状態: **草案 v0.20**（2026-09-28）。実装前の合意用。
 
 ## 0. cadrat プロジェクトの構成
 
@@ -29,14 +29,15 @@ CadMouse Compact Wireless（C658）の設定を、Linux上でデーモンを介�
 
 | 含む | 含まない（後のPhase） |
 |---|---|
-| 有線C658とReceiver（C652）経由C658へのReport `0x10` 送信 | デーモン、D-Bus、常駐、hold-open |
+| 有線C658とReceiver（C652）経由C658へのReport `0x10` 送信 | デーモン、D-Bus、設定の常駐管理 |
 | TOMLの読み込み・検証・部分更新・書き戻し | 複数プロファイル、アプリ別設定 |
 | マウス単位の列挙、識別キー、自動選択と明示指定 | Report `0x03` / `0x17` の監視（`monitor`） |
 | TOMLから作ったwire値の表示 | 送信履歴などのCLI側状態保存 |
 | Receiverのslot読み取り、pair、unpair | プロファイルの切り替え、マウスごとの設定の紐付け |
 | `--json` 出力 | |
+| 有線C658のhold-open（`hold-open` と、既定で無効のsystemd user unit） | |
 
-この段階のhold-openは、調査リポジトリの既存user service（`c658-hidraw-hold-open.service`）に任せる。CLIはhidrawを一時的に開くだけなので共存できる。
+hold-openは当初、調査リポジトリのuser service（`c658-hidraw-hold-open.service`）に任せる予定だった。しかしそれがないと有線C658が接続後数秒で使えなくなる事例があり（[02 §9](02-device.md#9-hold-open)）、利用者に調査用のPython SDKを入れてもらうのは現実的でないため、Phase 1に含める。`cadrat-tool hold-open` と、それを動かすsystemd user unit（`cadrat-hold-open.service`、既定で無効）を配布する。`cadratd` ができたら、hold-openはその役目になる。
 
 ## 3. 基本原則
 

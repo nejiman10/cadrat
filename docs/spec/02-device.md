@@ -146,3 +146,18 @@ Phase 1では次のように扱う。
 ## 8. 読み戻し
 
 GET `0x10` による読み戻しは行わない。調査で32-byteの現在設定を得られていないため（OBSERVED）。
+
+## 9. hold-open
+
+有線C658のhidraw nodeを、プロセスが開いたまま保持する。`cadrat-tool hold-open`（[03 §3](03-cli.md#hold-open---poll-interval秒)）が行い、配布物のsystemd user unit（`cadrat-hold-open.service`）がそれを常駐させる。unitは既定で無効で、有線で使う利用者が自分で有効にする。
+
+- **理由**: 調査の実機では、有線C658のhidrawをどのプロセスも開いていないと、USB接続から数秒で入力が止まった。全interfaceを開いたままにすると、止まらなかった（調査側 hold-open監査、各条件2回。調査側のuser serviceで1日以上の通常利用と再接続時のつかみ直しも確認）。観測は1つの環境だけで、原因は分かっていない（UNKNOWN）。したがってhold-openは原因の対策ではなく、観測に基づく回避策である。
+- **対象**: sysfsの `HID_ID` がbus USB、VID `256f`、PID `c658` のnodeすべて（interfaceを問わない）。Receiver（`c652`）とUSB以外のbusは対象外とする。
+- **開き方**: `O_RDWR | O_CLOEXEC | O_NONBLOCK`。調査側のuser serviceと同じで、この形で長期の利用が確認されている。reportの送受信は一切しない。
+- **追従**: 既定1秒ごとにsysfsを列挙し、次のように揃える。
+  - 対象から消えたnodeを閉じる。
+  - 保持中のfdに `HIDIOCGRAWINFO` を発行し、失敗したら閉じる。抜き差しが1回の間隔内に起き、同じpathが新しいデバイスに使われた場合に、古いfdを持ち続けないためである（調査側の実装にない追加。ioctlはデバイスと通信しない）。
+  - 新しい対象を開く。開けなければ、pathとerrnoの組が変わったときだけ警告し（`W-HOLD-OPEN-FAILED`）、次の周期でまた試す。
+  - sysfsを列挙できなければ一度だけ警告し（`W-HOLD-ENUMERATE-FAILED`）、保持中のfdはそのままにして次の周期でまた試す。
+- **終了**: SIGINTまたはSIGTERMで、保持中のfdをすべて閉じて終了コード0で終わる。
+- **共存**: 他の `cadrat-tool` コマンドや調査側のuser serviceと同時に動いてよい。hidrawは複数のプロセスが同時に開ける。ただし二重に動かす意味はないので、調査側のserviceは止めるよう案内する。

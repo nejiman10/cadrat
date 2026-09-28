@@ -2,7 +2,7 @@
 
 [仕様 04 §5](spec/04-implementation.md#5-phase-1-の達成条件) の達成条件を、実機で確かめる手順です。記録の形式は調査リポジトリの `HARDWARE_TEST.md` に倣います。
 
-**状態: 実施 1・2 を完了（2026-09-28）。** 実施には、所有者の明示的な指示、復元値の記録、この手順書の3つが要る（[AGENTS.md](../AGENTS.md)「Safety」）。3つとも揃った（下の「記録」）。
+**状態: 実施 1・2 を完了（2026-09-28）。実施 3（§H、hold-open）は未実施。** 実施には、所有者の明示的な指示、復元値の記録、この手順書の3つが要る（[AGENTS.md](../AGENTS.md)「Safety」）。3つとも揃った（下の「記録」）。
 
 ## 0. 実施の前提
 
@@ -13,7 +13,7 @@
 - **識別子を記録しない。** 機器ID（GET `0x08` の bytes 2..7）とslotの識別子は、この文書にもコミットにも書かない。貼り付ける出力は `--redact` 付きで取るか、伏せてから貼る。同じかどうかは「一致」「不一致」とだけ書く。
 - **ログは非公開の場所に置く。** `--json` の出力、ローカルパス、ユーザー名を含むログは、リポジトリの外（下の `$T/logs/`）に置く。ここには結果の要約だけを書く。
 - **既定の設定ファイルを使わない。** すべてのコマンドに `--config` を付け、試験用のファイルだけを使う。
-- **調査リポジトリのhold-open serviceはそのままでよい。** `cadrat-tool` はhidrawを一時的に開くだけなので共存できる（仕様 README §2）。
+- **調査リポジトリのhold-open serviceは、実施 1・2 ではそのままでよい。** `cadrat-tool` はhidrawを一時的に開くだけなので共存できる。実施 3（§H）では止めて、`cadrat-hold-open.service` に置き換える。
 - 各段階で、予定と違う挙動が出たら**そこで止めて**、§G.1の手順で復元してから記録する。先に進まない。
 - 調査リポジトリの知見と食い違う挙動は、調査リポジトリへ報告する（[AGENTS.md](../AGENTS.md)「Authority」）。
 
@@ -239,6 +239,22 @@ F6〜F10の結果（slotの空き→再占有、入力と設定の反映）を�
 
 - `.deb` を入れた場合、試験後も使い続けるかを所有者と決める。外すときは `sudo apt remove cadrat-tool` を実行する。
 - `$T/logs/` は非公開のまま保管する。
+
+## H. 有線の hold-open（実施 3、条件 12）
+
+`cadrat-tool hold-open` と `cadrat-hold-open.service`（仕様 02 §9）が、調査側の `c658-hidraw-hold-open.service` の代わりになることを確かめる。設定の送信はしないので、復元値は使わない。マウスは有線で使う。
+
+| # | 操作 | 期待 |
+|---|---|---|
+| H0 | hold-open を含む試験ビルドを入れる（`packaging/build-deb.sh 6` → `sudo apt install ./target/debian/cadrat-tool_*~test6*_amd64.deb`）。`ls /usr/lib/systemd/user/cadrat-hold-open.service`、`systemctl --user is-enabled cadrat-hold-open.service` | unitがあり、`disabled`（既定で無効） |
+| H1 | `systemctl --user disable --now c658-hidraw-hold-open.service` で調査側を止め、有線C658を抜き差しする | 数秒で入力が止まる（調査側の条件Aの再現。止まらなければそれも記録する） |
+| H2 | `systemctl --user enable --now cadrat-hold-open.service`。`journalctl --user -u cadrat-hold-open.service -n 20` | `held      /dev/hidrawN (MI_00)` と `(MI_01)` の2行。入力が戻らなければ抜き差しする |
+| H3 | 有線C658を抜き差しし、1分以上カーソル移動・クリック・スクロールを試す。journalを見る | 入力が止まらない。journalに `released` の2行と、続く `held` の2行 |
+| H4 | `ct apply`（サービスが動いたまま。`ct` は §0.2） | 終了コード0。hold-open と共存できる |
+| H5 | `systemctl --user stop cadrat-hold-open.service`。journalを見る | `released` の2行が出て、サービスが止まる |
+| H6 | 片付け: 使い続ける方の service を有効にする（通常は `systemctl --user enable --now cadrat-hold-open.service`、調査側は無効のまま） | 有線で入力が続く |
+
+記録には、各行の結果と、抜き差しから入力が止まるまでのおおよその時間（H1）を書く。hidraw の node 番号は書いてよいが、ローカルパスやユーザー名は書かない。
 
 ## 記録
 

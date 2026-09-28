@@ -34,6 +34,10 @@ struct State {
     sets: VecDeque<Reply<usize>>,
     log: Vec<Request>,
     on_set: Option<SetHook>,
+    /// Unplugged: every open descriptor answers `ENODEV`.
+    gone: bool,
+    /// Descriptors currently open.
+    open: usize,
 }
 
 impl std::fmt::Debug for State {
@@ -213,6 +217,19 @@ impl FakeNode {
         self.state.borrow().log.clone()
     }
 
+    /// Unplugs the device: descriptors already open answer `ENODEV` from
+    /// now on. Remove the node from the [`FakeSystem`] as well, or replace
+    /// it with a new node on the same path to model a reconnect.
+    pub fn unplug(&self) {
+        self.state.borrow_mut().gone = true;
+    }
+
+    /// How many descriptors of this node are open.
+    #[must_use]
+    pub fn open_count(&self) -> usize {
+        self.state.borrow().open
+    }
+
     /// Only the SET requests received so far.
     #[must_use]
     pub fn sets(&self) -> Vec<Vec<u8>> {
@@ -237,6 +254,15 @@ struct FakeDevice {
 const ENODEV: i32 = 19;
 
 impl FakeDevice {
+    fn new(node: FakeNode) -> Self {
+        node.state.borrow_mut().open += 1;
+        Self { node, dead: false }
+    }
+
+    fn gone(&self) -> bool {
+        self.dead || self.node.state.borrow().gone
+    }
+
     fn check<T>(&mut self, reply: Reply<T>) -> io::Result<T> {
         if reply.as_ref().is_err_and(|&errno| errno == ENODEV) {
             self.dead = true;
@@ -249,8 +275,17 @@ fn os_error(errno: i32) -> io::Error {
     io::Error::from_raw_os_error(errno)
 }
 
+impl Drop for FakeDevice {
+    fn drop(&mut self) {
+        self.node.state.borrow_mut().open -= 1;
+    }
+}
+
 impl Device for FakeDevice {
     fn raw_info(&mut self) -> io::Result<RawInfo> {
+        if self.node.state.borrow().gone {
+            return Err(os_error(ENODEV));
+        }
         Ok(self.node.raw_info)
     }
 
@@ -259,7 +294,7 @@ impl Device for FakeDevice {
     }
 
     fn get_feature(&mut self, report_id: u8, len: usize) -> io::Result<Vec<u8>> {
-        if self.dead {
+        if self.gone() {
             return Err(os_error(ENODEV));
         }
         let node = self.node.clone();
@@ -279,7 +314,7 @@ impl Device for FakeDevice {
     }
 
     fn set_feature(&mut self, data: &[u8]) -> io::Result<usize> {
-        if self.dead {
+        if self.gone() {
             return Err(os_error(ENODEV));
         }
         let node = self.node.clone();
@@ -330,10 +365,7 @@ impl System for FakeSystem {
         if let Some(errno) = node.open_error {
             return Err(os_error(errno));
         }
-        Ok(Box::new(FakeDevice {
-            node: node.clone(),
-            dead: false,
-        }))
+        Ok(Box::new(FakeDevice::new(node.clone())))
     }
 }
 

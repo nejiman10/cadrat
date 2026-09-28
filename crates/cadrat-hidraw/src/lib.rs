@@ -11,6 +11,7 @@
 #![allow(clippy::missing_panics_doc)]
 
 mod enumerate;
+pub mod hold;
 pub mod linux;
 pub mod model;
 pub mod receiver;
@@ -21,6 +22,7 @@ pub mod sys;
 pub mod fake;
 
 pub use enumerate::enumerate;
+pub use hold::{HoldEvent, HoldOpen};
 pub use linux::LinuxSystem;
 pub use model::{
     Inventory, Mouse, MouseKey, MouseRoute, NodeEntry, NodeStatus, Receiver, ReceiverKey,
