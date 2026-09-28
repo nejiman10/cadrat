@@ -2,7 +2,7 @@
 
 [仕様 04 §5](spec/04-implementation.md#5-phase-1-の達成条件) の達成条件を、実機で確かめる手順です。記録の形式は調査リポジトリの `HARDWARE_TEST.md` に倣います。
 
-**状態: 実施 1 を開始（2026-09-28）。** 実施には、所有者の明示的な指示、復元値の記録、この手順書の3つが要る（[AGENTS.md](../AGENTS.md)「Safety」）。3つとも揃った（下の「記録」）。
+**状態: 実施 1・2 を完了（2026-09-28）。** 実施には、所有者の明示的な指示、復元値の記録、この手順書の3つが要る（[AGENTS.md](../AGENTS.md)「Safety」）。3つとも揃った（下の「記録」）。
 
 ## 0. 実施の前提
 
@@ -359,3 +359,31 @@ F6の修正（commit `2657786`、試験ビルド test4）の後、unpair → pai
 | 9 pair待機中のCtrl-C | PASS（F4） |
 | 10 unpair確認の拒否 | PASS（F3） |
 | 11 記録 | この文書 |
+
+### 実施 2（2026-09-28、条件 8 の再試験）
+
+- 実施の指示: 2026-09-28、所有者から「開き直して続行する修正を、確認まで行う」との指示を受けた。範囲は条件 8 の再試験と復元。復元値は実施 1 と同じ。
+- cadrat: commit `2a45ea6`、`cadrat-tool 0.1.0~test5+g2a45ea6 (test build)`（仕様 05 §6 の開き直しを含む）
+- 開始時の状態: マウスは slot 1。管理nodeは MI_00
+
+| # | 結果 | 観察 |
+|---|---|---|
+| R1 | PASS | `receiver unpair 1` に `y`: 終了コード0、`unpaired slot 1`。`W-UNPAIR-EPIPE`、`W-SLOT-READ-RETRY`（3回、最後は `ENODEV`）、`W-MANAGEMENT-REOPENED`（1回。途中の試みは `no matching device is connected`）。解除後の全slotは空き |
+| R2 | PASS | `receiver pair`: 終了コード0、`paired  slot 2`。見出しの管理nodeは一時的に別の番号（MI_00 のまま、hidraw番号だけ変化）。`W-SLOT-READ-RETRY`（2回、`ENODEV`）、`W-MANAGEMENT-REOPENED`（1回。途中の試みは、新しい5つのnodeを開けない `EACCES`）。pairing表示は成立時に点滅から点灯に変わった |
+| R3 | PASS | マウスは slot 2（MI_02）で見え、keyの指紋はD1と一致 |
+| R4 | PASS | `receiver unpair 2` に `y`: 終了コード0。`W-SLOT-READ-RETRY`（3回、`ENODEV`）、`W-MANAGEMENT-REOPENED`（1回） |
+| R5 | PASS | `receiver pair`: 終了コード0、`paired  slot 3`。`W-SLOT-READ-RETRY`（2回）、`W-MANAGEMENT-REOPENED`（1回）。停止も成功 |
+| R6 | PASS | マウスは slot 3（MI_03）で見え、keyの指紋はD1と一致 |
+| R7 | 観察 | `apply`（dpi 400、radial `host:1`）は `via receiver (MI_03)`、終了コード0。約5分マウスを使いながら待ったが効果が現れなかった（30秒の観察4回とも Report `0x03` なし） |
+| R8 | PASS | もう一度 `apply` を送ると、直後から効いた（radialで `03 01` / `03 00` ×3） |
+| R9 | PASS | Receiver経路、続いて有線経路に復元値を送った。いずれも終了コード0 |
+
+- 条件 8: PASS。2サイクルとも、slotの空化と再占有をcadratが正しく判定した。解除のたびに管理nodeのfdが `ENODEV` になったが、開き直して続行できた（仕様 05 §6）。
+- 開き直しの途中の失敗理由（`no matching device is connected`、新しいnodeの `EACCES`）から、slotが変わるとReceiverの全interfaceのhidraw nodeが作り直され、udevの権限付与が一瞬遅れると考えられる。調査リポジトリへ報告する。
+- slotの割り当て: 実施 1・2 を通じて 4 → 0 → 1 → 2 → 3 と、毎回ひとつ先のslotに結合された。調査リポジトリへ報告する。
+- 条件 3a / Q7: 再ペアリング直後の最初の送信（R7）は効果が現れず、送り直し（R8）で効いた。調査で観察されていた「Receiverへの初回送信で効果が見えない」事例の再現である。仕様 04 のQ7に従い、方針を見直す。
+
+### 実施 2 の後の条件
+
+実施 1 と 2 で、仕様 04 §5 の条件 1〜11 をすべて満たした（条件 6・7 は承認済みの代替手順）。ただし条件 3a の記録から、Q7（Receiverへの初回送信）の方針の見直しが要る。
+

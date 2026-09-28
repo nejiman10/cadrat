@@ -70,8 +70,13 @@ packaging/build-deb.sh [試験番号]       # 既定は 1
 - udev ルールが有効に働き、一般ユーザーで `list` と送信ができた。ルールを外すと開けなくなり、戻すと元どおり使えた（実機確認 E1）。`dpkg -V cadrat-tool` も異常なし。
 - 実機での削除は、所有者が使い続けるため未確認。
 
+### 削除と test5 の導入（実機、2026-09-28）
+
+- `apt remove cadrat-tool` で test4 を削除し、`/usr/bin/cadrat-tool` と `/usr/lib/udev/rules.d/69-cadrat.rules` が消えたことを確認した。`dpkg -s` は `deinstall ok config-files`（削除後の通常の状態）。
+- test5（commit `2a45ea6`）を `apt install` で入れ、`--version`、udevルール、`man -w cadrat-tool` を確認した。
+- ビルド時に `cargo deb` が、`target/dist/` の資産について「Cargo の target ディレクトリとして扱わない」という警告を出す。資産は `xtask` が先に作るので、パッケージには入る。
+
 ## リリースまでに残ること
 
-- 実機のUbuntu LTSで、削除を確認する（インストールとudevルールの反映は test3 / test4 で確認済み）。
 - リリースのビルドは、サポートする最も古いUbuntu LTS上で行う（glibcの互換性のため）。対象とするLTSの版は、リリース時点で決める。24.04でビルドした試験ビルドは、22.04では依存を満たさない。
 - 版から `~test…` を外し、GitHub Releasesに置く。
