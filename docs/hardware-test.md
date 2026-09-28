@@ -273,8 +273,14 @@ F6〜F10の結果（slotの空き→再占有、入力と設定の反映）を�
 
 | # | 結果 | 観察 |
 |---|---|---|
-| A1 | （結果待ち） | |
+| A1 | PASS | 全テスト成功（計158件）。`cadrat-tool 0.1.0~test3+g4174787 (test build)`（`.deb` 試験ビルド）、Ubuntu 24.04.5 LTS、カーネル 7.0.0-34-generic |
 | A2 | PASS | マウス1台。有効な経路は wired。Receiver経路（slot 4、MI_04）も standby として同じマウスにまとまった |
 | A3 | PASS | 有線: MI_01が設定node、MI_00は `no-feature-0x10`（調査側Q2と一致）。Receiver: MI_00〜MI_04すべてが管理候補、MI_04がslot 4の設定node（MI_N ↔ slot N と一致）。管理nodeにはMI_00を選んだ |
 | A4 | PASS | `ok` |
 | A5 | PASS | dry-runのwireが復元値と完全に一致 |
+| B1 | PASS | 終了コード0、`via wired (MI_01)`、`saved`。standbyのreceiver経路について `note` が出た |
+| B2 | PASS | 試験者の判断: 明らかに遅くなった |
+| B3 | PASS | 終了コード0。wire byte 25 が `29` |
+| B4 | PASS | 30秒で `03 01` ×10、`03 00` ×10 |
+| B5 | PASS（DPIは確認待ち） | 復元値の送信は終了コード0。その後15秒の radial 押下で Report `0x03` なし（中クリックに戻った） |
+| B6 | PASS | `get` は 400 と `host:1`。`restore.toml` との差分は dpi と radial の2行だけ。置き換えた値の前後の空白と行末コメントは残った |
