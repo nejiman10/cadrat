@@ -1,4 +1,4 @@
-//! `receiver slots`, `receiver pair` and `receiver unpair` (spec 05).
+//! `receiver slots`, `receiver pair` and `receiver unpair` (spec receiver).
 
 use std::io::Write;
 use std::time::Duration;
@@ -15,7 +15,7 @@ use crate::exit::{Exit, Failure};
 use crate::render::{self, Redactor};
 
 pub fn run(ctx: &mut Ctx, command: &ReceiverCommand) -> Result<(), Failure> {
-    // Spec 05 §5: receiver commands do not take a mouse.
+    // Spec receiver §5: receiver commands do not take a mouse.
     if ctx.global.mouse.is_some() || ctx.global.route.is_some() {
         return Err(Failure::new(
             Exit::Usage,
@@ -52,7 +52,7 @@ fn polling(timeout: f64, interval: f64) -> Polling {
     }
 }
 
-/// Enumerates and chooses the management node (spec 05 §1).
+/// Enumerates and chooses the management node (spec receiver §1).
 fn target(
     ctx: &mut Ctx,
     receiver: &ReceiverArg,

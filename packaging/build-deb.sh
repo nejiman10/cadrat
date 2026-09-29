@@ -5,7 +5,7 @@
 # version, so a later release upgrades it. A test build has not passed the
 # Phase 1 hardware checks (docs/hardware-test.md) and is not published as a
 # release. Releases are built with packaging/build-release.sh on Ubuntu 22.04
-# (spec 04 §7).
+# (spec implementation §7).
 #
 # Usage: packaging/build-deb.sh [TEST_NUMBER]
 set -eu

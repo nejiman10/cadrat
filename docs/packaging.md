@@ -1,6 +1,6 @@
 # `.deb` パッケージ
 
-[仕様 04 §7](spec/04-implementation.md#7-配布) に沿って、`cadrat-tool` を `.deb` にする手順です。
+[仕様 implementation §7](spec/implementation.md#7-配布) に沿って、`cadrat-tool` を `.deb` にする手順です。
 
 ## 現状
 
@@ -33,7 +33,7 @@ packaging/build-deb.sh [試験番号]       # 既定は 1
 
 ## リリース用ビルド
 
-最小サポートの Ubuntu 22.04 上で、新しく clone したツリーから作ります（[仕様 04 §7](spec/04-implementation.md#7-配布)）。22.04 より古い Ubuntu 向けの `.deb` は作りません。その環境の利用者はソースからビルドします（README の「From source」）。
+最小サポートの Ubuntu 22.04 上で、新しく clone したツリーから作ります（[仕様 implementation §7](spec/implementation.md#7-配布)）。22.04 より古い Ubuntu 向けの `.deb` は作りません。その環境の利用者はソースからビルドします（README の「From source」）。
 
 ```sh
 packaging/build-release.sh
@@ -77,7 +77,7 @@ packaging/build-release.sh              # rust-toolchain.toml の版を rustup �
 |---|---|
 | `/usr/bin/cadrat-tool` | 本体 |
 | `/usr/lib/udev/rules.d/69-cadrat.rules` | hidrawの `uaccess`（[udev/69-cadrat.rules](../udev/69-cadrat.rules)） |
-| `/usr/lib/systemd/user/cadrat-hold-open.service` | 有線C658の hold-open（[packaging/systemd/](../packaging/systemd/cadrat-hold-open.service)、仕様 02 §9）。**有効にしない**。利用者が `systemctl --user enable --now cadrat-hold-open.service` で有効にする |
+| `/usr/lib/systemd/user/cadrat-hold-open.service` | 有線C658の hold-open（[packaging/systemd/](../packaging/systemd/cadrat-hold-open.service)、仕様 device §9）。**有効にしない**。利用者が `systemctl --user enable --now cadrat-hold-open.service` で有効にする |
 | `/usr/share/man/man1/cadrat-tool*.1.gz` | manページ |
 | `/usr/share/bash-completion/completions/cadrat-tool` | bash補完 |
 | `/usr/share/zsh/vendor-completions/_cadrat-tool` | zsh補完 |

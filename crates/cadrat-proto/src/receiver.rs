@@ -1,4 +1,4 @@
-//! C652 Receiver management: pairing packets and slot reports (spec 05).
+//! C652 Receiver management: pairing packets and slot reports (spec receiver).
 //!
 //! `OBSERVED` (`evidence/receiver-repair-2026-09`): one cycle of unpairing
 //! slot 2 and pairing into slot 3 with these packets.
@@ -70,7 +70,7 @@ impl fmt::Display for Slot {
 /// A parsed slot report.
 ///
 /// Equality compares the full raw response, which is what the unpair
-/// procedure checks between confirmation and execution (spec 05 §4 step 4).
+/// procedure checks between confirmation and execution (spec receiver §4 step 4).
 #[derive(Clone, Copy, PartialEq, Eq, Hash)]
 pub struct SlotReport {
     slot: Slot,
@@ -83,7 +83,7 @@ impl SlotReport {
     /// # Errors
     ///
     /// [`SlotError`] unless the response is 8 bytes starting with the slot's
-    /// Report ID (`ReceiverProtocolError`, spec 05 §2).
+    /// Report ID (`ReceiverProtocolError`, spec receiver §2).
     pub fn parse(slot: Slot, response: &[u8]) -> Result<Self, SlotError> {
         let raw: [u8; SLOT_REPORT_LEN] = response.try_into().map_err(|_| SlotError::Length {
             slot,
@@ -118,7 +118,7 @@ impl SlotReport {
     }
 
     /// Bytes 2..7, a per-device identifier candidate (`HYPOTHESIS`). Compared
-    /// with the device ID of Receiver setting nodes (spec 02 §5).
+    /// with the device ID of Receiver setting nodes (spec device §5).
     #[must_use]
     pub fn id_candidate(&self) -> DeviceId {
         let mut id = [0u8; 6];
@@ -146,7 +146,7 @@ impl fmt::Debug for SlotReport {
 }
 
 /// Slots that are occupied in `after` but were empty in `before`
-/// (spec 05 §3 step 5).
+/// (spec receiver §3 step 5).
 ///
 /// Reports are matched by slot number; slots missing from `before` are
 /// ignored.

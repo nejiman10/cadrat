@@ -1,8 +1,8 @@
-//! `cadrat-tool`: the stand-alone configuration tool (spec 03).
+//! `cadrat-tool`: the stand-alone configuration tool (spec tool/cli).
 //!
 //! [`run`] takes the arguments, the outside world ([`Env`]) and the standard
 //! streams ([`Io`]), so the CLI tests run the whole program against the fake
-//! transport of `cadrat-hidraw` (spec 04 §4). The binary only wires the real
+//! transport of `cadrat-hidraw` (spec implementation §4). The binary only wires the real
 //! implementations in.
 
 // `expect` is used only where clap or this crate already guarantees the value.

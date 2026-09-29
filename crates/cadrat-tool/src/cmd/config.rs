@@ -11,7 +11,7 @@ use crate::ctx::Ctx;
 use crate::exit::{Exit, Failure};
 use crate::render;
 
-/// Reads and parses the configuration file (spec 03 §4 step 3).
+/// Reads and parses the configuration file (spec tool/cli §4 step 3).
 pub fn read(path: &Path) -> Result<(Loaded, Document), Failure> {
     let loaded = file::load(path).map_err(|e| {
         let missing = matches!(e, cadrat_config::FileError::NotFound(_));
@@ -31,7 +31,7 @@ pub fn read(path: &Path) -> Result<(Loaded, Document), Failure> {
     Ok((loaded, document))
 }
 
-/// A validation failure listing every problem (spec 01 §2.1).
+/// A validation failure listing every problem (spec config §2.1).
 pub fn invalid(path: &Path, error: &ConfigError) -> Failure {
     let (kind, summary) = match error {
         ConfigError::Incomplete(_) => ("ConfigIncomplete", "is incomplete"),
@@ -53,7 +53,7 @@ pub fn load(path: &Path) -> Result<(Loaded, Document, Config), Failure> {
     Ok((loaded, document, config))
 }
 
-/// Prints the configuration warnings (spec 01 §4.4, §5).
+/// Prints the configuration warnings (spec config §4.4, §5).
 pub fn warn_config(ctx: &mut Ctx, config: &Config) {
     for warning in config.warnings() {
         ctx.warn(warning.code(), warning.to_string());

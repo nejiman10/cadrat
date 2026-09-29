@@ -1,4 +1,4 @@
-//! What a command runs against, and how it reports (spec 03 §1, §5).
+//! What a command runs against, and how it reports (spec tool/cli §1, §5).
 
 use std::ffi::OsString;
 use std::io::{BufRead, Write};
@@ -113,7 +113,7 @@ impl<'e, 'io> Ctx<'e, 'io> {
         self.fields.insert(key.to_owned(), value.into());
     }
 
-    /// The configuration file path (spec 01 §1).
+    /// The configuration file path (spec config §1).
     pub fn config_path(&self) -> Result<PathBuf, Failure> {
         if let Some(path) = &self.global.config {
             return Ok(path.clone());

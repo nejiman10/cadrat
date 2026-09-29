@@ -26,7 +26,7 @@ Receiver（key = recv:port-<USBポートパス>）
 
 - 根拠: 有線C658とReceiverを同時接続した監査で、有線MI_01のGET `0x08`、C652 MI_03のGET `0x08`、占有slot 3の応答 bytes 2..7 の3つが一致した（OBSERVED、調査SPEC「Receiver管理とLinux実装」、`evidence/connection-identity-2026-09`）。
 - 限界: このfieldの正式な意味と、複数の機器を並べたときの一意性は未検証（HYPOTHESIS扱い、Q17）。
-- 機器IDはローカル表示には出す。`--redact` を付けたときだけ伏せる（[03](03-cli.md)）。
+- 機器IDはローカル表示には出す。`--redact` を付けたときだけ伏せる（[tool/cli](tool/cli.md)）。
 
 ### 2.2 識別キー
 
@@ -64,7 +64,7 @@ Receiver（key = recv:port-<USBポートパス>）
 |---|---|---|
 | 有線の設定node | bus USB（`0x03`）、VID `256f`、PID `c658`、Feature `0x10` のwire長が32、Feature `0x08` のwire長が8 | 有線C658 MI_01（OBSERVED）。宣言しているのは1 interfaceだけだった |
 | Receiverの設定node | bus USB、VID `256f`、PID `c652`、Feature `0x10` のwire長が32、Feature `0x08` のwire長が8 | C652では、占有slotと同じ番号のMI_Nがこの宣言を持った（MI_02/slot 2、MI_03/slot 3、MI_04/slot 4。1台のReceiver・1台のマウス・単一占有の条件、OBSERVED。調査SPEC「Receiver管理とLinux実装」） |
-| Receiverの管理node | [05 §1](05-receiver.md#1-管理nodeの検出) | |
+| Receiverの管理node | [receiver §1](receiver.md#1-管理nodeの検出) | |
 
 設定nodeと判定したnodeには、GET Feature `0x08` を長さ8で送る（**IDプローブ**）。
 
@@ -75,7 +75,7 @@ Receiver（key = recv:port-<USBポートパス>）
 
 判定できなかったnodeは、`rejected` と理由（例: `no-feature-0x10`、`probe-mismatch: 08 00 …`、`probe-error: EPIPE`、`open-error: EIO`、`rawinfo-mismatch: …`、`unsupported-product: 256f:xxxx`、`descriptor-invalid: …`）を `list --nodes` に表示する。理由には機器IDのbyteを含めない。
 
-Receiverの設定nodeでプローブが失敗しても、そのnodeが管理nodeの条件（[05 §1](05-receiver.md#1-管理nodeの検出)）を満たすなら、管理nodeの候補としては残す。
+Receiverの設定nodeでプローブが失敗しても、そのnodeが管理nodeの条件（[receiver §1](receiver.md#1-管理nodeの検出)）を満たすなら、管理nodeの候補としては残す。
 
 次の場合は、その経路を `ambiguous-node` とし、その経路への送信を拒否する。
 - 1つのUSBデバイスに、有線の設定nodeが2つ以上ある。
@@ -149,7 +149,7 @@ GET `0x10` による読み戻しは行わない。調査で32-byteの現在設�
 
 ## 9. hold-open
 
-有線C658のhidraw nodeを、プロセスが開いたまま保持する。`cadrat-tool hold-open`（[03 §3](03-cli.md#hold-open---poll-interval秒)）が行い、配布物のsystemd user unit（`cadrat-hold-open.service`）がそれを常駐させる。unitは既定で無効で、有線で使う利用者が自分で有効にする。
+有線C658のhidraw nodeを、プロセスが開いたまま保持する。`cadrat-tool hold-open`（[tool/cli §3](tool/cli.md#hold-open---poll-interval秒)）が行い、配布物のsystemd user unit（`cadrat-hold-open.service`）がそれを常駐させる。unitは既定で無効で、有線で使う利用者が自分で有効にする。
 
 - **理由**: 調査の実機では、有線C658のhidrawをどのプロセスも開いていないと、USB接続から数秒で入力が止まった。全interfaceを開いたままにすると、止まらなかった（調査側 hold-open監査、各条件2回。調査側のuser serviceで1日以上の通常利用と再接続時のつかみ直しも確認）。観測は1つの環境だけで、原因は分かっていない（UNKNOWN）。したがってhold-openは原因の対策ではなく、観測に基づく回避策である。
 - **対象**: sysfsの `HID_ID` がbus USB、VID `256f`、PID `c658` のnodeすべて（interfaceを問わない）。Receiver（`c652`）とUSB以外のbusは対象外とする。

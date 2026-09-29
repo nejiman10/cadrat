@@ -1,4 +1,4 @@
-//! Schema 1 TOML configuration for cadrat (spec 01).
+//! Schema 1 TOML configuration for cadrat (spec config).
 //!
 //! The TOML file is the only record of the mouse settings (P1). This crate
 //! reads and validates it, applies `key=value` changes, rewrites only the

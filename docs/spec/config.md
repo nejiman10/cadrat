@@ -4,7 +4,7 @@
 
 - 既定のパス: `$XDG_CONFIG_HOME/cadrat/default.toml`。`XDG_CONFIG_HOME` が未設定なら `~/.config/cadrat/default.toml`。XDG Base Directory仕様に従い、空や相対パスの `XDG_CONFIG_HOME` は未設定とみなす。
 - `--config=<path>` で別のファイルを指定できる。開発中の試験用設定や、用途別の設定を使い分けるときに使う。
-- 自動では作らない。作るのは `init` だけ（[03-cli.md](03-cli.md)）。
+- 自動では作らない。作るのは `init` だけ（[tool/cli.md](tool/cli.md)）。
 
 ### 1.1 複数の設定ファイル
 
@@ -13,7 +13,7 @@
   - 運用: 使い分けたい設定は同じディレクトリに `<名前>.toml` として置き、`apply --config=...` で送る。マウスの中身は、最後に送ったファイルの内容になる。
 - 1つの設定ファイルは、`--mouse` で選んだマウスに送られる。マウスごとに設定を紐付ける仕組みは持たない。
 - `cadratd` が動いているときの扱い: `cadrat-tool` は、D-Bus上に `cadratd` の名前があれば送信系のコマンド（`set`、`apply`、`receiver pair` / `unpair`）を拒否し、`cadratctl` を使うよう案内する。設定の正本がデーモンとTOMLの2つに分かれるのを防ぐため（Q9）。
-- プロファイルの切り替え、現在有効なプロファイルの記録、マウスの識別キー（[02 §2.3](02-device.md#23-識別キー)）と設定の紐付けは、状態を持つデーモンのPhaseで扱う（Q9）。ファイル名を `default.toml` にしたのは、同じディレクトリにプロファイルが並ぶ将来の構成と矛盾しないようにするためである。
+- プロファイルの切り替え、現在有効なプロファイルの記録、マウスの識別キー（[device §2.2](device.md#22-識別キー)）と設定の紐付けは、状態を持つデーモンのPhaseで扱う（Q9）。ファイル名を `default.toml` にしたのは、同じディレクトリにプロファイルが並ぶ将来の構成と矛盾しないようにするためである。
 
 ## 2. スキーマ（schema 1）
 
@@ -131,7 +131,7 @@ wire reportは `0x10` とblobを連結した32 byteになる。
 - **原子的に書き込む。** 同じディレクトリの一時ファイルに書いて `fsync` し、`rename` で置き換え、ディレクトリも `fsync` する。元ファイルのpermissionは引き継ぐ。
 - **symbolic linkはたどる。** 設定ファイルがlinkなら、link先のファイルを置き換える（linkは残す）。lockファイルもlink先の隣に置く。
 - **並行実行を防ぐ。** 同じディレクトリの `<設定ファイル名>.lock`（例: `default.toml.lock`）に `flock(LOCK_EX)` をかけ、読み込みから保存までの間を保護する。ロックが取れなければ5秒待ち、それでも取れなければ `ConfigLocked` エラーにする。
-- **エディタでの同時編集を検出する。** 保存の直前にファイルを読み直し、読み込み時とSHA-256が違えば上書きしない（[03 `set` の処理順序](03-cli.md#3-set-の処理順序)）。
+- **エディタでの同時編集を検出する。** 保存の直前にファイルを読み直し、読み込み時とSHA-256が違えば上書きしない（[tool/cli §4](tool/cli.md#4-set-の処理順序)）。
 
 ## 8. `init` が作るテンプレート
 
@@ -139,5 +139,5 @@ wire reportは `0x10` とblobを連結した32 byteになる。
 - `--preset=research-baseline` を付けたときだけ、調査SDKの `latest_software_baseline()` と同じ値で埋める。ファイル冒頭には、実機から取得した値でも工場出荷値でもない旨のコメントを入れる。
   - 値: dpi 1400、lift無効、wheel normal、polling 1000、ボタンは left / right / middle / middle / forward / backward / middle。
   - 調査SDKの順序では第5 entryがforward、第6 entryがbackwardになる。本仕様の物理名対応では、`forward = "mouse:forward"`、`back = "mouse:backward"` になる。
-- テンプレートのコメントは英語で書く（[03 §5](03-cli.md#5-出力)）。
+- テンプレートのコメントは英語で書く（[tool/cli §5](tool/cli.md#5-出力)）。
 - 既にファイルがあれば上書きせずにエラーにする（`--force` で上書き）。

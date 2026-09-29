@@ -1,5 +1,5 @@
 //! Linux hidraw access for cadrat: discovery, selection, sending and
-//! Receiver management (spec 02, spec 05).
+//! Receiver management (spec device, spec receiver).
 //!
 //! All I/O and time go through the [`System`], [`Device`] and [`Clock`]
 //! traits. [`LinuxSystem`] is the real implementation; with the `fake`

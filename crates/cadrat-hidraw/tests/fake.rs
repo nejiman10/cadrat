@@ -1,5 +1,5 @@
 //! Discovery, selection, sending and Receiver management against fake
-//! sysfs, descriptors and ioctl replies (spec 04 §4).
+//! sysfs, descriptors and ioctl replies (spec implementation §4).
 
 #![allow(missing_docs)]
 

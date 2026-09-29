@@ -1,5 +1,5 @@
 //! The configuration file on disk: location, lock, load and atomic save
-//! (spec 01 §1, §7).
+//! (spec config §1, §7).
 
 use std::ffi::OsStr;
 use std::fs::{self, File, OpenOptions};
@@ -27,7 +27,7 @@ pub enum FileError {
     /// `ConfigLocked`: another process holds the lock.
     #[error("{} is locked by another process", .0.display())]
     Locked(PathBuf),
-    /// The file changed after it was read (spec 03 §4 step 9).
+    /// The file changed after it was read (spec tool/cli §4 step 9).
     #[error("{} was changed by someone else after it was read", .0.display())]
     Changed(PathBuf),
     /// `init` found an existing file and `--force` was not given.
@@ -144,7 +144,7 @@ fn sha256(bytes: &[u8]) -> Hash {
     Sha256::digest(bytes).into()
 }
 
-/// A configuration file as read (spec 03 §4 step 3).
+/// A configuration file as read (spec tool/cli §4 step 3).
 #[derive(Debug, Clone)]
 pub struct Loaded {
     /// The file actually read, with symbolic links resolved.
@@ -207,7 +207,7 @@ impl Loaded {
     }
 }
 
-/// Writes a new configuration file for `init` (spec 01 §8), creating its
+/// Writes a new configuration file for `init` (spec config §8), creating its
 /// directory. An existing file is replaced atomically only with `force`.
 ///
 /// # Errors

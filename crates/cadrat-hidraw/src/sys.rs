@@ -2,7 +2,7 @@
 //!
 //! Everything above this module talks to these traits only, so the whole
 //! discovery, selection, send and Receiver logic runs against fakes in tests
-//! (spec 04 §1, §4).
+//! (spec implementation §1, §4).
 
 use std::fmt;
 use std::io;
@@ -18,7 +18,7 @@ pub const PRODUCT_C658: u16 = 0xc658;
 /// Universal Receiver.
 pub const PRODUCT_C652: u16 = 0xc652;
 
-/// What sysfs says about one hidraw node, before opening it (spec 02 §3).
+/// What sysfs says about one hidraw node, before opening it (spec device §3).
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct NodeInfo {
     /// Device path, e.g. `/dev/hidraw5`.

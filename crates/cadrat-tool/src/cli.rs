@@ -1,4 +1,4 @@
-//! Command-line syntax (spec 03 §1, §3).
+//! Command-line syntax (spec tool/cli §1, §3).
 
 use std::path::PathBuf;
 

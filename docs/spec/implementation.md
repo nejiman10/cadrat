@@ -44,13 +44,13 @@ docs/spec/
 照合する項目: wire値と `inspect` の結果、descriptorのFeature / Input wire長、Report `0x03` のbitmapと押下・解放mask、Receiver packet。descriptorの `top_level_usages` は `cadrat-proto` の責務に含めないので照合しない。
 
 - ベクタは調査SDKの挙動を示すもので、プロトコルの新しい根拠ではない。
-- `real` のdescriptorは `cadrat-hidraw` のfakeにも使い、nodeの分類（02 §4、05 §1）と選択を確かめる（`crates/cadrat-hidraw/tests/fake.rs`）。
+- `real` のdescriptorは `cadrat-hidraw` のfakeにも使い、nodeの分類（device §4、receiver §1）と選択を確かめる（`crates/cadrat-hidraw/tests/fake.rs`）。
 - exporterは設定から作ったwireしか検査しないため、次のものはベクタで表せない。Rust側だけのテストで確かめる。
   - `raw:` のボタン（`0x10`..`0x27`）と、actionに対応しないwire値（`0x00`..`0x09`）
   - 予約byteが0でないもの、offset 26が `0x1e` でないもの、`inspect` のエラー（長さ、Report ID、未知のwheel・polling）
   - slot応答とIDプローブ応答の解析
   - 調査SDKと意図して異なる挙動（DPIの拒否、256以上のReport ID、深すぎるPUSH）
-- DPIについて: Python SDKはclampと切り捨てをするが、本CLIは範囲外や端数をエラーにする（[01 §4.1](01-config.md#41-dpi)）。ベクタは50の倍数で範囲内のものに限る。
+- DPIについて: Python SDKはclampと切り捨てをするが、本CLIは範囲外や端数をエラーにする（[config §4.1](config.md#41-dpi)）。ベクタは50の倍数で範囲内のものに限る。
 - 実機のdescriptorは、調査側TODO 12で収録されてから取り込む。調査の証拠に載っているSHA-256と一致し、個体識別子が含まれないことを調査側で確認したものに限る。
 - ベクタを取り込み直すときは、どちらの組にも個体識別子とローカル環境の情報（パス、ユーザー名、hidraw node、シリアル）が無いことを確かめる。
 
@@ -82,7 +82,7 @@ CLIのテストでは、`cadrat-tool` のライブラリの入口 `run(args, env
 9. `receiver pair` の待機中にCtrl-Cを押しても、停止packetが送られて終了コード12になる。
 10. unpairの確認プロンプトで `n` を押すと、何もせず終了コード18になる。
 11. 実機試験の手順と結果を `docs/hardware-test.md` に記録する。記録の形式は調査リポジトリの `HARDWARE_TEST.md` に倣う。
-12. 有線C658で、調査側のuser serviceを止めて `cadrat-hold-open.service` を有効にすると、USBの抜き差しの後も入力が止まらず、journalに保持と解放の行が残る。serviceを止めると保持中のfdが閉じられる（[02 §9](02-device.md#9-hold-open)）。
+12. 有線C658で、調査側のuser serviceを止めて `cadrat-hold-open.service` を有効にすると、USBの抜き差しの後も入力が止まらず、journalに保持と解放の行が残る。serviceを止めると保持中のfdが閉じられる（[device §9](device.md#9-hold-open)）。
 
 ## 6. 未決事項
 
@@ -90,22 +90,22 @@ CLIのテストでは、`cadrat-tool` のライブラリの入口 `run(args, env
 
 | # | 論点 | 状態 | 扱い |
 |---|---|---|---|
-| Q1 | 有線とReceiverが両方つながっているときの扱い | 解決 | 機器IDで1台のマウスにまとめ、有効な経路（有線nodeがあれば有線）にだけ送る（[02 §2.3](02-device.md#23-有効な経路)） |
+| Q1 | 有線とReceiverが両方つながっているときの扱い | 解決 | 機器IDで1台のマウスにまとめ、有効な経路（有線nodeがあれば有線）にだけ送る（[device §2.3](device.md#23-有効な経路)） |
 | Q2 | 有線C658で、Feature `0x10` 32 byteを宣言するinterfaceが1つか | 解決（試験個体） | MI_01だけだった。複数あれば `ambiguous-node` とする規則は残す |
 | Q3 | 物理ボタン名とoffset 18..24の対応 | 解決（試験条件） | 7 entryすべて、両経路の成功監査で対応を確認（OBSERVED） |
 | Q4 | 名称 | 決定 | プロジェクト名 cadrat。独立ツール `cadrat-tool`、デーモン `cadratd`、フロントエンド `cadratctl`（[README §0](README.md#0-cadrat-プロジェクトの構成)） |
 | Q5 | ライセンス | 決定 | MIT（調査リポジトリと同じ） |
 | Q6 | `--deny-warnings` を用意するか | 決定 | 用意しない |
-| Q7 | Receiver経由の送信で、再送や適用確認をするか | 決定 | 1回だけ送り、送信直前に同じfdで宛先を確認する。自動では再送せず、Receiver経由の送信の成功時と `receiver pair` の成功時に、効いていなければ送り直すよう案内する（[02 §7](02-device.md#7-送信) 手順7、[05 §3](05-receiver.md#3-pair)）。実機確認（[実施 2](../hardware-test.md)）で、再ペアリング直後の最初の送信が約5分たっても効かず、送り直すと効く事例を再現したが、再現の条件が分からないため、原因の調査（調査側 [Issue #2](https://github.com/nejiman10/3dx-hid-research/issues/2)）を待たずに案内で対処する。原因が分かれば見直す |
+| Q7 | Receiver経由の送信で、再送や適用確認をするか | 決定 | 1回だけ送り、送信直前に同じfdで宛先を確認する。自動では再送せず、Receiver経由の送信の成功時と `receiver pair` の成功時に、効いていなければ送り直すよう案内する（[device §7](device.md#7-送信) 手順7、[receiver §3](receiver.md#3-pair)）。実機確認（[実施 2](../hardware-test.md)）で、再ペアリング直後の最初の送信が約5分たっても効かず、送り直すと効く事例を再現したが、再現の条件が分からないため、原因の調査（調査側 [Issue #2](https://github.com/nejiman10/3dx-hid-research/issues/2)）を待たずに案内で対処する。原因が分かれば見直す |
 | Q8 | MSRVと配布の形 | 決定 | Ubuntu LTS（最小22.04）を対象に、`.deb` をGitHub Releasesで配布する（§7）。MSRVは定めず、`rust-toolchain.toml` でツールチェーンを固定する |
-| Q9 | デーモン導入時に、CLIとデーモンが同じTOMLへ同時に書かない方法 | 方針決定 | `cadratd` が動いていれば、`cadrat-tool` の送信系コマンドは拒否する（[01 §1.1](01-config.md#11-複数の設定ファイル)）。検出方法や終了コードなどの詳細はPhase 2の仕様で決める。`cadratd` がまだ無いので、Phase 1の `cadrat-tool` は検出しない |
-| Q10 | Receiverの管理nodeの選び方 | 決定（根拠は限定的） | interface番号が最小のもの。MI_02で効くことは観測済み、MI_00は状況証拠。純正の規則は不明。slotが変わると管理nodeが作り直されるので、pair / unpair の途中で消えたら同じ規則で選び直して開き直す（[05 §6](05-receiver.md#6-管理nodeの開き直し)） |
+| Q9 | デーモン導入時に、CLIとデーモンが同じTOMLへ同時に書かない方法 | 方針決定 | `cadratd` が動いていれば、`cadrat-tool` の送信系コマンドは拒否する（[config §1.1](config.md#11-複数の設定ファイル)）。検出方法や終了コードなどの詳細はPhase 2の仕様で決める。`cadratd` がまだ無いので、Phase 1の `cadrat-tool` は検出しない |
+| Q10 | Receiverの管理nodeの選び方 | 決定（根拠は限定的） | interface番号が最小のもの。MI_02で効くことは観測済み、MI_00は状況証拠。純正の規則は不明。slotが変わると管理nodeが作り直されるので、pair / unpair の途中で消えたら同じ規則で選び直して開き直す（[receiver §6](receiver.md#6-管理nodeの開き直し)） |
 | Q11 | slot byte1で占有を判定してよいか | 決定（根拠は限定的） | `0x00` ↔ 空き、`0x59` ↔ 占有を観測。任意の非0値を占有とする一般則は未検証なので、HYPOTHESISと明記して使う |
 | Q12 | pair後に自動で `apply` するか | 決定 | しない |
 | Q13 | USBシリアルはあるか | 解決 | 無い（試験個体）。マウスは機器ID、Receiverはポートパスで識別する |
 | Q14 | 1台のReceiverに複数のマウスを結合したときの対応付け | 調査中 | 機器IDとslot識別子の照合で対応付ける。複数台での検証は調査側TODO 10 |
 | Q15 | 有線と無線を同じマウスとしてまとめるか | 解決 | まとめる。機器IDが3か所で一致した（OBSERVED） |
-| Q16 | モード切り替え後に設定が変わって見える原因 | 調査側TODO 13 | 送信は有効な経路だけに行い、切り替え後の `apply` を案内する（[02 §7.1](02-device.md#71-モード切り替えとの関係)） |
+| Q16 | モード切り替え後に設定が変わって見える原因 | 調査側TODO 13 | 送信は有効な経路だけに行い、切り替え後の `apply` を案内する（[device §7.1](device.md#71-モード切り替えとの関係)） |
 | Q17 | GET `0x08` bytes 2..7 の正式な意味と一意性 | 未検証 | 機器IDとして使う。複数機器での一意性は調査側TODO 10で確認する |
 
 ## 7. 配布
@@ -122,7 +122,7 @@ CLIのテストでは、`cadrat-tool` のライブラリの入口 `run(args, env
 - `.deb` に含めるもの:
   - `/usr/bin/cadrat-tool`
   - `/usr/lib/udev/rules.d/69-cadrat.rules`（hidrawの `uaccess`）。インストール後に `udevadm control --reload` と `udevadm trigger` を実行する
-  - `/usr/lib/systemd/user/cadrat-hold-open.service`（[02 §9](02-device.md#9-hold-open)）。インストールしても有効にしない。有線で使う利用者が `systemctl --user enable --now cadrat-hold-open.service` で有効にする
+  - `/usr/lib/systemd/user/cadrat-hold-open.service`（[device §9](device.md#9-hold-open)）。インストールしても有効にしない。有線で使う利用者が `systemctl --user enable --now cadrat-hold-open.service` で有効にする
   - manページとシェル補完（bash / zsh / fish）
   - 後のPhaseでは、`cadratd` のsystemd user unit（`/usr/lib/systemd/user/`）とGNOME Shell拡張（`/usr/share/gnome-shell/extensions/`）を同じパッケージか別パッケージで追加する
 - manページとシェル補完は、CLIの定義から `cargo run -p xtask -- dist` で生成する。

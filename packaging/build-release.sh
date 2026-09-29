@@ -1,5 +1,5 @@
 #!/bin/sh
-# Builds the cadrat-tool .deb as a RELEASE BUILD (spec 04 §7).
+# Builds the cadrat-tool .deb as a RELEASE BUILD (spec implementation §7).
 #
 # Run it on Ubuntu 22.04, the oldest supported LTS, so the binary needs no
 # newer glibc than 2.35. docs/packaging.md shows how to prepare that

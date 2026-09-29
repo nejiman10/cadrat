@@ -1,4 +1,4 @@
-//! Device ID: bytes 2..7 of the Feature `0x08` response (spec 02 §2.1, §4).
+//! Device ID: bytes 2..7 of the Feature `0x08` response (spec device §2.1, §4).
 //!
 //! `OBSERVED`: the same six bytes came back from the wired node, the Receiver
 //! setting node and the occupied Receiver slot of one mouse. Their formal
@@ -114,7 +114,7 @@ pub enum DeviceIdError {
 }
 
 impl fmt::Display for DeviceIdError {
-    /// The rejection reason shown by `list --nodes` (spec 02 §4).
+    /// The rejection reason shown by `list --nodes` (spec device §4).
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
             Self::Length(len) => write!(f, "probe-length: {len}"),

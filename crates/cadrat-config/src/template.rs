@@ -1,4 +1,4 @@
-//! Templates written by `init` (spec 01 §8).
+//! Templates written by `init` (spec config §8).
 
 use std::fmt::Write as _;
 
@@ -21,7 +21,7 @@ pub enum Preset {
 const HEADER: &str = "\
 # cadrat configuration (schema 1)
 # Every key is required. Ranges and meanings:
-# https://github.com/nejiman10/cadrat/blob/main/docs/spec/01-config.md
+# https://github.com/nejiman10/cadrat/blob/main/docs/spec/config.md
 ";
 
 const EMPTY_NOTE: &str = "\

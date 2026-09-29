@@ -1,4 +1,4 @@
-//! Holding the wired C658 open against fake sysfs (spec 02 §9).
+//! Holding the wired C658 open against fake sysfs (spec device §9).
 
 #![allow(missing_docs)]
 

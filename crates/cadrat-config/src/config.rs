@@ -29,7 +29,7 @@ pub struct Config {
 }
 
 impl Config {
-    /// The values of `init --preset=research-baseline` (spec 01 §8).
+    /// The values of `init --preset=research-baseline` (spec config §8).
     #[must_use]
     pub fn research_baseline() -> Self {
         let report = Report10Config::research_baseline();
@@ -113,7 +113,7 @@ impl Config {
     }
 
     /// Applies assignments in order and lists every assignment with its old
-    /// value (spec 03 §4 step 5).
+    /// value (spec tool/cli §4 step 5).
     ///
     /// # Errors
     ///
@@ -150,7 +150,7 @@ impl Config {
         }
     }
 
-    /// Warnings for sending this configuration (spec 01 §4.4, §5).
+    /// Warnings for sending this configuration (spec config §4.4, §5).
     #[must_use]
     pub fn warnings(&self) -> Vec<Warning> {
         let mut warnings = Vec::new();
@@ -198,7 +198,7 @@ impl Change {
     }
 }
 
-/// Warnings derived from the configuration (spec 03 §7). They never stop a
+/// Warnings derived from the configuration (spec tool/cli §7). They never stop a
 /// send.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Warning {

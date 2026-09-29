@@ -1,5 +1,5 @@
-//! Choosing the mouse or Receiver to act on, and sending (spec 02 §6, §7,
-//! spec 05 §1).
+//! Choosing the mouse or Receiver to act on, and sending (spec device §6, §7,
+//! spec receiver §1).
 
 use std::path::{Path, PathBuf};
 
@@ -14,7 +14,7 @@ use crate::model::{
 use crate::sys::{Device, Errno, PRODUCT_C652, System, VENDOR};
 
 /// Why no single target could be chosen. Each maps to an exit code
-/// (spec 03 §6).
+/// (spec tool/cli §6).
 #[derive(Debug, Clone, PartialEq, Eq, thiserror::Error)]
 pub enum SelectError {
     /// `NoDevice` (4).
@@ -54,7 +54,7 @@ fn inaccessible(inventory: &Inventory, product: Option<u16>) -> Vec<PathBuf> {
         .collect()
 }
 
-/// Resolves a selector against a list of keys (spec 02 §6): a 1-based
+/// Resolves a selector against a list of keys (spec device §6): a 1-based
 /// number, a key, or a unique key prefix.
 fn resolve(
     keys: &[String],
@@ -140,7 +140,7 @@ pub fn select_mouse(
 }
 
 /// Uses one node directly (`--hidraw`). Classification and the ID probe
-/// still apply (spec 02 §6).
+/// still apply (spec device §6).
 ///
 /// # Errors
 ///
@@ -274,7 +274,7 @@ impl Target {
         self.mouse.device_id
     }
 
-    /// Sends one wire report (spec 02 §7): re-probes on the same descriptor,
+    /// Sends one wire report (spec device §7): re-probes on the same descriptor,
     /// then sends exactly once. Success means the host completed the ioctl,
     /// not that the mouse applied it (P6).
     ///
@@ -342,7 +342,7 @@ impl ManagementTarget {
 
     /// A [`Link`](crate::receiver::Link) that reopens this Receiver's
     /// management node when it disappears: it enumerates again and chooses
-    /// by the same rules (spec 05 §1), keyed by the Receiver's USB port.
+    /// by the same rules (spec receiver §1), keyed by the Receiver's USB port.
     pub fn link<'a>(
         &'a mut self,
         system: &'a dyn System,
@@ -384,7 +384,7 @@ impl crate::receiver::Link for ManagementLink<'_> {
 }
 
 /// Chooses the Receiver (`--receiver`) and its management node: the
-/// candidate with the lowest interface number (spec 05 §1, Q10).
+/// candidate with the lowest interface number (spec receiver §1, Q10).
 ///
 /// `require_pairing` also requires Feature `0x41` (pair and unpair).
 ///
@@ -436,7 +436,7 @@ pub fn select_receiver(
 }
 
 /// Uses one management node directly (`--hidraw`), checked against the
-/// same conditions (spec 05 §1).
+/// same conditions (spec receiver §1).
 ///
 /// # Errors
 ///

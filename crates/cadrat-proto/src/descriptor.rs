@@ -1,6 +1,6 @@
 //! HID report descriptor parsing for report-length discovery.
 //!
-//! Follows the research SDK's `hid_descriptor.py` (spec 02 §3): global
+//! Follows the research SDK's `hid_descriptor.py` (spec device §3): global
 //! PUSH/POP, Report Size, Report ID and Report Count are tracked, long items
 //! are skipped, and multiple main items for the same Report ID are summed.
 //! The wire length is the payload rounded up to bytes, plus one byte for the

@@ -1,4 +1,4 @@
-//! In-memory [`System`], [`Device`] and [`Clock`] for tests (spec 04 §4).
+//! In-memory [`System`], [`Device`] and [`Clock`] for tests (spec implementation §4).
 //!
 //! Each node answers GET requests from a per-Report-ID queue whose last
 //! entry repeats, answers SET requests from a queue whose last entry

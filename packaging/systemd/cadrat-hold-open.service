@@ -1,5 +1,5 @@
 # Keeps the wired C658's hidraw nodes open so that its input keeps working
-# (spec 02 §9). Installed disabled; enable it for your user with
+# (spec device §9). Installed disabled; enable it for your user with
 #   systemctl --user enable --now cadrat-hold-open.service
 [Unit]
 Description=Keep wired CadMouse Compact Wireless (C658) hidraw nodes open (cadrat)

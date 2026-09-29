@@ -34,7 +34,7 @@ cadrat-tool receiver slots             # Receiver slots / Receiverのslot
 cadrat-tool hold-open                  # keep a wired C658 working (usually run by the user service)
 ```
 
-All output is in English. Commands, options and exit codes: [docs/spec/03-cli.md](docs/spec/03-cli.md)（コマンドの詳細）.
+All output is in English. Commands, options and exit codes: [docs/spec/tool/cli.md](docs/spec/tool/cli.md)（コマンドの詳細）.
 
 ## Installation
 
@@ -108,6 +108,7 @@ The udev rule [udev/69-cadrat.rules](udev/69-cadrat.rules) gives the logged-in u
 
 Most documents are in Japanese. 文書の多くは日本語です。
 
+- [docs/](docs/README.md): index of documents / 文書の索引
 - [docs/spec/](docs/spec/README.md): Phase 1 specification, the reference for the implementation / Phase 1（`cadrat-tool`）の仕様。実装の正本
 - [docs/hardware-test.md](docs/hardware-test.md): hardware test procedure / 実機確認の手順と記録
 - [docs/packaging.md](docs/packaging.md): building the `.deb` / `.deb` の作り方

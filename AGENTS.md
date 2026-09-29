@@ -11,6 +11,19 @@ These instructions apply to the entire repository. Keep this file timeless: do n
 - Device and protocol facts are owned by the research repository `nejiman10/3dx-hid-research` (`SPEC.md`). This repository cites them with the research commit it relied on and keeps their evidence labels (`CONFIRMED`, `OBSERVED`, `HYPOTHESIS`, `UNKNOWN`). Do not upgrade the certainty of a research claim here.
 - New device behavior discovered while working here is reported to the research repository for investigation. It is not recorded here as a protocol fact.
 
+## Branches
+
+- `main` holds the released state. Each release is tagged on `main`.
+- Development happens on `develop`. Work branches start from `develop` and return to it through pull requests.
+- `develop` is merged into `main` with a merge commit (not a squash) when a release is ready, after its hardware checks pass.
+- A fix for a released version starts from `main`, is merged into `main`, and is then merged into `develop`.
+- `TODO.md` and `HANDOFF.md` on `develop` are the current ones.
+
+## Documentation layout
+
+- `docs/spec/` holds documents shared by all executables at its top level, and documents for a single executable in a directory named after it (`tool/`, `daemon/`, `ctl/`).
+- The specification has one version and one open-question table for the whole project.
+
 ## Design rules
 
 - `cadrat-tool` is stateless: the TOML file is its only state. It never uses the research baseline as an implicit default, never guesses between multiple targets, and saves the TOML only after a successful send.
@@ -26,5 +39,5 @@ These instructions apply to the entire repository. Keep this file timeless: do n
 ## Specification changes
 
 - Update the version and date in `docs/spec/README.md` when the specification changes.
-- Keep open questions in the table in `docs/spec/04-implementation.md` with their state and current handling.
+- Keep open questions in the table in `docs/spec/implementation.md` with their state and current handling.
 - When the referenced research commit changes, review every cited claim and update the commit reference.

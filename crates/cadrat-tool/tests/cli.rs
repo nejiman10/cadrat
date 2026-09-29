@@ -1,5 +1,5 @@
 //! The whole CLI against the fake transport, in a temporary configuration
-//! directory (spec 04 §4, CLI layer).
+//! directory (spec implementation §4, CLI layer).
 
 #![allow(missing_docs)]
 
