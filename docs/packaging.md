@@ -4,7 +4,7 @@
 
 ## 現状
 
-Phase 1 の実機確認（[hardware-test.md](hardware-test.md)）は終わった。リリース用ビルドの手順（下の「リリース用ビルド」）を用意し、Ubuntu 22.04 で確認した。**GitHub Releases にはまだ何も置いていない。** これまでに所有者の PC へ入れた `.deb` はすべて試験ビルドである。
+Phase 1 の実機確認（[hardware-test.md](hardware-test.md)）を終え、最初のリリース [v0.1.0](https://github.com/nejiman10/cadrat/releases/tag/v0.1.0) を 2026-09-29 に公開した（下の「v0.1.0 の公開」）。所有者の PC では試験ビルドをアンインストールし、公開した v0.1.0 を入れている。
 
 ## 試験ビルド
 
@@ -134,7 +134,15 @@ packaging/build-release.sh              # rust-toolchain.toml の版を rustup �
 - この確認で作った `.deb` は公開していない。Docker Hub からイメージを取得できない環境だったため、コンテナではなく chroot を使った。
 - 経緯: 最初は最小サポートを 18.04 として同じ確認を行い通過したが、ビルド環境の再現しやすさとCADソフトの対応OSを考えて 22.04 に引き上げた。
 
-## リリースまでに残ること
+### v0.1.0 の公開（2026-09-29）
 
-- 公開する commit に tag を付け、そこからリリース用ビルドを作る。
-- GitHub Releases に `.deb` と SHA-256 を置く（所有者の指示を待つ）。
+- `v0.1.0` の tag は、hold-open を含む main の commit `e141c99`（PR #4 の取り込み）に付けた。最初は `c8cfd0d` に付けて下書きまで作ったが、hold-open を入れるため、公開前に下書きと tag を消して付け直した。
+- Release workflow が `ubuntu:22.04` のコンテナでビルドし、同じコンテナでインストール・実行・削除を試したうえで、build provenance の attestation と下書きを作った。所有者が本文を書き、通常の release（pre-release ではない）として公開した。
+- 添付は `cadrat-tool_0.1.0_amd64.deb` と `SHA256SUMS`。
+- 所有者は PC（Ubuntu 24.04.5）から試験ビルド test6 をアンインストールし、公開した v0.1.0 の `.deb` を入れた。
+
+## 次のリリースの手順
+
+1. main の、リリースする commit で `Cargo.toml` の版を上げておく。
+2. 注釈付き tag `v<版>` を push する（このリポジトリを操作するクラウド環境からは tag を push できないので、所有者が行う）。
+3. できた下書きの本文を書き、確かめて公開する。
