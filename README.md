@@ -8,9 +8,9 @@ CadMouse Compact Wireless（C658）と Universal Receiver（C652）を Linux で
 
 ## Status
 
-> **Phase 1, first release in preparation.** Settings and Receiver management are implemented, tested against a simulated device and checked with a real mouse and Receiver on Ubuntu 24.04. `hold-open`, which keeps a wired C658 working (see [Wired use](#wired-use-hold-open)), has been checked on the same hardware, including unplugging and reconnecting. Release packages support Ubuntu 22.04 and later; on older systems, build from source.
+> **Phase 1: [v0.1.0](https://github.com/nejiman10/cadrat/releases/tag/v0.1.0) released.** Settings and Receiver management are implemented, tested against a simulated device and checked with a real mouse and Receiver on Ubuntu 24.04. `hold-open`, which keeps a wired C658 working (see [Wired use](#wired-use-hold-open)), has been checked on the same hardware, including unplugging and reconnecting. Release packages support Ubuntu 22.04 and later; on older systems, build from source.
 
-現在は Phase 1 で、最初のリリースを準備しています。設定の送信と Receiver 管理は、模擬デバイスでのテストと実機での確認（[docs/hardware-test.md](docs/hardware-test.md)）を終えました。有線の C658 を使い続けるための `hold-open` も、抜き差しを含めて実機で確認しました。リリース用の `.deb` は Ubuntu 22.04 以降が対象で、それより古い環境ではソースからビルドしてください。
+現在は Phase 1 で、最初のリリース [v0.1.0](https://github.com/nejiman10/cadrat/releases/tag/v0.1.0) を公開しました。設定の送信と Receiver 管理は、模擬デバイスでのテストと実機での確認（[docs/hardware-test.md](docs/hardware-test.md)）を終えました。有線の C658 を使い続けるための `hold-open` も、抜き差しを含めて実機で確認しました。リリース用の `.deb` は Ubuntu 22.04 以降が対象で、それより古い環境ではソースからビルドしてください。
 
 ## Components
 
@@ -40,7 +40,15 @@ All output is in English. Commands, options and exit codes: [docs/spec/03-cli.md
 
 ### Release package (Ubuntu 22.04 or later)
 
-Download the `.deb` from [GitHub Releases](https://github.com/nejiman10/cadrat/releases) once one is published, or build it on Ubuntu 22.04 from a fresh clone:
+Download `cadrat-tool_<version>_amd64.deb` and `SHA256SUMS` from the [latest release](https://github.com/nejiman10/cadrat/releases/latest), check and install it:
+
+```sh
+sha256sum -c SHA256SUMS
+sudo apt install ./cadrat-tool_<version>_amd64.deb
+systemctl --user enable --now cadrat-hold-open.service   # only if you use the mouse by cable
+```
+
+Or build it yourself on Ubuntu 22.04 from a fresh clone:
 
 ```sh
 packaging/build-release.sh             # writes target/debian/cadrat-tool_<version>_amd64.deb
