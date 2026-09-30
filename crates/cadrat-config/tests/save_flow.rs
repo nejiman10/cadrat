@@ -1,4 +1,4 @@
-//! The file side of `set` (spec 03 §4 steps 2–5 and 9–10), on a real file.
+//! The file side of `set` (spec tool/cli §4 steps 2–5 and 9–10), on a real file.
 
 #![allow(missing_docs)]
 

@@ -1,4 +1,4 @@
-//! Exit codes (spec 03 §6).
+//! Exit codes (spec tool/cli §6).
 
 /// Every exit code `cadrat-tool` uses.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]

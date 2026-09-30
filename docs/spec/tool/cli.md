@@ -4,9 +4,9 @@
 
 | オプション | 意味 |
 |---|---|
-| `--config=<path>` | 設定ファイルのパス（[01 §1](01-config.md#1-場所)） |
-| `--mouse=<selector>` | 対象のマウス（[02 §6](02-device.md#6-マウスの選択)） |
-| `--route=<wired\|receiver>` | 有効な経路の代わりに、指定した経路へ送る（[02 §6](02-device.md#6-マウスの選択)） |
+| `--config=<path>` | 設定ファイルのパス（[config §1](../config.md#1-場所)） |
+| `--mouse=<selector>` | 対象のマウス（[device §6](../device.md#6-マウスの選択)） |
+| `--route=<wired\|receiver>` | 有効な経路の代わりに、指定した経路へ送る（[device §6](../device.md#6-マウスの選択)） |
 | `--hidraw=<path>` | 開発者向け。送信先nodeを直接指定する（判定は飛ばさない） |
 | `--json` | stdoutに機械可読なJSONを1つだけ出す |
 | `-v`, `--verbose` | 詳細表示（検出の過程、Receiverの注記など） |
@@ -14,7 +14,7 @@
 
 - オプションは `--name=value` と `--name value` のどちらでも受け付ける。文書では `=` 形式で書く。
 - 結果はstdoutに、警告とエラーはstderrに出す。`--json` のときもstderrは人間向けのままにする。
-- 対話的な確認をするのは `receiver unpair` だけとする（[05 §4](05-receiver.md#4-unpair)）。それ以外のコマンドは、スクリプトからそのまま使える。
+- 対話的な確認をするのは `receiver unpair` だけとする（[receiver §4](../receiver.md#4-unpair)）。それ以外のコマンドは、スクリプトからそのまま使える。
 - `-q` は、情報の行（`set` / `apply` の送信結果、`note`、`init` の結果など）を出さない。要求された結果（`list`、`get`、`receiver slots` の表示）と、警告・エラーは出す。
 - `-v` は、各hidraw nodeの判定結果をstderrに出す。
 - `--hidraw` は `--mouse`、`--route` と同時に指定できない（終了コード2）。
@@ -31,7 +31,7 @@
 | `mouse.wheel` | `normal` / `inertial` |
 | `mouse.lift.enabled` | `true` / `false` |
 | `mouse.lift.threshold` | `0`..`255`（`0x..` も可） |
-| `buttons.left` / `.right` / `.middle` / `.wheel` / `.forward` / `.back` / `.radial` | actionの書き方（[01 §5](01-config.md#5-action)）。例: `mouse:left`、`host:1` |
+| `buttons.left` / `.right` / `.middle` / `.wheel` / `.forward` / `.back` / `.radial` | actionの書き方（[config §5](../config.md#5-action)）。例: `mouse:left`、`host:1` |
 
 - 引数は最初の `=` で分ける。キーの側に空白や `=` は含まない。
 - 文字列の値は引用符なしで書ける（`mouse.wheel=inertial`）。
@@ -41,7 +41,7 @@
 
 ### `list [--nodes] [--redact]`
 
-接続中のマウスとReceiverを列挙する。送信はしない。読み取り要求（probe、slot読み取り）は行う（[02 §3](02-device.md#3-列挙の手順)）。
+接続中のマウスとReceiverを列挙する。送信はしない。読み取り要求（probe、slot読み取り）は行う（[device §3](../device.md#3-列挙の手順)）。
 
 ```
 $ cadrat-tool list
@@ -60,7 +60,7 @@ recv:port-3-2   1/5    /dev/hidraw6 (MI_00)
 
 ### `init [--preset=research-baseline] [--force]`
 
-設定ファイルのテンプレートを作る（[01 §8](01-config.md#8-init-が作るテンプレート)）。デバイスには触れない。
+設定ファイルのテンプレートを作る（[config §8](../config.md#8-init-が作るテンプレート)）。デバイスには触れない。
 
 ### `get [<key>...] [--wire] [-n]`
 
@@ -113,19 +113,19 @@ TOMLの内容をそのまま送る。TOMLは変更しない。再接続後や `-
 
 ### `receiver slots [--redact]`
 
-Receiverのslot 0..4の状態を表示する。読み取りだけを行う（[05 §2](05-receiver.md#2-slotの読み取り)）。Receiverが2台以上あれば `--receiver=<key>` で選ぶ。
+Receiverのslot 0..4の状態を表示する。読み取りだけを行う（[receiver §2](../receiver.md#2-slotの読み取り)）。Receiverが2台以上あれば `--receiver=<key>` で選ぶ。
 
 ### `receiver pair [--receiver=<key>] [--timeout=<秒>] [--poll-interval=<秒>]`
 
-pairing modeを開始し、新しいslotが占有されるまで待つ。終了時には必ず停止する（[05 §3](05-receiver.md#3-pair)）。
+pairing modeを開始し、新しいslotが占有されるまで待つ。終了時には必ず停止する（[receiver §3](../receiver.md#3-pair)）。
 
 ### `receiver unpair <slot> [--receiver=<key>] [--yes] [--timeout=<秒>] [--poll-interval=<秒>]`
 
-対象slotの内容を表示して確認を取り、解除し、slotが空になったことで成否を判定する（[05 §4](05-receiver.md#4-unpair)）。
+対象slotの内容を表示して確認を取り、解除し、slotが空になったことで成否を判定する（[receiver §4](../receiver.md#4-unpair)）。
 
 ### `hold-open [--poll-interval=<秒>]`
 
-有線C658のhidraw nodeを開いたまま保持し、抜き差しに追従する（[02 §9](02-device.md#9-hold-open)）。SIGINTかSIGTERMまで前面で動き続け、systemd user unit（`cadrat-hold-open.service`）から起動することを想定する。
+有線C658のhidraw nodeを開いたまま保持し、抜き差しに追従する（[device §9](../device.md#9-hold-open)）。SIGINTかSIGTERMまで前面で動き続け、systemd user unit（`cadrat-hold-open.service`）から起動することを想定する。
 
 - `--poll-interval` の既定は1秒。
 - 標準出力に、保持と解放を1行ずつ出す（`held      /dev/hidraw5 (MI_01)`、`released  /dev/hidraw5`）。journalに残すためである。開始時の案内はstderrに出し、`-q` で消える。
@@ -208,7 +208,7 @@ note    the receiver route is on standby; run `cadrat-tool apply` after switchin
 
 - `command` は `list`、`init`、`get`、`check`、`set`、`apply`、`receiver slots`、`receiver pair`、`receiver unpair` のいずれか。
 - エラーのときは `"ok": false`、`"error": {"code": "AmbiguousTarget", "message": "…", "details": {…}}` とする。
-- `list --json` は、`mice`、`receivers`（`--nodes` 指定時は `nodes` も）を配列で出す。デーモンの前準備として、この構造を[02 §2](02-device.md#2-デバイスモデル)のモデルと一致させる。
+- `list --json` は、`mice`、`receivers`（`--nodes` 指定時は `nodes` も）を配列で出す。デーモンの前準備として、この構造を[device §2](../device.md#2-デバイスモデル)のモデルと一致させる。
 - `format` はJSON出力の形式バージョン。フィールドを足すときは据え置き、互換性を壊すときだけ上げる。
 
 ## 6. 終了コード
@@ -252,9 +252,9 @@ note    the receiver route is on standby; run `cadrat-tool apply` after switchin
 | `W-SLOT-IF-MISMATCH` | Receiverの設定nodeのinterface番号が、機器IDで対応付けたslot番号と一致しない |
 | `W-INACTIVE-ROUTE` | `--route` で待機中（standby）の経路へ送った |
 | `W-SLOT-READ-RETRY` | pairまたはunpairの待機中にslotの読み取りがerrnoで失敗し、読み直した |
-| `W-MANAGEMENT-REOPENED` | pairまたはunpairの途中で管理nodeが使えなくなり、開き直した（[05 §6](05-receiver.md#6-管理nodeの開き直し)） |
+| `W-MANAGEMENT-REOPENED` | pairまたはunpairの途中で管理nodeが使えなくなり、開き直した（[receiver §6](../receiver.md#6-管理nodeの開き直し)） |
 | `W-INACCESSIBLE` | 列挙で、permission不足で開けないnodeがあった（udevルールのヒントを添える） |
 | `W-HOLD-OPEN-FAILED` | `hold-open` で対象のnodeを開けなかった（pathとerrnoの組ごとに1回。permission不足ならudevルールのヒントを添える） |
 | `W-HOLD-ENUMERATE-FAILED` | `hold-open` でsysfsを列挙できなかった（回復するまで1回） |
 
-警告は送信を止めない。止める設定（`--deny-warnings`）を用意するかは未決（[Q6](04-implementation.md#6-未決事項)）。
+警告は送信を止めない。止める設定（`--deny-warnings`）を用意するかは未決（[Q6](../implementation.md#6-未決事項)）。

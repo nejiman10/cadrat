@@ -1,4 +1,4 @@
-//! Keeping the wired C658's hidraw nodes open (spec 02 §9).
+//! Keeping the wired C658's hidraw nodes open (spec device §9).
 //!
 //! On the tested host, a wired C658 stopped sending input a few seconds
 //! after it was plugged in unless some process held its hidraw nodes open.

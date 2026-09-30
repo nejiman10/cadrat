@@ -1,5 +1,5 @@
 //! The device model: nodes, mice with their routes, and Receivers
-//! (spec 02 §2).
+//! (spec device §2).
 
 use std::fmt;
 use std::path::PathBuf;
@@ -29,7 +29,7 @@ impl fmt::Display for Route {
     }
 }
 
-/// Whether a route is the one settings go to by default (spec 02 §2.3).
+/// Whether a route is the one settings go to by default (spec device §2.3).
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum RouteState {
     /// The active route.
@@ -96,7 +96,7 @@ impl fmt::Display for RejectReason {
     }
 }
 
-/// The setting role of a node (spec 02 §4).
+/// The setting role of a node (spec device §4).
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum SettingRole {
     /// Wired C658 setting node.
@@ -125,7 +125,7 @@ pub enum NodeStatus {
     Inaccessible(Errno),
 }
 
-/// What a management node declares (spec 05 §1).
+/// What a management node declares (spec receiver §1).
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct ManagementCaps {
     /// Feature `0x41` is declared with 5 bytes, so it can pair and unpair.
@@ -139,7 +139,7 @@ pub struct NodeEntry {
     pub info: NodeInfo,
     /// Classification.
     pub status: NodeStatus,
-    /// The open descriptor, kept for the send (spec 02 §7 step 1).
+    /// The open descriptor, kept for the send (spec device §7 step 1).
     pub(crate) device: Option<Box<dyn Device>>,
 }
 
@@ -151,7 +151,7 @@ impl NodeEntry {
     }
 }
 
-/// Stable key of a mouse (spec 02 §2.2).
+/// Stable key of a mouse (spec device §2.2).
 #[derive(Debug, Clone, PartialEq, Eq, Hash, PartialOrd, Ord)]
 pub enum MouseKey {
     /// `c658:<device ID>`.
@@ -184,7 +184,7 @@ impl fmt::Display for ReceiverKey {
     }
 }
 
-/// How a Receiver route was matched to a slot (spec 02 §5).
+/// How a Receiver route was matched to a slot (spec device §5).
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum SlotMatch {
     /// The slot whose identifier equals the device ID.
@@ -271,7 +271,7 @@ pub struct Receiver {
     pub slots: SlotsRead,
 }
 
-/// Warnings found while enumerating or selecting (spec 03 §7).
+/// Warnings found while enumerating or selecting (spec tool/cli §7).
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum Warning {
     /// `W-NO-DEVICE-ID`: a wired setting node without a device ID.

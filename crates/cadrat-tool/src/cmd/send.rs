@@ -1,4 +1,4 @@
-//! `set` and `apply`, following the order in spec 03 §4.
+//! `set` and `apply`, following the order in spec tool/cli §4.
 
 use cadrat_config::{ConfigLock, parse_assignments};
 use cadrat_hidraw::{Route, RouteState, SendError, Target, select_mouse, select_node};
@@ -171,7 +171,7 @@ fn run(
         ));
     }
     if target.route.route == Route::Receiver {
-        // Spec 02 §7 step 7 (Q7): a send through the Receiver is sometimes
+        // Spec device §7 step 7 (Q7): a send through the Receiver is sometimes
         // lost, and cadrat-tool cannot read the setting back to tell.
         ctx.info("note    a send through the Receiver can take about 30 s to show and is sometimes lost;");
         ctx.info("        if nothing changes, run the same command again");

@@ -1,7 +1,7 @@
 //! Button actions: the one-byte wire value of each Report `0x10` button entry.
 //!
 //! The string forms (`mouse:left`, `unknown:6`, `host:1`, `raw:0x10`) are the
-//! same in TOML and JSON (spec 01 §5, spec 04 §2).
+//! same in TOML and JSON (spec config §5, spec implementation §2).
 
 use core::fmt;
 use core::str::FromStr;

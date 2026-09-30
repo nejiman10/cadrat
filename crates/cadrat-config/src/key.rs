@@ -1,5 +1,5 @@
 //! Setting keys and values, as written in TOML paths and `key=value`
-//! arguments (spec 03 §2).
+//! arguments (spec tool/cli §2).
 
 use std::fmt;
 use std::str::FromStr;
@@ -155,7 +155,7 @@ impl fmt::Display for Value {
     }
 }
 
-/// Why a `key=value` argument list was rejected (a usage error, spec 03 §2).
+/// Why a `key=value` argument list was rejected (a usage error, spec tool/cli §2).
 #[derive(Debug, Clone, PartialEq, Eq, thiserror::Error)]
 pub enum AssignmentError {
     /// No `=`.

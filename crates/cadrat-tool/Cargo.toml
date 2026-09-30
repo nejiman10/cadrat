@@ -22,7 +22,7 @@ signal-hook = "0.4.4"
 cadrat-hidraw = { path = "../cadrat-hidraw", features = ["fake"] }
 tempfile = "3.27.0"
 
-# `.deb` package (spec 04 §7). Build it with packaging/build-deb.sh, which
+# `.deb` package (spec implementation §7). Build it with packaging/build-deb.sh, which
 # generates target/dist first and marks the version as a test build.
 [package.metadata.deb]
 name = "cadrat-tool"

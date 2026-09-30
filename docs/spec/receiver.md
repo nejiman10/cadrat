@@ -6,7 +6,7 @@ C652 Universal Receiverの結合状態を読んだり変えたりする。この
 
 ## 1. 管理nodeの検出
 
-1. [02 §3](02-device.md#3-列挙の手順) の手順で列挙し、親USBデバイスごとにまとめる。1つの物理Receiverが1つのグループになる。
+1. [device §3](device.md#3-列挙の手順) の手順で列挙し、親USBデバイスごとにまとめる。1つの物理Receiverが1つのグループになる。
 2. 次の条件をすべて満たすnodeを、管理nodeの候補にする。
    - bus USB、VID `256f`、PID `c652`
    - Feature `0x43`..`0x47` のwire長がすべて8
@@ -18,7 +18,7 @@ C652 Universal Receiverの結合状態を読んだり変えたりする。この
 5. グループ内に条件を満たす候補が無ければ、そのReceiverには `DeviceInvalid`（7）を返す。
 6. Receiverの選択:
    - 1台ならそれを選ぶ。
-   - 2台以上なら `AmbiguousTarget` にし、`--receiver=<key>` で指定してもらう（keyは[02 §2.3](02-device.md#23-識別キー)）。keyの一意な接頭辞も受け付ける。`list` はReceiverに番号を付けないので、番号では指定できない。
+   - 2台以上なら `AmbiguousTarget` にし、`--receiver=<key>` で指定してもらう（keyは[device §2.2](device.md#22-識別キー)）。keyの一意な接頭辞も受け付ける。`list` はReceiverに番号を付けないので、番号では指定できない。
    - 開発者向けの `--hidraw=<path>` で管理nodeを直接指定することもできる。その場合も条件2で判定する。
 
 ## 2. slotの読み取り
@@ -35,7 +35,7 @@ C652 Universal Receiverの結合状態を読んだり変えたりする。この
 | 2..7 | 個体識別子の候補（6 byte） | HYPOTHESIS |
 
 - 「占有」の判定は `byte1 != 0` だけで行う。本CLIではこの解釈をHYPOTHESISと明記したうえで使う。調査側で否定された場合は仕様を改訂する。
-- 識別子の候補は、Receiver経由マウスの識別キーに使う（[02 §2.3](02-device.md#23-識別キー)）。既定では表示し、`--redact` を付けたときだけ伏せる。
+- 識別子の候補は、Receiver経由マウスの識別キーに使う（[device §2.2](device.md#22-識別キー)）。既定では表示し、`--redact` を付けたときだけ伏せる。
 
 ```
 $ cadrat-tool receiver slots
@@ -47,7 +47,7 @@ slot 3  empty
 slot 4  empty
 ```
 
-slotの識別子とマウスの機器IDが一致した場合は（[02 §5](02-device.md#5-receiver経由の経路とslotの対応付け)）、`list` の番号とkeyを併記する。
+slotの識別子とマウスの機器IDが一致した場合は（[device §5](device.md#5-receiver経由の経路とslotの対応付け)）、`list` の番号とkeyを併記する。
 
 ## 3. pair
 
@@ -88,7 +88,7 @@ cadrat-tool receiver pair [--receiver=<key>] [--timeout=<秒>] [--poll-interval=
 - 成功は「slotが占有された」ことまでしか意味しない。入力が来るかどうかは確かめない（調査のpair CLIと同じ境界）。成功時には次の手順を案内する。
   - `cadrat-tool list` で新しいマウスが現れたかを確認する。設定nodeは、新しいslot番号と同じinterface（MI_N）に現れると見込まれる（OBSERVED）。
   - `cadrat-tool apply --mouse=<番号またはkey>` で設定を送る。
-  - pair後の最初の送信は失われることがあるので、変化がなければ送り直す（Q7、[02 §7](02-device.md#7-送信) 手順7）。
+  - pair後の最初の送信は失われることがあるので、変化がなければ送り直す（Q7、[device §7](device.md#7-送信) 手順7）。
 - 再ペアリング後、設定nodeはslotに合わせて別のinterfaceへ移る（調査では MI_03 → MI_04）。以前のhidraw pathを使い回さない。
 
 ## 4. unpair
@@ -134,7 +134,7 @@ cadrat-tool receiver unpair <slot> [--receiver=<key>] [--yes]
 ## 5. 共通事項
 
 - `--mouse` と `--route` は使わない。指定されたら使い方の誤り（終了コード2）にする。
-- `--json` は[03 §5](03-cli.md#5-出力)の共通の外枠に従い、`receiver`、`slots_before`、`slots_after`、`new_slots`、`stop_sent` などを載せる。`--json` のときの `unpair` は対話しないので、`--yes` が必須になる。
+- `--json` は[tool/cli §5](tool/cli.md#5-出力)の共通の外枠に従い、`receiver`、`slots_before`、`slots_after`、`new_slots`、`stop_sent` などを載せる。`--json` のときの `unpair` は対話しないので、`--yes` が必須になる。
 - 自動再試行はしない。
 - 管理nodeへのSETはすべて、Feature Reportの宣言長（`0x41` は5 byte）どおりに送る。宣言長と違う長さでは送らない。
 

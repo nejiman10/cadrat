@@ -1,4 +1,4 @@
-//! `list` (spec 03 §3).
+//! `list` (spec tool/cli §3).
 
 use cadrat_hidraw::{Inventory, NodeStatus, SlotsRead, enumerate};
 use serde_json::{Value, json};

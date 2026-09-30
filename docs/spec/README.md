@@ -1,6 +1,6 @@
 # cadrat-tool 仕様（Phase 1: 独立設定ツール）
 
-状態: **草案 v0.21**（2026-09-28）。実装前の合意用。
+状態: **草案 v0.22**（2026-09-29）。実装前の合意用。
 
 ## 0. cadrat プロジェクトの構成
 
@@ -37,7 +37,7 @@ CadMouse Compact Wireless（C658）の設定を、Linux上でデーモンを介�
 | `--json` 出力 | |
 | 有線C658のhold-open（`hold-open` と、既定で無効のsystemd user unit） | |
 
-hold-openは当初、調査リポジトリのuser service（`c658-hidraw-hold-open.service`）に任せる予定だった。しかしそれがないと有線C658が接続後数秒で使えなくなる事例があり（[02 §9](02-device.md#9-hold-open)）、利用者に調査用のPython SDKを入れてもらうのは現実的でないため、Phase 1に含める。`cadrat-tool hold-open` と、それを動かすsystemd user unit（`cadrat-hold-open.service`、既定で無効）を配布する。`cadratd` ができたら、hold-openはその役目になる。
+hold-openは当初、調査リポジトリのuser service（`c658-hidraw-hold-open.service`）に任せる予定だった。しかしそれがないと有線C658が接続後数秒で使えなくなる事例があり（[device §9](device.md#9-hold-open)）、利用者に調査用のPython SDKを入れてもらうのは現実的でないため、Phase 1に含める。`cadrat-tool hold-open` と、それを動かすsystemd user unit（`cadrat-hold-open.service`、既定で無効）を配布する。`cadratd` ができたら、hold-openはその役目になる。
 
 ## 3. 基本原則
 
@@ -54,13 +54,17 @@ hold-openは当初、調査リポジトリのuser service（`c658-hidraw-hold-op
 
 ## 4. 文書構成
 
-| 文書 | 内容 |
-|---|---|
-| [01-config.md](01-config.md) | TOMLスキーマ、値の検証、wireへの対応 |
-| [02-device.md](02-device.md) | デバイスモデル（マウス・Receiver・識別キー）、検出、選択、送信 |
-| [03-cli.md](03-cli.md) | コマンド体系、`set` の処理順序、出力、終了コード |
-| [05-receiver.md](05-receiver.md) | Receiver管理nodeの検出、slotの読み取り、pair/unpairの手順と判定 |
-| [04-implementation.md](04-implementation.md) | crate構成、テスト方針、達成条件、未決事項 |
+`docs/spec/` の直下には、`cadrat-tool` と後の `cadratd` が共有する文書を置く。1つの実行ファイルだけにかかわる文書は、その名前のディレクトリ（`tool/`、後の `daemon/`、`ctl/`）に置く。仕様の版と未決事項の表は、全体で1つにする。
+
+| 文書 | 対象 | 内容 |
+|---|---|---|
+| [config.md](config.md) | 共通 | TOMLスキーマ、値の検証、wireへの対応 |
+| [device.md](device.md) | 共通 | デバイスモデル（マウス・Receiver・識別キー）、検出、選択、送信 |
+| [receiver.md](receiver.md) | 共通 | Receiver管理nodeの検出、slotの読み取り、pair/unpairの手順と判定 |
+| [implementation.md](implementation.md) | 共通 | crate構成、テスト方針、達成条件、未決事項、配布 |
+| [tool/cli.md](tool/cli.md) | `cadrat-tool` | コマンド体系、`set` の処理順序、出力、終了コード |
+
+文書をまたぐ参照は、ファイル名から `.md` を除いた名前と節番号で書く（例: `device §7`、`tool/cli §4`）。
 
 ## 5. 調査リポジトリとの関係
 
@@ -68,7 +72,7 @@ hold-openは当初、調査リポジトリのuser service（`c658-hidraw-hold-op
 
 本仕様内のプロトコル記述には、調査側の根拠ラベル（`CONFIRMED` / `OBSERVED` / `HYPOTHESIS` / `UNKNOWN`）を付ける。調査側のSPECが更新されたら、影響箇所を洗い出して本仕様を改訂する。
 
-コードは共有しない。調査リポジトリのPython SDKは参照実装として残し、両者はテストベクタ（[04-implementation.md](04-implementation.md#3-テストベクタ)）でつなぐ。
+コードは共有しない。調査リポジトリのPython SDKは参照実装として残し、両者はテストベクタ（[implementation.md](implementation.md#3-テストベクタ)）でつなぐ。
 
 ## 6. 用語
 
@@ -78,9 +82,9 @@ hold-openは当初、調査リポジトリのuser service（`c658-hidraw-hold-op
 | wire report | Report ID `0x10` とblobを合わせた32 byte |
 | 物理ボタン名 | blob offset 18..24 の7 entryに付ける名前（`left` … `radial`） |
 | action | 各物理ボタンに割り当てる1 byteのwire値の意味（direct / host-routed / raw） |
-| マウス | 利用者が扱う単位。機器IDで識別し、1つまたは2つの経路（route）を持つ（[02 §2](02-device.md#2-デバイスモデル)） |
+| マウス | 利用者が扱う単位。機器IDで識別し、1つまたは2つの経路（route）を持つ（[device §2](device.md#2-デバイスモデル)） |
 | route | `wired`（C658直結）または `receiver`（C652経由）。有効な経路は1つで、もう一方は `standby` |
 | 機器ID | GET `0x08` 応答の bytes 2..7。有線・Receiverの両経路で同じ値になる |
-| 識別キー | マウスやReceiverを安定して指す文字列（[02 §2.3](02-device.md#23-識別キー)） |
+| 識別キー | マウスやReceiverを安定して指す文字列（[device §2.2](device.md#22-識別キー)） |
 | 管理node | C652のうち、slot報告（Feature `0x43..0x47`）とpairing制御（Feature `0x41`）を宣言するhidraw node。Report `0x10` の送信先とは別 |
 | slot | Receiverの結合枠（0..4）。GET `0x43 + slot` で状態を読む |

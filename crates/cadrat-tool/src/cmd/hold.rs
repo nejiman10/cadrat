@@ -1,4 +1,4 @@
-//! `hold-open` (spec 03 §2.9, spec 02 §9).
+//! `hold-open` (spec tool/cli §2.9, spec device §9).
 
 use std::time::Duration;
 

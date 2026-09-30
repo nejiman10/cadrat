@@ -2,7 +2,7 @@
 
 /// Parses a non-negative integer written in decimal or as `0x` hexadecimal.
 ///
-/// These are the integer forms accepted in command-line values (spec 03 §2):
+/// These are the integer forms accepted in command-line values (spec tool/cli §2):
 /// decimal without sign or leading zeros, or a lowercase `0x` prefix followed
 /// by hexadecimal digits. The TOML file itself accepts every TOML notation.
 /// Returns `None` for anything else, including values that do not fit in

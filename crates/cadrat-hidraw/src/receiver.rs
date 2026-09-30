@@ -1,4 +1,4 @@
-//! Receiver management: slot reads, pair and unpair (spec 05).
+//! Receiver management: slot reads, pair and unpair (spec receiver).
 //!
 //! Pair and unpair are judged only by slot snapshots before and after, never
 //! by the return value of the SET (P7).
@@ -27,7 +27,7 @@ pub enum SlotReadError {
     Protocol(#[from] SlotError),
 }
 
-/// Reads one slot (spec 05 §2).
+/// Reads one slot (spec receiver §2).
 ///
 /// # Errors
 ///
@@ -89,7 +89,7 @@ fn set(device: &mut dyn Device, packet: [u8; PAIRING_REPORT_LEN]) -> SetResult {
 /// The descriptor stays open for the whole procedure, but the Receiver has
 /// been seen to drop the node after a slot changes (every GET then fails
 /// with `ENODEV`). [`Link::reopen`] finds the same Receiver's management node
-/// again so the procedure can continue (spec 05 §3, §4).
+/// again so the procedure can continue (spec receiver §3, §4).
 pub trait Link {
     /// The open management node.
     fn device(&mut self) -> &mut dyn Device;
@@ -220,7 +220,7 @@ impl Polling {
     };
 }
 
-/// How pairing ended (spec 05 §3).
+/// How pairing ended (spec receiver §3).
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum PairResult {
     /// New slots became occupied and pairing was stopped.
@@ -278,7 +278,7 @@ fn stop(
     result
 }
 
-/// Pairs a new device (spec 05 §3 steps 2–7).
+/// Pairs a new device (spec receiver §3 steps 2–7).
 ///
 /// `waiting` is called once pairing has started, to tell the user what to
 /// do. `interrupted` is polled between slot reads; the caller sets it from a
@@ -348,7 +348,7 @@ pub fn pair(
     })
 }
 
-/// How unpairing ended (spec 05 §4).
+/// How unpairing ended (spec receiver §4).
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum UnpairResult {
     /// The slot became empty.
@@ -383,7 +383,7 @@ pub struct UnpairOutcome {
     pub warnings: Vec<Warning>,
 }
 
-/// Unpairs one slot (spec 05 §4 steps 2–6).
+/// Unpairs one slot (spec receiver §4 steps 2–6).
 ///
 /// `confirm` is shown the slot and returns whether to proceed; with `--yes`
 /// the caller returns `true` without asking.

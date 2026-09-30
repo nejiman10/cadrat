@@ -1,4 +1,4 @@
-//! Reading, validating and updating the TOML file in place (spec 01 §2, §7).
+//! Reading, validating and updating the TOML file in place (spec config §2, §7).
 
 use std::fmt;
 
@@ -22,7 +22,7 @@ pub struct Document {
 #[error("{0}")]
 pub struct SyntaxError(String);
 
-/// One problem found while validating (spec 01 §2.1).
+/// One problem found while validating (spec config §2.1).
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum Problem {
     /// No `schema` key.

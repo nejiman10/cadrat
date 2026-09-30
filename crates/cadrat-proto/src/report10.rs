@@ -4,7 +4,7 @@
 //! 2 (lift threshold), 3..6 (wheel), 18..24 (seven buttons), 26 (fixed
 //! `0x1e`) and 30 (polling divider). The wire report is Report ID `0x10`
 //! followed by the blob, 32 bytes in total. It is always a full snapshot,
-//! never a patch (spec 01 §3).
+//! never a patch (spec config §3).
 
 use core::fmt;
 use core::str::FromStr;
@@ -28,7 +28,7 @@ pub const LIFT_DISABLED: u8 = 0x1f;
 /// Blob offsets that the generator always leaves zero.
 const RESERVED: [usize; 16] = [0, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 25, 27, 28, 29];
 
-/// DPI: 50..=8200 in steps of 50 (spec 01 §4.1).
+/// DPI: 50..=8200 in steps of 50 (spec config §4.1).
 ///
 /// Unlike the recovered generator, which clamps and floors, out-of-range and
 /// non-multiple values are not representable. How values in range behave on
@@ -128,7 +128,7 @@ impl FromStr for Dpi {
     }
 }
 
-/// Lift detection (blob offset 2). Experimental on C658 (spec 01 §4.4).
+/// Lift detection (blob offset 2). Experimental on C658 (spec config §4.4).
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub enum Lift {
     /// Encoded as `0x1f`.
@@ -319,7 +319,7 @@ impl FromStr for PollingRate {
     }
 }
 
-/// Physical button names for blob offsets 18..24 (spec 01 §6).
+/// Physical button names for blob offsets 18..24 (spec config §6).
 ///
 /// `OBSERVED`: on both routes, changing each offset to `host:1` made the
 /// corresponding physical button report bitmap `0x01`, for all seven entries.
@@ -530,7 +530,7 @@ impl WireButton {
 }
 
 /// A decoded wire report. Produced from captures and test vectors; the
-/// device itself cannot be read back (spec 02 §8).
+/// device itself cannot be read back (spec device §8).
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub struct InspectedReport10 {
     /// Raw blob offset 1.
@@ -661,7 +661,7 @@ mod tests {
         })
     }
 
-    /// The research baseline wire report, byte by byte from spec 01 §3.
+    /// The research baseline wire report, byte by byte from spec config §3.
     const BASELINE_WIRE: &str = concat!(
         "10",                     // Report ID
         "00",                     // 0

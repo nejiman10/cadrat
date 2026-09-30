@@ -1,6 +1,6 @@
 # テストベクタ
 
-調査リポジトリ [nejiman10/3dx-hid-research](https://github.com/nejiman10/3dx-hid-research) の Python SDK が書き出したベクタです。`cadrat-proto` の出力が SDK と一致することを、`crates/cadrat-proto/tests/vectors.rs` で確かめます。方針は [仕様 04 §3](../docs/spec/04-implementation.md#3-テストベクタ) を参照してください。
+調査リポジトリ [nejiman10/3dx-hid-research](https://github.com/nejiman10/3dx-hid-research) の Python SDK が書き出したベクタです。`cadrat-proto` の出力が SDK と一致することを、`crates/cadrat-proto/tests/vectors.rs` で確かめます。方針は [仕様 implementation §3](../docs/spec/implementation.md#3-テストベクタ) を参照してください。
 
 ## 出所
 

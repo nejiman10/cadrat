@@ -1,5 +1,5 @@
 //! Checks `cadrat-proto` against the research SDK's test vectors in
-//! `vectors/` (spec 04 §3). See `vectors/README.md` for their origin.
+//! `vectors/` (spec implementation §3). See `vectors/README.md` for their origin.
 
 #![allow(missing_docs)]
 

@@ -1,7 +1,7 @@
 //! Build helpers.
 //!
 //! `cargo run -p xtask -- dist` writes the manual pages and shell completions
-//! that the `.deb` package installs (spec 04 §7) to `target/dist/`.
+//! that the `.deb` package installs (spec implementation §7) to `target/dist/`.
 
 use std::fs::{self, File};
 use std::io::{self, Write};

@@ -1,5 +1,5 @@
 //! Discovery: classify each node and assemble mice and Receivers
-//! (spec 02 §3–§5, spec 05 §1).
+//! (spec device §3–§5, spec receiver §1).
 //!
 //! Enumeration only reads: the ID probe (GET `0x08`) on setting nodes and the
 //! slot reports (GET `0x43..0x47`) on one management node per Receiver.
@@ -40,7 +40,7 @@ pub fn enumerate(system: &dyn System) -> io::Result<Inventory> {
     Ok(assemble(nodes, warnings))
 }
 
-/// Classifies one node (spec 02 §4, spec 05 §1).
+/// Classifies one node (spec device §4, spec receiver §1).
 pub(crate) fn classify(
     system: &dyn System,
     info: NodeInfo,
@@ -139,7 +139,7 @@ pub(crate) fn classify(
     }
 }
 
-/// The ID probe: GET Feature `0x08` with length 8 (spec 02 §4).
+/// The ID probe: GET Feature `0x08` with length 8 (spec device §4).
 pub(crate) fn probe(device: &mut dyn Device) -> Result<DeviceId, RejectReason> {
     let response = device
         .get_feature(DEVICE_ID_REPORT, DEVICE_ID_LEN)
@@ -211,7 +211,7 @@ fn assemble_receivers(nodes: &mut [NodeEntry]) -> BTreeMap<String, Receiver> {
     receivers
 }
 
-/// Setting nodes grouped into mice by key (spec 02 §2, §5).
+/// Setting nodes grouped into mice by key (spec device §2, §5).
 fn assemble_mice(
     nodes: &[NodeEntry],
     receivers: &BTreeMap<String, Receiver>,
@@ -285,7 +285,7 @@ fn assemble_mice(
     }
 
     // ambiguous-node: two wired setting nodes on one USB device, or two
-    // routes of the same kind for one mouse (spec 02 §4).
+    // routes of the same kind for one mouse (spec device §4).
     let wired_ports: Vec<&str> = routes
         .values()
         .flat_map(|(_, _, r)| r)

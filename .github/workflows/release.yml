@@ -1,5 +1,5 @@
 # Builds the release .deb on Ubuntu 22.04, the oldest supported LTS
-# (spec 04 §7), and tries it in the same container.
+# (spec implementation §7), and tries it in the same container.
 #
 # - Pull request: build and try only.
 # - Tag v<version>: also attest the build and create a DRAFT GitHub Release.
