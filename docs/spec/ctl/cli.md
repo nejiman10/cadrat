@@ -12,7 +12,7 @@
 | `check` | `Check` | なし |
 | `set <key>=<value>... [--dry-run \| --no-save]` | `Set` | なし |
 | `apply [--dry-run]` | `Apply` | なし |
-| `receiver slots [--redact]` | `ReceiverSlots` | なし |
+| `receiver slots [--receiver=<key>] [--redact]` | `ReceiverSlots` | なし |
 | `receiver pair [--receiver=<key>] [--timeout=<秒>] [--poll-interval=<秒>]` | `ReceiverPair` | §2 |
 | `receiver unpair <slot> [--receiver=<key>] [--yes] [--timeout=<秒>] [--poll-interval=<秒>]` | `ReceiverSlots`、`ReceiverUnpair` | §2 |
 
@@ -34,24 +34,27 @@
 2. `cadrat-tool` と同じ内容で確認を取る（[receiver §4](../receiver.md#4-unpair) の手順3）。`--yes`、端末でない場合、`--json` の扱いも同じである。
 3. 確認で見せたslotの生の値を `expected` に、手順1の結果にあったReceiverのkeyを `receiver` に入れて、`ReceiverUnpair` を呼ぶ。
    - 確認してから実行するまでにslotが変わっていないかは、`cadratd` が照合する。
+4. 手順3の応答を待つ間（slotが空になるのを待つ間）にSIGINTかSIGTERMを受けたら、`cadrat-tool` と同じく、シグナルの既定の動作で終わる。`cadratd` は接続が消えたことで待機をやめる。解除要求はすでに送っているので、結果は `receiver slots` で確かめる（[tool/cli §3](../tool/cli.md#receiver-unpair-slot---receiverkey---yes---timeout秒---poll-interval秒)）。手順3より前に終われば、何も送られない。
 
 ## 3. 出力
 
 - `cadratd` が返したJSONから、`cadrat-tool` と同じ人間向けの表示を作る（[tool/cli §5](../tool/cli.md#5-出力)）。`--json` のときは、返ったJSONをそのまま出す。
 - 案内の文言に出てくるコマンド名は `cadratctl` にする（例: "run `cadratctl apply` after switching modes"）。
 - `--json` のときも、D-Busのエラー（§4の21、22）は外枠のJSONで出す。`error.code` は終了コードの名前とする。
+- **`-v`**: `verbose` を付けて呼び、返ったJSONの `nodes` を、`cadrat-tool -v` と同じ形でstderrに出す。stdoutに出すJSONからは `nodes` を除く。ただし `list --nodes` のときは、`cadrat-tool` と同じく `nodes` を残す。これで、`-v` と `--json` を組み合わせても、stdoutとstderrが `cadrat-tool` と同じになる。
 
 ## 4. 終了コード
 
-[tool/cli §6](../tool/cli.md#6-終了コード) の0〜19と同じである。`cadratd` が返したJSONの `exit_code` で終える。それに次を加える。
+終了コードの表は1つにまとめ、[tool/cli §6](../tool/cli.md#6-終了コード) に置く。`cadratctl` は、`cadratd` が返したJSONの `exit_code` で終える。それに加えて、`cadratctl` だけが次を使う。
 
 | コード | 名前 | 意味 |
 |---:|---|---|
 | 21 | DaemonUnavailable | `cadratd` に届かない（session busが無い、起動できない、応答が無い、呼び出しを拒否された）。呼び出しのtimeoutの場合は、要求が実行されたかどうか分からないと表示する |
-| 22 | Busy | `cadratd` が別のデバイス操作を実行中だった。何もしていない。メッセージに実行中のコマンド名を出す |
+| 22 | Busy | `cadratd` が別の書き込む操作を実行中だった（`Busy`）、または起動の準備中だった（`Starting`）。何もしていない。メッセージに理由（実行中のコマンド名、または `cadrat-tool` の終わりを待っていること）を出す |
 
 - 20（`DaemonRunning`）は `cadrat-tool` だけが使う（[tool/cli §8](../tool/cli.md#8-cadratd-との排他)）。
 - D-Busの `InvalidArgs` はUsage（2）、`Internal` はInternal（1）とする。
+- シグナルで終わった場合は、シグナルの既定の動作に従う（§2）。
 
 ## 5. 呼び出しのtimeout
 

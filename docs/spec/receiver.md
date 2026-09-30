@@ -1,4 +1,4 @@
-# 05 Receiver管理（slot / pair / unpair）
+# Receiver管理（slot / pair / unpair）
 
 C652 Universal Receiverの結合状態を読んだり変えたりする。この機能はTOMLに一切触れない（設定正本とは独立）。
 

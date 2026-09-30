@@ -56,7 +56,7 @@ recv:port-3-2   1/5    /dev/hidraw6 (MI_00)
 1台のマウスが両方の経路で見えている場合も、1行にまとめて表示する。
 
 - `--nodes`: hidraw nodeごとの判定結果（`candidate` / `rejected` と理由 / `inaccessible`）を表示する。開発と不具合調査に使う。
-- `--redact`: 機器IDとslotの識別子を伏せて表示する（issueに貼るとき向け）。
+- `--redact`: 機器IDとslotの識別子を伏せて表示する（issueに貼るとき向け）。伏せた値は `id-N` と書く。Nは1から、その出力の中で最初に現れた順に振り、同じ値には同じNを使う。そのため、1つの出力の中では、同じ個体かどうかを照合できる。`receiver slots --redact` も同じである。
 
 ### `init [--preset=research-baseline] [--force]`
 
@@ -111,7 +111,7 @@ $ cadrat-tool set mouse.dpi=1000 buttons.radial=host:1
 
 TOMLの内容をそのまま送る。TOMLは変更しない。再接続後や `--no-save` の後に戻すとき、`--config` で別のファイルを送るときに使う。
 
-### `receiver slots [--redact]`
+### `receiver slots [--receiver=<key>] [--redact]`
 
 Receiverのslot 0..4の状態を表示する。読み取りだけを行う（[receiver §2](../receiver.md#2-slotの読み取り)）。Receiverが2台以上あれば `--receiver=<key>` で選ぶ。
 
@@ -122,6 +122,8 @@ pairing modeを開始し、新しいslotが占有されるまで待つ。終了�
 ### `receiver unpair <slot> [--receiver=<key>] [--yes] [--timeout=<秒>] [--poll-interval=<秒>]`
 
 対象slotの内容を表示して確認を取り、解除し、slotが空になったことで成否を判定する（[receiver §4](../receiver.md#4-unpair)）。
+
+- シグナル（SIGINT、SIGTERM）は捕まえず、既定の動作で終わる。確認を取る前に終われば何も送らない。解除要求を送った後の待機中に終われば、解除の結果は分からないので、`receiver slots` で確かめる。
 
 ### `hold-open [--poll-interval=<秒>]`
 
@@ -236,6 +238,8 @@ note    the receiver route is on standby; run `cadrat-tool apply` after switchin
 | 18 | Aborted | 確認プロンプトで拒否された |
 | 19 | TargetChanged | 送信直前の宛先確認で、機器IDが一致しなかった（送信していない） |
 | 20 | DaemonRunning | `cadratd` が動いているので、送信系のコマンドを実行しなかった（§8） |
+| 21 | DaemonUnavailable | `cadratctl` だけが使う。`cadratd` に届かない（[ctl/cli §4](../ctl/cli.md#4-終了コード)） |
+| 22 | Busy | `cadratctl` だけが使う。`cadratd` が別の書き込む操作の実行中か、起動の準備中だった（[ctl/cli §4](../ctl/cli.md#4-終了コード)） |
 
 ## 7. 警告コード
 
@@ -258,17 +262,18 @@ note    the receiver route is on standby; run `cadrat-tool apply` after switchin
 | `W-HOLD-OPEN-FAILED` | `hold-open` で対象のnodeを開けなかった（pathとerrnoの組ごとに1回。permission不足ならudevルールのヒントを添える） |
 | `W-HOLD-ENUMERATE-FAILED` | `hold-open` でsysfsを列挙できなかった（回復するまで1回） |
 
-警告は送信を止めない。止める設定（`--deny-warnings`）を用意するかは未決（[Q6](../implementation.md#6-未決事項)）。
+警告は送信を止めない。止める設定（`--deny-warnings`）は用意しない（[Q6](../implementation.md#6-未決事項)）。
 
 ## 8. `cadratd` との排他
 
 `cadratd` が動いている間、デバイスへの書き込みは `cadratd` だけが行う（[daemon §4](../daemon/daemon.md#4-デバイスへの書き込みの排他q9)）。
 
 - **対象のコマンド**: `set`、`apply`（どちらも `--dry-run` を除く）、`receiver pair`、`receiver unpair`。`--hidraw` を指定した場合も含む。
-- **確かめ方**: 引数の検証の後、TOMLのロック（§4 の手順2）より前に、`$XDG_RUNTIME_DIR/cadrat/cadratd.lock` に `flock(LOCK_SH | LOCK_NB)` をかける。
-  - `XDG_RUNTIME_DIR` が未設定なら `/run/user/<uid>` を使う。
-  - ディレクトリかファイルが無ければ作る（ディレクトリはmode 0700）。作れなければ `cadratd` も動けないので、確かめずに続ける。
+- **確かめ方**: 引数の検証の後、TOMLのロック（§4 の手順2）より前に、`/run/user/<uid>/cadrat/cadratd.lock` に `flock(LOCK_SH | LOCK_NB)` をかける。`<uid>` はプロセスの実uid（`getuid()`）で、`XDG_RUNTIME_DIR` は使わない（[daemon §4](../daemon/daemon.md#4-デバイスへの書き込みの排他q9)）。
+  - `/run/user/<uid>` が無ければ、そのユーザーの `cadratd` は動けないので、確かめずに続ける。`/run/user/<uid>` は作らない。
+  - その下の `cadrat/` とロックファイルが無ければ作る（ディレクトリはmode 0700）。
   - ロックが取れなければ、何もせずに `DaemonRunning`（20）で終える。メッセージで同じ操作の `cadratctl` のコマンドを案内する（"cadratd is running; use `cadratctl set …` instead"）。
   - 取れたロックは、コマンドが終わるまで持つ。その間 `cadratd` は起動を待つ。
+- **rootで実行した場合**: `/run/user/*/cadrat/cadratd.lock` をすべて確かめ、見つかったものすべてに `LOCK_SH | LOCK_NB` をかける。1つでも取れなければ20で終える。rootは `uaccess` が無くてもhidrawを開けるので、どのユーザーの `cadratd` とも書き込みが重なり得るためである。ロックファイルは作らない（無いユーザーの `cadratd` は動いていない）。
 - **対象外のコマンド**: `list`、`init`、`get`、`check`、`--dry-run`、`receiver slots`、`hold-open` は確かめない。デバイスへ書き込まないためである。
 - `cadrat-tool` はD-Busを使わない。
