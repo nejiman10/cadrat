@@ -1,4 +1,4 @@
-# 03 CLI
+# cadrat-tool
 
 ## 1. 共通オプション
 
@@ -125,7 +125,7 @@ pairing modeを開始し、新しいslotが占有されるまで待つ。終了�
 
 ### `hold-open [--poll-interval=<秒>]`
 
-有線C658のhidraw nodeを開いたまま保持し、抜き差しに追従する（[device §9](../device.md#9-hold-open)）。SIGINTかSIGTERMまで前面で動き続け、systemd user unit（`cadrat-hold-open.service`）から起動することを想定する。
+有線C658のhidraw nodeを開いたまま保持し、抜き差しに追従する（[device §9](../device.md#9-hold-open)）。SIGINTかSIGTERMまで前面で動き続ける。常駐させるのはシステムサービスの `cadrat-hold-open`（[hold-open/cli.md](../hold-open/cli.md)）で、このコマンドは試験と調査に使う。
 
 - `--poll-interval` の既定は1秒。
 - 標準出力に、保持と解放を1行ずつ出す（`held      /dev/hidraw5 (MI_01)`、`released  /dev/hidraw5`）。journalに残すためである。開始時の案内はstderrに出し、`-q` で消える。
@@ -235,6 +235,7 @@ note    the receiver route is on standby; run `cadrat-tool apply` after switchin
 | 17 | ReceiverProtocolError | slot応答の長さやReport IDが想定と違う |
 | 18 | Aborted | 確認プロンプトで拒否された |
 | 19 | TargetChanged | 送信直前の宛先確認で、機器IDが一致しなかった（送信していない） |
+| 20 | DaemonRunning | `cadratd` が動いているので、送信系のコマンドを実行しなかった（§8） |
 
 ## 7. 警告コード
 
@@ -258,3 +259,16 @@ note    the receiver route is on standby; run `cadrat-tool apply` after switchin
 | `W-HOLD-ENUMERATE-FAILED` | `hold-open` でsysfsを列挙できなかった（回復するまで1回） |
 
 警告は送信を止めない。止める設定（`--deny-warnings`）を用意するかは未決（[Q6](../implementation.md#6-未決事項)）。
+
+## 8. `cadratd` との排他
+
+`cadratd` が動いている間、デバイスへの書き込みは `cadratd` だけが行う（[daemon §4](../daemon/daemon.md#4-デバイスへの書き込みの排他q9)）。
+
+- **対象のコマンド**: `set`、`apply`（どちらも `--dry-run` を除く）、`receiver pair`、`receiver unpair`。`--hidraw` を指定した場合も含む。
+- **確かめ方**: 引数の検証の後、TOMLのロック（§4 の手順2）より前に、`$XDG_RUNTIME_DIR/cadrat/cadratd.lock` に `flock(LOCK_SH | LOCK_NB)` をかける。
+  - `XDG_RUNTIME_DIR` が未設定なら `/run/user/<uid>` を使う。
+  - ディレクトリかファイルが無ければ作る（ディレクトリはmode 0700）。作れなければ `cadratd` も動けないので、確かめずに続ける。
+  - ロックが取れなければ、何もせずに `DaemonRunning`（20）で終える。メッセージで同じ操作の `cadratctl` のコマンドを案内する（"cadratd is running; use `cadratctl set …` instead"）。
+  - 取れたロックは、コマンドが終わるまで持つ。その間 `cadratd` は起動を待つ。
+- **対象外のコマンド**: `list`、`init`、`get`、`check`、`--dry-run`、`receiver slots`、`hold-open` は確かめない。デバイスへ書き込まないためである。
+- `cadrat-tool` はD-Busを使わない。

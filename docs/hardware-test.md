@@ -1,6 +1,6 @@
 # 実機確認の手順と記録（Phase 1）
 
-[仕様 implementation §5](spec/implementation.md#5-phase-1-の達成条件) の達成条件を、実機で確かめる手順です。記録の形式は調査リポジトリの `HARDWARE_TEST.md` に倣います。
+[仕様 implementation §5.1](spec/implementation.md#51-phase-1) の達成条件を、実機で確かめる手順です。記録の形式は調査リポジトリの `HARDWARE_TEST.md` に倣います。
 
 **状態: 実施 1〜3 を完了（2026-09-28）。** 実施には、所有者の明示的な指示、復元値の記録、この手順書の3つが要る（[AGENTS.md](../AGENTS.md)「Safety」）。3つとも揃った（下の「記録」）。
 

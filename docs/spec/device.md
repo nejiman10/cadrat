@@ -149,7 +149,7 @@ GET `0x10` による読み戻しは行わない。調査で32-byteの現在設�
 
 ## 9. hold-open
 
-有線C658のhidraw nodeを、プロセスが開いたまま保持する。`cadrat-tool hold-open`（[tool/cli §3](tool/cli.md#hold-open---poll-interval秒)）が行い、配布物のsystemd user unit（`cadrat-hold-open.service`）がそれを常駐させる。unitは既定で無効で、有線で使う利用者が自分で有効にする。
+有線C658のhidraw nodeを、プロセスが開いたまま保持する。常駐させるのはシステムサービスの `cadrat-hold-open`（[hold-open/cli.md](hold-open/cli.md)、既定で有効）である。`cadrat-tool hold-open`（[tool/cli §3](tool/cli.md#hold-open---poll-interval秒)）も同じ規則で保持し、試験と調査に使う。Phase 1では、既定で無効のsystemd user unitが `cadrat-tool hold-open` を常駐させていた。ログイン画面とログアウトの後に入力が止まるので、Phase 2aでシステムサービスに移す。`cadratd` はhold-openを行わない。
 
 - **理由**: 調査の実機では、有線C658のhidrawをどのプロセスも開いていないと、USB接続から数秒で入力が止まった。全interfaceを開いたままにすると、止まらなかった（調査側 hold-open監査、各条件2回。調査側のuser serviceで1日以上の通常利用と再接続時のつかみ直しも確認）。観測は1つの環境だけで、原因は分かっていない（UNKNOWN）。したがってhold-openは原因の対策ではなく、観測に基づく回避策である。
 - **対象**: sysfsの `HID_ID` がbus USB、VID `256f`、PID `c658` のnodeすべて（interfaceを問わない）。Receiver（`c652`）とUSB以外のbusは対象外とする。
@@ -160,4 +160,4 @@ GET `0x10` による読み戻しは行わない。調査で32-byteの現在設�
   - 新しい対象を開く。開けなければ、pathとerrnoの組が変わったときだけ警告し（`W-HOLD-OPEN-FAILED`）、次の周期でまた試す。
   - sysfsを列挙できなければ一度だけ警告し（`W-HOLD-ENUMERATE-FAILED`）、保持中のfdはそのままにして次の周期でまた試す。
 - **終了**: SIGINTまたはSIGTERMで、保持中のfdをすべて閉じて終了コード0で終わる。接続中に閉じると、抜き差しをしなくても入力が止まった（cadratの実機確認 実施 3、1回。調査側 [Issue #4](https://github.com/nejiman10/3dx-hid-research/issues/4)）。したがって有線で使う間はserviceを動かし続けるよう案内する。
-- **共存**: 他の `cadrat-tool` コマンドや調査側のuser serviceと同時に動いてよい。hidrawは複数のプロセスが同時に開ける。ただし二重に動かす意味はないので、調査側のserviceは止めるよう案内する。
+- **共存**: 他の `cadrat-tool` コマンド、`cadratd`、調査側のuser serviceと同時に動いてよい。hidrawは複数のプロセスが同時に開ける。ただし二重に動かす意味はないので、調査側のserviceは止めるよう案内する。
