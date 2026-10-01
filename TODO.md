@@ -8,9 +8,9 @@ Phase 1 は [v0.1.0](https://github.com/nejiman10/cadrat/releases/tag/v0.1.0) �
 
 目的: `cadratd`、`cadratctl`、`cadrat-hold-open`、パッケージの分割、`cadrat-tool` との排他を仕様に書き、所有者と合意する。
 
-達成条件: [docs/spec/](docs/spec/README.md) の v0.23 の内容（daemon/、ctl/、hold-open/、implementation §5.2・§6・§7、tool/cli §8）を所有者が承認し、develop にマージされる。
+達成条件: [docs/spec/](docs/spec/README.md) の v0.24 の内容（daemon/、ctl/、hold-open/、device §7.2、implementation §5.2・§6・§7、tool/cli §8）を所有者が承認し、develop にマージされる。
 
-現状: 草案を書き、所有者のレビュー（排他の境界、起動中の要求、`Busy` の範囲、`-v` の出力、`/dev` の見張り方など）を反映した。所有者の確認待ち。
+現状: 草案を書き、所有者のレビュー（排他の境界、起動中の要求、`Busy` の範囲、`-v` の出力、`/dev` の見張り方など）を反映した。v0.24 で、後から変えにくい部分を見直した（hold-open を udev から node ごとに起動、D-Bus API を Phase 2a では内部 API とする、書き込み時の hidraw node のロック、`cadratd` の有効化は初回のインストールだけ）。所有者の確認待ち。
 
 ## 14. コマンド層を共有 crate に移す
 
