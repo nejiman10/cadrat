@@ -44,6 +44,22 @@ pub struct Target {
     /// Warnings from selection.
     pub warnings: Vec<Warning>,
     device: Box<dyn Device>,
+    /// For the Receiver route, the Receiver's management node, locked
+    /// before the setting node (spec device §7.2).
+    management: Option<(PathBuf, Box<dyn Device>)>,
+}
+
+/// The management node of the Receiver a route goes through, opened, if
+/// the inventory has one.
+fn route_management(
+    inventory: &mut Inventory,
+    route: &MouseRoute,
+) -> Option<(PathBuf, Box<dyn Device>)> {
+    let key = route.receiver.as_ref()?;
+    let receiver = inventory.receivers.iter().find(|r| &r.key == key)?;
+    let node = *receiver.management.first()?;
+    let path = inventory.nodes[node].info.path.clone();
+    inventory.take_device(node).map(|device| (path, device))
 }
 
 fn inaccessible(inventory: &Inventory, product: Option<u16>) -> Vec<PathBuf> {
@@ -131,11 +147,13 @@ pub fn select_mouse(
     let device = inventory
         .take_device(chosen.node)
         .expect("setting nodes stay open");
+    let management = route_management(inventory, &chosen);
     Ok(Target {
         mouse,
         route: chosen,
         warnings,
         device,
+        management,
     })
 }
 
@@ -199,6 +217,15 @@ pub fn select_node(system: &dyn System, path: &Path) -> Result<Target, SelectErr
         slot: None,
         ambiguous: false,
     };
+    // The Receiver's management node is found by enumerating, as for a
+    // selected mouse; without one, only the setting node is locked.
+    let management = if route.route == Route::Receiver {
+        crate::enumerate(system)
+            .ok()
+            .and_then(|mut inventory| route_management(&mut inventory, &route))
+    } else {
+        None
+    };
     Ok(Target {
         mouse: Mouse {
             key,
@@ -208,6 +235,7 @@ pub fn select_node(system: &dyn System, path: &Path) -> Result<Target, SelectErr
         route,
         warnings,
         device: entry.device.take().expect("candidates are open"),
+        management,
     })
 }
 
@@ -222,6 +250,15 @@ pub enum SendError {
         path: PathBuf,
         /// What differed.
         reason: String,
+    },
+    /// `Busy` (22): another process holds the write lock on this node
+    /// (spec device §7.2). Nothing was sent.
+    #[error("another process is writing to {path} ({errno}); nothing was sent")]
+    Busy {
+        /// The node.
+        path: PathBuf,
+        /// The `flock` error.
+        errno: Errno,
     },
     /// `SendFailed` (8): the check or the send failed.
     #[error("sending to {path} failed: {failure}")]
@@ -274,8 +311,9 @@ impl Target {
         self.mouse.device_id
     }
 
-    /// Sends one wire report (spec device §7): re-probes on the same descriptor,
-    /// then sends exactly once. Success means the host completed the ioctl,
+    /// Sends one wire report (spec device §7): locks the nodes it writes
+    /// through without waiting (spec device §7.2), re-probes on the same
+    /// descriptor, then sends exactly once. Success means the host completed the ioctl,
     /// not that the mouse applied it (P6).
     ///
     /// # Errors
@@ -283,6 +321,16 @@ impl Target {
     /// See [`SendError`].
     pub fn send(&mut self, wire: &[u8; WIRE_LEN]) -> Result<(), SendError> {
         let path = self.route.path.clone();
+        if let Some((management, device)) = &mut self.management {
+            device.lock().map_err(|e| SendError::Busy {
+                path: management.clone(),
+                errno: Errno::of(&e),
+            })?;
+        }
+        self.device.lock().map_err(|e| SendError::Busy {
+            path: path.clone(),
+            errno: Errno::of(&e),
+        })?;
         match probe(self.device.as_mut()) {
             Ok(id) => {
                 if let Some(expected) = self.expected_id()
@@ -352,6 +400,7 @@ impl ManagementTarget {
             target: self,
             system,
             require_pairing,
+            locked: false,
         }
     }
 }
@@ -361,6 +410,7 @@ pub struct ManagementLink<'a> {
     target: &'a mut ManagementTarget,
     system: &'a dyn System,
     require_pairing: bool,
+    locked: bool,
 }
 
 impl crate::receiver::Link for ManagementLink<'_> {
@@ -379,6 +429,18 @@ impl crate::receiver::Link for ManagementLink<'_> {
         self.target.path = fresh.path;
         self.target.interface = fresh.interface;
         self.target.device = fresh.device;
+        if self.locked {
+            // Spec device §7.2: lock the new descriptor again. If another
+            // process took it meanwhile, carry on: the stop packet must
+            // still go out.
+            let _ = self.target.device.lock();
+        }
+        Ok(())
+    }
+
+    fn lock(&mut self) -> std::io::Result<()> {
+        self.target.device.lock()?;
+        self.locked = true;
         Ok(())
     }
 }

@@ -95,11 +95,23 @@ pub trait Link {
     fn device(&mut self) -> &mut dyn Device;
 
     /// Chooses and opens the management node again, by the same rules.
+    /// If the old node was locked, the new one is locked again; failing to
+    /// lock it does not fail the reopen, so the stop packet can still be
+    /// sent (spec device §7.2).
     ///
     /// # Errors
     ///
     /// Why no management node could be opened (yet).
     fn reopen(&mut self) -> Result<(), String>;
+
+    /// Takes the write lock on the management node (spec device §7.2).
+    ///
+    /// # Errors
+    ///
+    /// The `flock` error; `EWOULDBLOCK` when another process holds it.
+    fn lock(&mut self) -> std::io::Result<()> {
+        self.device().lock()
+    }
 }
 
 /// A link that cannot reopen: for a single node without a system to
@@ -238,6 +250,9 @@ pub enum PairResult {
     /// node. Takes precedence over every other result; pairing mode may
     /// still be on.
     StopFailed(SetResult),
+    /// `Busy` (22): another process holds the management node's write lock
+    /// (spec device §7.2). Nothing was sent.
+    Busy(Errno),
 }
 
 /// The full record of a pair attempt.
@@ -247,7 +262,8 @@ pub struct PairOutcome {
     pub before: [SlotReport; 5],
     /// Last slots read, if any read happened after starting.
     pub after: Option<[SlotReport; 5]>,
-    /// Whether the stop packet was sent (always, once start was attempted).
+    /// Whether the stop packet was sent (always, once start was attempted;
+    /// never when the lock could not be taken).
     pub stop_sent: bool,
     /// The result.
     pub result: PairResult,
@@ -280,7 +296,8 @@ fn stop(
 
 /// Pairs a new device (spec receiver §3 steps 2–7).
 ///
-/// `waiting` is called once pairing has started, to tell the user what to
+/// The management node is locked before the start packet (spec device
+/// §7.2). `waiting` is called once pairing has started, to tell the user what to
 /// do. `interrupted` is polled between slot reads; the caller sets it from a
 /// SIGINT/SIGTERM handler. The stop packet is sent whenever the start packet
 /// was attempted, however the wait ends.
@@ -296,6 +313,15 @@ pub fn pair(
     interrupted: &dyn Fn() -> bool,
 ) -> Result<PairOutcome, SlotReadError> {
     let before = read_slots(link.device())?;
+    if let Err(e) = link.lock() {
+        return Ok(PairOutcome {
+            before,
+            after: None,
+            stop_sent: false,
+            result: PairResult::Busy(Errno::of(&e)),
+            warnings: Vec::new(),
+        });
+    }
     let start = set(link.device(), PAIR_START);
     let mut after = None;
     let mut state = Waiting::default();
@@ -366,6 +392,9 @@ pub enum UnpairResult {
     /// `ReceiverProtocolError` (17): a slot report was malformed after the
     /// request. Failed reads (errno) are retried until the timeout.
     SlotReadFailed(SlotReadError),
+    /// `Busy` (22): another process holds the management node's write lock
+    /// (spec device §7.2). Nothing was sent.
+    Busy(Errno),
 }
 
 /// The full record of an unpair attempt.
@@ -386,7 +415,9 @@ pub struct UnpairOutcome {
 /// Unpairs one slot (spec receiver §4 steps 2–6).
 ///
 /// `confirm` is shown the slot and returns whether to proceed; with `--yes`
-/// the caller returns `true` without asking.
+/// the caller returns `true` without asking. The management node is locked
+/// only after the confirmation, so a prompt left open blocks no one
+/// (spec device §7.2).
 ///
 /// # Errors
 ///
@@ -411,6 +442,10 @@ pub fn unpair(
     }
     if !confirm(&target) {
         outcome.result = UnpairResult::Aborted;
+        return Ok(outcome);
+    }
+    if let Err(e) = link.lock() {
+        outcome.result = UnpairResult::Busy(Errno::of(&e));
         return Ok(outcome);
     }
     if read_slot(link.device(), slot)? != target {

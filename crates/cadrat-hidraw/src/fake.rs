@@ -38,6 +38,10 @@ struct State {
     gone: bool,
     /// Descriptors currently open.
     open: usize,
+    /// Another process holds the write lock (spec device §7.2).
+    locked_elsewhere: bool,
+    /// Descriptors of this process holding the write lock.
+    locks: usize,
 }
 
 impl std::fmt::Debug for State {
@@ -224,6 +228,25 @@ impl FakeNode {
         self.state.borrow_mut().gone = true;
     }
 
+    /// Another process takes the write lock on this node (`flock(LOCK_EX)`)
+    /// until [`FakeNode::unlock_elsewhere`]. A lock this process already
+    /// holds is not affected.
+    pub fn lock_elsewhere(&self) {
+        self.state.borrow_mut().locked_elsewhere = true;
+    }
+
+    /// The other process releases the write lock.
+    pub fn unlock_elsewhere(&self) {
+        self.state.borrow_mut().locked_elsewhere = false;
+    }
+
+    /// Whether a descriptor opened through the [`FakeSystem`] holds the
+    /// write lock.
+    #[must_use]
+    pub fn is_locked(&self) -> bool {
+        self.state.borrow().locks > 0
+    }
+
     /// How many descriptors of this node are open.
     #[must_use]
     pub fn open_count(&self) -> usize {
@@ -249,6 +272,7 @@ impl FakeNode {
 struct FakeDevice {
     node: FakeNode,
     dead: bool,
+    locked: bool,
 }
 
 const ENODEV: i32 = 19;
@@ -256,7 +280,11 @@ const ENODEV: i32 = 19;
 impl FakeDevice {
     fn new(node: FakeNode) -> Self {
         node.state.borrow_mut().open += 1;
-        Self { node, dead: false }
+        Self {
+            node,
+            dead: false,
+            locked: false,
+        }
     }
 
     fn gone(&self) -> bool {
@@ -277,7 +305,11 @@ fn os_error(errno: i32) -> io::Error {
 
 impl Drop for FakeDevice {
     fn drop(&mut self) {
-        self.node.state.borrow_mut().open -= 1;
+        let mut state = self.node.state.borrow_mut();
+        state.open -= 1;
+        if self.locked {
+            state.locks -= 1;
+        }
     }
 }
 
@@ -326,6 +358,20 @@ impl Device for FakeDevice {
         let reply = next(&mut state.sets).unwrap_or(Ok(data.len()));
         drop(state);
         self.check(reply)
+    }
+
+    fn lock(&mut self) -> io::Result<()> {
+        if self.locked {
+            return Ok(());
+        }
+        let mut state = self.node.state.borrow_mut();
+        // Like flock, a second descriptor conflicts even in the same process.
+        if state.locked_elsewhere || state.locks > 0 {
+            return Err(os_error(rustix::io::Errno::WOULDBLOCK.raw_os_error()));
+        }
+        state.locks += 1;
+        self.locked = true;
+        Ok(())
     }
 }
 

@@ -12,7 +12,7 @@ use std::time::Duration;
 use cadrat_config::{ConfigLock, Preset, template};
 use cadrat_hidraw::Clock;
 use cadrat_hidraw::fake::{FakeClock, FakeNode, FakeSystem, probe_response};
-use cadrat_tool::{Env, Interrupt, Io, run};
+use cadrat_tool::{DaemonLock, Env, Interrupt, Io, run};
 use serde_json::Value;
 
 // Synthetic device IDs; not taken from any device.
@@ -57,6 +57,7 @@ struct Harness {
     system: FakeSystem,
     clock: FakeClock,
     interrupt: FakeInterrupt,
+    uid: Cell<u32>,
 }
 
 impl Harness {
@@ -66,6 +67,16 @@ impl Harness {
             system: FakeSystem::new(nodes),
             clock: FakeClock::default(),
             interrupt: FakeInterrupt::default(),
+            uid: Cell::new(1000),
+        }
+    }
+
+    /// `/run/user` lives in the temporary directory; it does not exist
+    /// until a test creates it, so cadratd is not running by default.
+    fn daemon_lock(&self) -> DaemonLock {
+        DaemonLock {
+            run_user: self.dir.path().join("run"),
+            uid: self.uid.get(),
         }
     }
 
@@ -91,6 +102,7 @@ impl Harness {
             xdg_config_home: Some(self.dir.path().into()),
             home: None,
             lock_timeout: Duration::from_millis(100),
+            daemon_lock: Some(self.daemon_lock()),
         };
         let (mut stdout, mut stderr) = (Vec::new(), Vec::new());
         let mut input = stdin.as_bytes();
@@ -910,4 +922,281 @@ fn hold_open_rejects_target_and_json_options() {
         assert_eq!(out.code, 2, "{args:?}");
     }
     assert_eq!(h.run(&["hold-open", "--poll-interval=0"]).code, 2);
+}
+
+// --- cadratd lock (spec tool/cli §8) and node write locks (spec device §7.2) ---
+
+/// Takes `cadratd`'s exclusive lock for user 1000, as a running `cadratd`
+/// would. The returned file holds it until dropped.
+fn run_cadratd(h: &Harness) -> fs::File {
+    let dir = h.dir.path().join("run/1000/cadrat");
+    fs::create_dir_all(&dir).unwrap();
+    let file = fs::File::create(dir.join("cadratd.lock")).unwrap();
+    rustix::fs::flock(&file, rustix::fs::FlockOperation::NonBlockingLockExclusive).unwrap();
+    file
+}
+
+/// Whether a `cadratd` starting now could take its lock.
+fn cadratd_could_start(path: &std::path::Path) -> bool {
+    let file = fs::File::open(path).unwrap();
+    rustix::fs::flock(&file, rustix::fs::FlockOperation::NonBlockingLockExclusive).is_ok()
+}
+
+#[test]
+fn writes_stop_while_cadratd_runs() {
+    let wired = wired();
+    let receiver = occupied_slot3();
+    let h = Harness::new(vec![wired.clone(), receiver.clone()]);
+    h.write_config(&baseline());
+    let _cadratd = run_cadratd(&h);
+
+    for (args, instead) in [
+        (
+            &["set", "mouse.dpi=1000"][..],
+            "cadratctl set mouse.dpi=1000",
+        ),
+        (&["apply"][..], "cadratctl apply"),
+        (&["apply", "--hidraw=/dev/hidraw5"][..], "cadratctl apply"),
+        (&["receiver", "pair"][..], "cadratctl receiver pair"),
+        (
+            &["receiver", "unpair", "3", "--yes"][..],
+            "cadratctl receiver unpair 3",
+        ),
+    ] {
+        let out = h.run(args);
+        assert_eq!(out.code, 20, "{args:?}: {}", out.stderr);
+        assert!(
+            out.stderr
+                .contains(&format!("cadratd is running; use `{instead}` instead")),
+            "{}",
+            out.stderr
+        );
+    }
+    let json = h.run(&["apply", "--json"]).json();
+    assert_eq!(json["error"]["code"], "DaemonRunning");
+    assert!(wired.sets().is_empty());
+    assert!(receiver.sets().is_empty());
+    assert_eq!(h.read_config(), baseline());
+
+    // Commands that do not write to a device still work.
+    for args in [
+        &["list"][..],
+        &["get"],
+        &["check"],
+        &["set", "--dry-run", "mouse.dpi=1000"],
+        &["apply", "--dry-run"],
+        &["receiver", "slots"],
+    ] {
+        assert_eq!(h.run(args).code, 0, "{args:?}");
+    }
+}
+
+#[test]
+fn cadratd_waits_while_a_write_runs() {
+    let h = Harness::new(vec![]);
+    fs::create_dir_all(h.dir.path().join("run/1000")).unwrap();
+    let lock = h.dir.path().join("run/1000/cadrat/cadratd.lock");
+    let seen = Rc::new(Cell::new(None));
+    let during = Rc::clone(&seen);
+    let path = lock.clone();
+    let node = wired().on_set(move |_| during.set(Some(cadratd_could_start(&path))));
+    let mut h = h;
+    h.system = FakeSystem::new(vec![node.clone()]);
+    h.write_config(&baseline());
+
+    let out = h.run(&["apply"]);
+    assert_eq!(out.code, 0, "{}", out.stderr);
+    assert_eq!(seen.get(), Some(false), "cadratd started during the send");
+    assert!(cadratd_could_start(&lock), "the lock outlived the command");
+
+    // The directory is private to the user.
+    let permissions = fs::metadata(lock.parent().unwrap()).unwrap().permissions();
+    let mode = std::os::unix::fs::PermissionsExt::mode(&permissions);
+    assert_eq!(mode & 0o777, 0o700);
+}
+
+#[test]
+fn no_runtime_directory_means_no_cadratd() {
+    let node = wired();
+    let h = Harness::new(vec![node.clone()]);
+    h.write_config(&baseline());
+    assert_eq!(h.run(&["apply"]).code, 0);
+    assert_eq!(node.sets().len(), 1);
+    assert!(
+        !h.dir.path().join("run").exists(),
+        "/run/user/<uid> was created"
+    );
+}
+
+#[test]
+fn root_checks_every_users_cadratd() {
+    let node = wired();
+    let h = Harness::new(vec![node.clone()]);
+    h.write_config(&baseline());
+    h.uid.set(0);
+    // Another user without a lock file: nothing is created for them.
+    fs::create_dir_all(h.dir.path().join("run/1001")).unwrap();
+    assert_eq!(h.run(&["apply"]).code, 0);
+    assert!(!h.dir.path().join("run/1001/cadrat").exists());
+
+    let cadratd = run_cadratd(&h);
+    let out = h.run(&["apply"]);
+    assert_eq!(out.code, 20, "{}", out.stderr);
+    assert!(out.stderr.contains("run/1000/cadrat/cadratd.lock"));
+    assert_eq!(node.sets().len(), 1);
+
+    drop(cadratd);
+    assert_eq!(h.run(&["apply"]).code, 0);
+}
+
+#[test]
+fn a_locked_node_is_busy() {
+    let node = wired();
+    let h = Harness::new(vec![node.clone()]);
+    h.write_config(&baseline());
+    node.lock_elsewhere();
+    for args in [&["set", "mouse.dpi=1000"][..], &["apply"]] {
+        let out = h.run(args);
+        assert_eq!(out.code, 22, "{args:?}: {}", out.stderr);
+        assert!(
+            out.stderr
+                .contains("another process is writing to /dev/hidraw5")
+        );
+    }
+    assert!(node.sets().is_empty());
+    assert_eq!(h.read_config(), baseline());
+    assert_eq!(h.run(&["list"]).code, 0);
+
+    node.unlock_elsewhere();
+    assert_eq!(h.run(&["apply"]).code, 0);
+    assert!(!node.is_locked(), "the lock outlived the command");
+}
+
+#[test]
+fn a_locked_management_node_blocks_receiver_writes() {
+    let nodes = receiver_only();
+    let (management, setting) = (nodes[0].clone(), nodes[1].clone());
+    let h = Harness::new(nodes);
+    h.write_config(&baseline());
+    management.lock_elsewhere();
+
+    // A send through the Receiver locks its management node first.
+    let out = h.run(&["set", "mouse.dpi=1000"]);
+    assert_eq!(out.code, 22, "{}", out.stderr);
+    assert!(out.stderr.contains("/dev/hidraw6"), "{}", out.stderr);
+    assert!(setting.sets().is_empty());
+    assert!(!setting.is_locked());
+    assert_eq!(h.read_config(), baseline());
+    let out = h.run(&["apply", "--hidraw=/dev/hidraw9"]);
+    assert_eq!(out.code, 22, "{}", out.stderr);
+    assert!(setting.sets().is_empty());
+
+    assert_eq!(h.run(&["receiver", "pair"]).code, 22);
+    assert_eq!(h.run(&["receiver", "unpair", "3", "--yes"]).code, 22);
+    assert!(management.sets().is_empty());
+    assert_eq!(h.run(&["receiver", "slots"]).code, 0);
+    assert_eq!(h.run(&["list"]).code, 0);
+}
+
+/// Answers the unpair prompt, recording whether the node was locked then.
+/// With `steal`, another process takes the node's lock at the prompt.
+struct Answer {
+    node: FakeNode,
+    locked: Rc<Cell<Option<bool>>>,
+    steal: bool,
+    text: &'static [u8],
+}
+
+impl std::io::Read for Answer {
+    fn read(&mut self, buf: &mut [u8]) -> std::io::Result<usize> {
+        let n = self.text.len().min(buf.len());
+        buf[..n].copy_from_slice(&self.text[..n]);
+        self.text = &self.text[n..];
+        Ok(n)
+    }
+}
+
+impl std::io::BufRead for Answer {
+    fn fill_buf(&mut self) -> std::io::Result<&[u8]> {
+        if self.locked.get().is_none() {
+            self.locked.set(Some(self.node.is_locked()));
+            if self.steal {
+                self.node.lock_elsewhere();
+            }
+        }
+        Ok(self.text)
+    }
+    fn consume(&mut self, n: usize) {
+        self.text = &self.text[n..];
+    }
+}
+
+fn unpair_answering(steal: bool) -> (i32, Option<bool>, FakeNode) {
+    let node = occupied_slot3();
+    let h = Harness::new(vec![node.clone()]);
+    let locked = Rc::new(Cell::new(None));
+    let mut answer = Answer {
+        node: node.clone(),
+        locked: Rc::clone(&locked),
+        steal,
+        text: b"y\n",
+    };
+    let env = Env {
+        system: &h.system,
+        clock: &h.clock,
+        interrupt: &h.interrupt,
+        xdg_config_home: Some(h.dir.path().into()),
+        home: None,
+        lock_timeout: Duration::from_millis(100),
+        daemon_lock: None,
+    };
+    let (mut stdout, mut stderr) = (Vec::new(), Vec::new());
+    let io = Io {
+        stdout: &mut stdout,
+        stderr: &mut stderr,
+        stdin: &mut answer,
+        stdin_is_terminal: true,
+    };
+    let args = ["cadrat-tool", "receiver", "unpair", "3"].map(Into::into);
+    (run(args, &env, io), locked.get(), node)
+}
+
+#[test]
+fn unpair_locks_only_after_confirmation() {
+    // Not locked while the prompt waits.
+    let (code, locked, node) = unpair_answering(false);
+    assert_eq!(code, 0);
+    assert_eq!(locked, Some(false));
+    assert_eq!(node.sets(), [UNPAIR_3.to_vec()]);
+    // The lock is taken after the answer: another writer that started
+    // meanwhile makes it Busy, and nothing is sent.
+    let (code, _, node) = unpair_answering(true);
+    assert_eq!(code, 22);
+    assert!(node.sets().is_empty());
+}
+
+#[test]
+fn pair_stops_even_if_the_reopened_node_cannot_be_locked() {
+    // Slot 0 answers ENODEV after pairing starts: the node is reopened,
+    // but another process has taken its lock by then.
+    let node = management([&[None]; 5]).get(
+        0x43,
+        &[
+            Ok(cadrat_hidraw::fake::slot_response(0, None)),
+            Ok(cadrat_hidraw::fake::slot_response(0, None)),
+            Err(19),
+            Ok(cadrat_hidraw::fake::slot_response(0, None)),
+        ],
+    );
+    let h = Harness::new(vec![node.clone()]);
+    let other = node.clone();
+    h.clock.on_sleep(move |_| other.lock_elsewhere());
+    let out = h.run(&["receiver", "pair", "--timeout=3"]);
+    assert_eq!(out.code, 12, "{}", out.stderr);
+    assert!(
+        out.stderr.contains("W-MANAGEMENT-REOPENED"),
+        "{}",
+        out.stderr
+    );
+    assert_eq!(node.sets(), [START.to_vec(), STOP.to_vec()]);
 }

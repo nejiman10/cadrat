@@ -7,6 +7,7 @@ use std::time::Duration;
 use cadrat_hidraw::{Clock, System};
 use serde_json::{Map, Value};
 
+use crate::daemon::{DaemonGuard, DaemonLock};
 use crate::exit::{Exit, Failure};
 use crate::request::Options;
 
@@ -35,6 +36,9 @@ pub struct Env<'a> {
     pub home: Option<OsString>,
     /// How long to wait for the configuration lock (5 s in the binaries).
     pub lock_timeout: Duration,
+    /// `cadratd`'s lock, checked before writing to a device (`cadrat-tool`);
+    /// `None` in `cadratd` itself.
+    pub daemon_lock: Option<DaemonLock>,
 }
 
 /// What has to reach the user while a command runs. Everything else is in
@@ -101,6 +105,17 @@ impl<'e, 'f> Ctx<'e, 'f> {
     /// Sets a JSON result field.
     pub fn set(&mut self, key: &str, value: impl Into<Value>) {
         self.fields.insert(key.to_owned(), value.into());
+    }
+
+    /// Checks that `cadratd` is not running before writing to a device
+    /// (spec tool/cli §8). Keep the guard until the command ends.
+    /// `instead` is the same operation as a `cadratctl` command.
+    pub fn hold_daemon_lock(&self, instead: &str) -> Result<Option<DaemonGuard>, Failure> {
+        self.env
+            .daemon_lock
+            .as_ref()
+            .map(|lock| lock.hold(instead))
+            .transpose()
     }
 
     /// The configuration file path (spec config §1).

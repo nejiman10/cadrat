@@ -13,12 +13,14 @@
 
 mod cmd;
 mod ctx;
+mod daemon;
 mod exit;
 mod format;
 pub mod render;
 mod request;
 
 pub use ctx::{Env, Frontend, Interrupt, envelope};
+pub use daemon::DaemonLock;
 pub use exit::{Exit, Failure};
 pub use request::{Command, Options};
 

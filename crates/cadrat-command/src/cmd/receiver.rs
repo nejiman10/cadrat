@@ -44,6 +44,17 @@ fn target(
     Ok((target, inventory))
 }
 
+/// Spec device §7.2: another process is writing through this Receiver.
+fn busy(path: &std::path::Path, errno: cadrat_hidraw::Errno) -> Failure {
+    Failure::new(
+        Exit::Busy,
+        format!(
+            "another process is writing to {} ({errno}); nothing was done",
+            path.display()
+        ),
+    )
+}
+
 fn protocol(error: &SlotReadError) -> Failure {
     Failure::new(Exit::ReceiverProtocolError, error.to_string())
 }
@@ -61,6 +72,7 @@ pub fn slots(ctx: &mut Ctx, receiver: Option<&str>, redact: bool) -> Result<(), 
 
 pub fn pair(ctx: &mut Ctx, receiver: Option<&str>, polling: Polling) -> Result<(), Failure> {
     no_mouse(ctx)?;
+    let _daemon = ctx.hold_daemon_lock("receiver pair")?;
     let (mut target, inventory) = target(ctx, receiver, true)?;
     let interrupt = ctx.env.interrupt;
     let clock = ctx.env.clock;
@@ -76,6 +88,7 @@ pub fn pair(ctx: &mut Ctx, receiver: Option<&str>, polling: Polling) -> Result<(
     );
     interrupt.disarm();
     let outcome = outcome.map_err(|e| protocol(&e))?;
+    let path = target.path.clone();
 
     let mut redactor = Redactor::new(false);
     ctx.set(
@@ -123,6 +136,7 @@ pub fn pair(ctx: &mut Ctx, receiver: Option<&str>, polling: Polling) -> Result<(
             ),
         )
         .hint("unplug the Receiver and plug it in again to leave pairing mode")),
+        PairResult::Busy(errno) => Err(busy(&path, errno)),
     }
 }
 
@@ -140,6 +154,7 @@ pub fn unpair(
             "unpair asks for confirmation on a terminal; pass --yes to skip it",
         ));
     }
+    let _daemon = ctx.hold_daemon_lock(&format!("receiver unpair {slot}"))?;
     let (mut target, inventory) = target(ctx, receiver, true)?;
     let mut redactor = Redactor::new(false);
     let clock = ctx.env.clock;
@@ -166,6 +181,7 @@ pub fn unpair(
         yes || frontend.confirm_unpair(slot)
     });
     let outcome = outcome.map_err(|e| protocol(&e))?;
+    let path = target.path.clone();
 
     let mut redactor = Redactor::new(false);
     ctx.set(
@@ -210,5 +226,6 @@ pub fn unpair(
             format!("slot {slot} did not become empty before the timeout"),
         )),
         UnpairResult::SlotReadFailed(e) => Err(protocol(&e)),
+        UnpairResult::Busy(errno) => Err(busy(&path, errno)),
     }
 }

@@ -19,7 +19,7 @@ use std::time::Duration;
 use cadrat_command::{Failure, Frontend, render};
 use clap::Parser;
 
-pub use cadrat_command::{Env, Exit, Interrupt};
+pub use cadrat_command::{DaemonLock, Env, Exit, Interrupt};
 
 use cli::{Cli, Command};
 

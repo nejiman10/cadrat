@@ -154,7 +154,9 @@ Phase 1では次のように扱う。
   - 有線経路への送信（§7）: その設定node。
   - Receiver経由の操作（Report `0x10` の送信、pair、unpair）: 先にそのReceiverの管理node（[receiver §1](receiver.md#1-管理nodeの検出)）、次に書き込むnode（Report `0x10` なら設定node）。どちらも取れたときだけ書き込む。1台のReceiverへの書き込みは、これで1つずつになる。Receiverの中で設定の送信とpairが干渉するかは分かっていないので、安全な側に倒す。
 - **かけないもの**: 読むだけの操作（列挙のGET `0x08`、`receiver slots`）と、hold-open。`cadrat-tool list` がpairの実行中でも動く今の挙動を保つためである。
-- 管理nodeを開き直したとき（[receiver §6](receiver.md#6-管理nodeの開き直し)）は、新しいfdでロックを取り直す。
+  - `--hidraw` でReceiver経由の設定nodeを指定したときも、列挙して同じReceiver（USBポート）の管理nodeを探し、先にロックする。管理nodeが見つからなければ、設定nodeだけにかける。
+- **unpairでは、確認の後にロックを取る。** 確認を待つ間は持たない。プロンプトを開いたままにしても、ほかの書き込みを止めないためである。確認の後に取れなければ22で、何も送らない。
+- 管理nodeを開き直したとき（[receiver §6](receiver.md#6-管理nodeの開き直し)）は、新しいfdでロックを取り直す。取り直せなくても、開き直したfdを使い続ける。開き直した後に送るのはpairの停止packetだけで、pairing modeを残さないことを優先するためである。
 - `cadratd.lock`（[daemon §4](daemon/daemon.md#4-デバイスへの書き込みの排他q9)）とは別のものである。`cadratd.lock` は「`cadratd` が動いている間は `cadrat-tool` が書き込まない」という方針の排他、このロックは「今このデバイスに書き込んでいるか」の排他で、両方を使う。
 - v0.1.0の `cadrat-tool` はこのロックをかけない。`.deb` では `cadrat-common` の `Breaks: cadrat-tool (<< 0.2.0)` で更新されるので、残るのはソースから入れた古い版だけである。
 

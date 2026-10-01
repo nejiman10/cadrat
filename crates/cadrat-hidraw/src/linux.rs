@@ -251,6 +251,14 @@ impl Device for LinuxDevice {
         // SAFETY: see `Feature`.
         Ok(unsafe { ioctl::ioctl(&self.file, request) }?)
     }
+
+    fn lock(&mut self) -> io::Result<()> {
+        rustix::fs::flock(
+            &self.file,
+            rustix::fs::FlockOperation::NonBlockingLockExclusive,
+        )?;
+        Ok(())
+    }
 }
 
 #[cfg(test)]

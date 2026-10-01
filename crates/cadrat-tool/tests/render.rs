@@ -54,6 +54,7 @@ fn run_fresh(nodes: Vec<FakeNode>, config: Option<&str>, args: &[&str]) -> Outpu
         xdg_config_home: Some(dir.path().into()),
         home: None,
         lock_timeout: Duration::from_millis(100),
+        daemon_lock: None,
     };
     let (mut stdout, mut stderr) = (Vec::new(), Vec::new());
     let mut input: &[u8] = b"";
@@ -477,6 +478,7 @@ fn guidance_names_the_front_end() {
         xdg_config_home: Some(dir.path().into()),
         home: None,
         lock_timeout: Duration::from_millis(100),
+        daemon_lock: None,
     };
     let options = Options::default();
 
