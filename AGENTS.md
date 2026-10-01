@@ -21,7 +21,7 @@ These instructions apply to the entire repository. Keep this file timeless: do n
 
 ## Documentation layout
 
-- `docs/spec/` holds documents shared by all executables at its top level, and documents for a single executable in a directory named after it (`tool/`, `daemon/`, `ctl/`).
+- `docs/spec/` holds documents shared by all executables at its top level, and documents for a single executable in a directory named after it (`tool/`, `hold-open/`, `daemon/`, `ctl/`).
 - The specification has one version and one open-question table for the whole project.
 
 ## Design rules
@@ -30,6 +30,11 @@ These instructions apply to the entire repository. Keep this file timeless: do n
 - `cadratctl` is only a D-Bus front end for `cadratd`; it never opens hidraw. The `ctl` suffix is reserved for daemon front ends.
 - Shared logic lives in library crates (`cadrat-proto`, `cadrat-hidraw`, `cadrat-config`) so that `cadrat-tool` and `cadratd` behave identically.
 - `cadrat-proto` performs no I/O.
+- While `cadratd` runs, only `cadratd` writes to devices; `cadrat-tool` refuses its device-writing commands. Reading commands stay available.
+- `cadratd`, `cadratctl` and `cadrat-tool` give the same result, exit code and output for the same command.
+- Every process that writes to a device holds an exclusive `flock` on the hidraw node it writes through, and does not wait for it.
+- `cadratd` runs as the calling user and never grants a caller more than that user already has.
+- Hold-open is done by the `cadrat-hold-open` system service, independent of login and of `cadratd`. udev starts it per hidraw node; it does not poll.
 
 ## Safety
 

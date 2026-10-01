@@ -73,6 +73,8 @@ packaging/build-release.sh              # rust-toolchain.toml の版を rustup �
 
 ## 中身
 
+v0.1.0 の単一パッケージ（`cadrat-tool`）の中身です。Phase 2a（v0.2）では、`cadrat-common`、`cadrat-tool`、`cadratd` の3つに分け、hold-open は user unit からシステムサービス（`cadrat-hold-open`）に移ります（[仕様 implementation §7](spec/implementation.md#7-配布)）。この節は TODO 18 で書き直します。
+
 | パス | 内容 |
 |---|---|
 | `/usr/bin/cadrat-tool` | 本体 |
@@ -100,7 +102,7 @@ packaging/build-release.sh              # rust-toolchain.toml の版を rustup �
   - zshの補完ファイルが所定の場所に入った。
   - manページは入らなかった。このコンテナは最小構成のUbuntuで、dpkgの設定（`path-exclude=/usr/share/man/*`）がmanページをすべて除外するためで、パッケージ側の問題ではない。
 - `dpkg -r` でバイナリとudevルールが消えた。
-- 未確認のこと（[TODO.md の 7](../TODO.md#7-deb-パッケージを作る)）:
+- 未確認のこと（当時の TODO 7。v0.1.0 の公開とともに完了して削除した）:
   - 実機のUbuntuでのインストールと、そこでmanページが入ること
   - udevルールの反映
   - 実機を使った `list`

@@ -1,4 +1,4 @@
-# 05 Receiver管理（slot / pair / unpair）
+# Receiver管理（slot / pair / unpair）
 
 C652 Universal Receiverの結合状態を読んだり変えたりする。この機能はTOMLに一切触れない（設定正本とは独立）。
 
@@ -61,6 +61,7 @@ cadrat-tool receiver pair [--receiver=<key>] [--timeout=<秒>] [--poll-interval=
 
 ```
 1. 管理nodeを選び、そのfdを開いたまま使う（ただし §6 の開き直しを行う）
+   書き込みのロック（device §7.2）を取る           取れない → Busy（22、何もしない）
 2. slot snapshot S0 を読む
 3. SIGINT / SIGTERM のハンドラを設定する（以降の中断は必ず手順6に進む）
 4. SET 41 02 02 00 00（pairing開始）                 失敗 → 6へ進み、ReceiverCommandFailed
@@ -113,7 +114,8 @@ cadrat-tool receiver unpair <slot> [--receiver=<key>] [--yes]
      端末で "Unpair slot 2? [y/N]" に y → 4へ
      y 以外                  → Aborted（18、何もしない）
      端末でなく --yes も無い  → Usage（2、何もしない）
-4. 対象slotを読み直し、S と完全に一致するか確かめる  違う → SlotChanged（16、何もしない）
+4. 書き込みのロック（device §7.2）を取る           取れない → Busy（22、何もしない）
+   対象slotを読み直し、S と完全に一致するか確かめる  違う → SlotChanged（16、何もしない）
 5. SET 41 04 <slot> 00 00
      成功（戻り値5）       → 6へ
      EPIPE                → 警告 W-UNPAIR-EPIPE を出して 6へ
@@ -123,6 +125,7 @@ cadrat-tool receiver unpair <slot> [--receiver=<key>] [--yes]
      timeout      → UnpairNotConfirmed（15）
 ```
 
+- **ロックを手順4で取る理由。** 手順3の確認は利用者の入力を待つので、その間にロックを持つと、ほかの書き込みを止め続けてしまう。
 - **確認と照合の分担。** 利用者は、画面の内容を見て `y` を押すだけでよい。確認を表示してから実行するまでにslotが変わっていないかは、CLIが手順4で自動的に照合する。調査の手順（dry-runで出た生の値を人が照合して、実行コマンドに渡す）と同じ安全性を、手入力なしで保つためである。
 - **EPIPEだけで成功とも失敗とも判定しない。** 調査の実装はEPIPEの後もslotを見続けており、HARDWARE_TESTでも「EPIPEだけでunpair成功扱いしない」とされている。判定は手順6のslotの空化だけで行う。
 - 空化を確かめた後、全slotのsnapshotも表示する。このsnapshotの読み取りに失敗しても、結果は成功のままとする（空化は手順6で確認済みのため）。
@@ -149,6 +152,7 @@ slotが変わった後、開いていた管理nodeのfdが使えなくなるこ�
 - **待機中**: 開き直せたら、次のpollからそのfdで読む。開き直せなければ、次のpollでまた試す。timeoutの扱いは変えない。
 - **停止**: 停止のSETがこれらのerrnoで失敗したら、開き直して停止を送り直す。最長10秒まで繰り返す。それでも送れなければ `PairStopFailed`（13）とする。停止packetを必ず送るという §3 の原則を保つためである。
 - **送らないもの**: 開き直した後に、pair開始（`41 02 02 …`）やunpair（`41 04 …`）を送り直すことはしない。すでに送った要求の結果は、slotの変化だけで判定する（P7）。
+- **ロック**: 開き直したら、新しいfdで書き込みのロック（[device §7.2](device.md#72-書き込みのロック)）を取り直す。取れなくても待機は続け、停止のSETも送る。停止は常に安全な側の操作で、必ず送るという §3 の原則を優先する。取れなかったことは `W-MANAGEMENT-REOPENED` の中で示す。
 - **表示**: 開き直した場合は警告 `W-MANAGEMENT-REOPENED` を出す（回数と、最後に失敗した試みがあればその理由）。
 - **対象外**: slotの読み取り（`receiver slots`）と、要求を送る前の読み取り（pairの手順2、unpairの手順2と4）では開き直さない。失敗したら何も送らずに17で終える。
 

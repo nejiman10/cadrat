@@ -1,4 +1,4 @@
-# 02 デバイスモデル・検出・送信
+# デバイスモデル・検出・送信
 
 ## 1. 権限
 
@@ -111,7 +111,7 @@ Receiverの設定nodeでプローブが失敗しても、そのnodeが管理node
 
 ## 7. 送信
 
-1. 判定に使ったfdを**開いたまま**送信に使う。列挙し直さず、開き直さない。
+1. 判定に使ったfdを**開いたまま**送信に使う。列挙し直さず、開き直さない。手順2の前に、§7.2 の書き込みのロックを取る。取れなければ何も送らずに `Busy`（22）とする。
 2. **送信直前の宛先確認。** 同じfdで、もう一度IDプローブ（GET `0x08`）を行う。
    - `resp[1] == 0x59` であり、かつ機器IDが選んだマウスの機器IDと一致することを確かめる。
    - 一致しなければ送信せず、`TargetChanged`（終了コード19）にする。
@@ -143,21 +143,37 @@ Phase 1では次のように扱う。
 - 送信は有効な経路だけに行う（§6）。
 - `set` / `apply` の成功時、そのマウスに `standby` の経路があれば、"the <route> route is on standby; run `cadrat-tool apply` after switching modes" と注記する（`<route>` は待機中の経路名）（`-q` のときは出さない）。
 
+### 7.2 書き込みのロック
+
+デバイスへ書き込むプロセスは、書き込むhidraw nodeのfdに `flock(LOCK_EX | LOCK_NB)` をかけ、その操作が終わってfdを閉じるまで持つ。`cadrat-tool`、`cadratd` のどちらも同じ規則に従い、実行するユーザー（rootを含む）を問わない。
+
+- **目的**: 同じデバイスへの書き込みを、プロセスとユーザーをまたいで1つずつにする。`flock` はnodeのinodeにかかるので、別のユーザーのプロセスや、rootで動かした `cadrat-tool` とも排他になる。プロセスが終われば、カーネルが解放する。ユーザーを切り替えたときに、別のユーザーの `cadratd` と書き込みが重なるのを防ぐ（Q21）。
+- **先例**: systemdの [Locking Block Device Access](https://systemd.io/BLOCK_DEVICE_LOCKING/) は、ブロックデバイスのnodeそのものにBSDロックをかけ、それを尊重する約束である。同じ考え方をhidrawに当てはめる。
+- **待たない。** 取れなければ、何もせずに `Busy`（22）で終える。遅れて書き込むと、利用者の知らない送信になるためである。
+- **かけるnode**:
+  - 有線経路への送信（§7）: その設定node。
+  - Receiver経由の操作（Report `0x10` の送信、pair、unpair）: 先にそのReceiverの管理node（[receiver §1](receiver.md#1-管理nodeの検出)）、次に書き込むnode（Report `0x10` なら設定node）。どちらも取れたときだけ書き込む。1台のReceiverへの書き込みは、これで1つずつになる。Receiverの中で設定の送信とpairが干渉するかは分かっていないので、安全な側に倒す。
+- **かけないもの**: 読むだけの操作（列挙のGET `0x08`、`receiver slots`）と、hold-open。`cadrat-tool list` がpairの実行中でも動く今の挙動を保つためである。
+- 管理nodeを開き直したとき（[receiver §6](receiver.md#6-管理nodeの開き直し)）は、新しいfdでロックを取り直す。
+- `cadratd.lock`（[daemon §4](daemon/daemon.md#4-デバイスへの書き込みの排他q9)）とは別のものである。`cadratd.lock` は「`cadratd` が動いている間は `cadrat-tool` が書き込まない」という方針の排他、このロックは「今このデバイスに書き込んでいるか」の排他で、両方を使う。
+- v0.1.0の `cadrat-tool` はこのロックをかけない。`.deb` では `cadrat-common` の `Breaks: cadrat-tool (<< 0.2.0)` で更新されるので、残るのはソースから入れた古い版だけである。
+
 ## 8. 読み戻し
 
 GET `0x10` による読み戻しは行わない。調査で32-byteの現在設定を得られていないため（OBSERVED）。
 
 ## 9. hold-open
 
-有線C658のhidraw nodeを、プロセスが開いたまま保持する。`cadrat-tool hold-open`（[tool/cli §3](tool/cli.md#hold-open---poll-interval秒)）が行い、配布物のsystemd user unit（`cadrat-hold-open.service`）がそれを常駐させる。unitは既定で無効で、有線で使う利用者が自分で有効にする。
+有線C658のhidraw nodeを、プロセスが開いたまま保持する。常駐させるのは、udevがnodeごとに起動するシステムサービスの `cadrat-hold-open@<node>.service`（[hold-open/cli.md](hold-open/cli.md)、既定で動く）である。`cadrat-tool hold-open`（[tool/cli §3](tool/cli.md#hold-open---poll-interval秒)）も同じ規則で保持し、試験と調査に使う。両者の違いは、対象のnodeの見つけ方（下の「追従」）だけである。Phase 1では、既定で無効のsystemd user unitが `cadrat-tool hold-open` を常駐させていた。ログイン画面とログアウトの後に入力が止まるので、Phase 2aでシステムサービスに移す。`cadratd` はhold-openを行わない。
 
 - **理由**: 調査の実機では、有線C658のhidrawをどのプロセスも開いていないと、USB接続から数秒で入力が止まった。全interfaceを開いたままにすると、止まらなかった（調査側 hold-open監査、各条件2回。調査側のuser serviceで1日以上の通常利用と再接続時のつかみ直しも確認）。観測は1つの環境だけで、原因は分かっていない（UNKNOWN）。したがってhold-openは原因の対策ではなく、観測に基づく回避策である。
 - **対象**: sysfsの `HID_ID` がbus USB、VID `256f`、PID `c658` のnodeすべて（interfaceを問わない）。Receiver（`c652`）とUSB以外のbusは対象外とする。
 - **開き方**: `O_RDWR | O_CLOEXEC | O_NONBLOCK`。調査側のuser serviceと同じで、この形で長期の利用が確認されている。reportの送受信は一切しない。
-- **追従**: 既定1秒ごとにsysfsを列挙し、次のように揃える。
+- **追従（`cadrat-hold-open`）**: udevがnodeの出現ごとにサービスを1つ起動し、nodeが消えればsystemdが止める。プログラムは引数のnodeを1つ開いて、`HIDIOCGRAWINFO` で対象であることを確かめ、消えるまで保持する（[hold-open/cli §3](hold-open/cli.md#3-コマンド)）。
+- **追従（`cadrat-tool hold-open`）**: 既定1秒ごとにsysfsを列挙し、次のように揃える。
   - 対象から消えたnodeを閉じる。
   - 保持中のfdに `HIDIOCGRAWINFO` を発行し、失敗したら閉じる。抜き差しが1回の間隔内に起き、同じpathが新しいデバイスに使われた場合に、古いfdを持ち続けないためである（調査側の実装にない追加。ioctlはデバイスと通信しない）。
   - 新しい対象を開く。開けなければ、pathとerrnoの組が変わったときだけ警告し（`W-HOLD-OPEN-FAILED`）、次の周期でまた試す。
   - sysfsを列挙できなければ一度だけ警告し（`W-HOLD-ENUMERATE-FAILED`）、保持中のfdはそのままにして次の周期でまた試す。
 - **終了**: SIGINTまたはSIGTERMで、保持中のfdをすべて閉じて終了コード0で終わる。接続中に閉じると、抜き差しをしなくても入力が止まった（cadratの実機確認 実施 3、1回。調査側 [Issue #4](https://github.com/nejiman10/3dx-hid-research/issues/4)）。したがって有線で使う間はserviceを動かし続けるよう案内する。
-- **共存**: 他の `cadrat-tool` コマンドや調査側のuser serviceと同時に動いてよい。hidrawは複数のプロセスが同時に開ける。ただし二重に動かす意味はないので、調査側のserviceは止めるよう案内する。
+- **共存**: 他の `cadrat-tool` コマンド、`cadratd`、調査側のuser serviceと同時に動いてよい。hidrawは複数のプロセスが同時に開ける。ただし二重に動かす意味はないので、調査側のserviceは止めるよう案内する。
