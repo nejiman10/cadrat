@@ -12,7 +12,7 @@ use std::rc::Rc;
 use std::time::Duration;
 
 use crate::sys::{
-    BUS_USB, Clock, Device, NodeInfo, PRODUCT_C652, PRODUCT_C658, RawInfo, System, VENDOR,
+    BUS_USB, Clock, Device, NodeInfo, PRODUCT_C652, PRODUCT_C658, RawInfo, System, VENDOR, Wait,
 };
 
 /// A request a fake node received.
@@ -358,6 +358,14 @@ impl Device for FakeDevice {
         let reply = next(&mut state.sets).unwrap_or(Ok(data.len()));
         drop(state);
         self.check(reply)
+    }
+
+    fn wait_hangup(&mut self, _wake: std::os::fd::BorrowedFd<'_>) -> io::Result<Wait> {
+        Ok(if self.gone() {
+            Wait::Hangup
+        } else {
+            Wait::Woken
+        })
     }
 
     fn lock(&mut self) -> io::Result<()> {

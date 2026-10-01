@@ -1,0 +1,47 @@
+# Keeps one wired CadMouse Compact Wireless (C658) hidraw node open so that its
+# input keeps working (spec hold-open/cli). udev starts one instance per node
+# (69-cadrat-hold-open.rules); it stops when the node disappears. There is no
+# [Install] section: stop it with `systemctl mask cadrat-hold-open@.service`.
+[Unit]
+Description=Keep wired CadMouse Compact Wireless (C658) node %I open (cadrat)
+Documentation=man:cadrat-hold-open(1)
+BindsTo=dev-%i.device
+After=dev-%i.device
+
+[Service]
+Type=exec
+ExecStart=/usr/bin/cadrat-hold-open /dev/%I
+Restart=on-failure
+RestartPreventExitStatus=7
+
+# Root without capabilities: hidraw nodes are owned by root, so opening one
+# needs no capability. The only device it can open is this instance's node.
+CapabilityBoundingSet=
+AmbientCapabilities=
+NoNewPrivileges=yes
+DevicePolicy=closed
+DeviceAllow=/dev/%I rw
+ProtectSystem=strict
+ProtectHome=yes
+PrivateTmp=yes
+PrivateNetwork=yes
+ProtectKernelTunables=yes
+ProtectKernelModules=yes
+ProtectKernelLogs=yes
+ProtectControlGroups=yes
+ProtectClock=yes
+ProtectHostname=yes
+RestrictAddressFamilies=AF_UNIX
+RestrictNamespaces=yes
+RestrictRealtime=yes
+RestrictSUIDSGID=yes
+LockPersonality=yes
+MemoryDenyWriteExecute=yes
+SystemCallArchitectures=native
+SystemCallFilter=@system-service
+SystemCallFilter=~@privileged @resources
+SystemCallErrorNumber=EPERM
+ProtectProc=invisible
+ProcSubset=pid
+IPAddressDeny=any
+UMask=0077

@@ -32,4 +32,4 @@ pub use select::{
     ManagementLink, ManagementTarget, SelectError, SendError, SendFailure, Target,
     select_management_node, select_mouse, select_node, select_receiver,
 };
-pub use sys::{Clock, Device, Errno, NodeInfo, RawInfo, System, SystemClock};
+pub use sys::{Clock, Device, Errno, NodeInfo, RawInfo, System, SystemClock, Wait};

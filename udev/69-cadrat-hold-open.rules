@@ -1,0 +1,4 @@
+# cadrat: start cadrat-hold-open@<node>.service for each wired C658 hidraw node,
+# which keeps the node open so that the mouse keeps sending input.
+# Stop it with: systemctl mask cadrat-hold-open@.service
+SUBSYSTEM=="hidraw", ATTRS{idVendor}=="256f", ATTRS{idProduct}=="c658", TAG+="systemd", ENV{SYSTEMD_WANTS}+="cadrat-hold-open@%k.service"
