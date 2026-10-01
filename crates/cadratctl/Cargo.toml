@@ -1,0 +1,32 @@
+[package]
+name = "cadratctl"
+description = "Command-line front end of cadratd"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+publish.workspace = true
+
+[lints]
+workspace = true
+
+[dependencies]
+async-channel = "2.5.0"
+cadrat-command = { path = "../cadrat-command" }
+cadrat-config = { path = "../cadrat-config" }
+cadrat-dbus = { path = "../cadrat-dbus" }
+cadrat-proto = { path = "../cadrat-proto" }
+clap = { version = "4.6.7", features = ["derive"] }
+futures-lite = "2.6.1"
+serde_json = "1.0.151"
+signal-hook = "0.4.4"
+zbus = { version = "5.19.0", default-features = false, features = ["blocking-api", "async-io"] }
+
+[dev-dependencies]
+cadrat-command = { path = "../cadrat-command" }
+cadrat-config = { path = "../cadrat-config" }
+cadrat-hidraw = { path = "../cadrat-hidraw", features = ["fake"] }
+cadrat-tool = { path = "../cadrat-tool" }
+cadratd = { path = "../cadratd" }
+rustix = { version = "1.1.5", features = ["fs"] }
+tempfile = "3.27.0"

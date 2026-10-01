@@ -1,0 +1,30 @@
+# cadratd: the per-user daemon behind cadratctl (spec daemon §2).
+# Enabled for every user when the package is first installed; the D-Bus
+# activation file (packaging/dbus/cc.nejiman10.Cadrat1.service) starts it
+# on the first cadratctl call in sessions that began before that.
+
+[Unit]
+Description=cadrat daemon for the CadMouse Compact Wireless (C658) and its Receiver
+Documentation=man:cadratd(1) man:cadratctl(1)
+# Not for the login screen or other system users' sessions.
+ConditionUser=!@system
+
+[Service]
+Type=dbus
+BusName=cc.nejiman10.Cadrat1
+ExecStart=/usr/bin/cadratd
+Restart=on-failure
+
+# No filesystem restrictions: the configuration file may be at any absolute
+# path the user can write (spec daemon §2).
+NoNewPrivileges=yes
+LockPersonality=yes
+MemoryDenyWriteExecute=yes
+RestrictRealtime=yes
+RestrictSUIDSGID=yes
+RestrictNamespaces=yes
+SystemCallArchitectures=native
+RestrictAddressFamilies=AF_UNIX
+
+[Install]
+WantedBy=default.target

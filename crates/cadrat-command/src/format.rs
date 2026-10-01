@@ -3,7 +3,7 @@
 use std::collections::HashMap;
 
 use cadrat_config::{Config, Key};
-use cadrat_hidraw::{Inventory, Mouse, MouseRoute, Receiver, SlotMatch, SlotsRead};
+use cadrat_hidraw::{Inventory, Mouse, MouseRoute, Receiver, Route, SlotMatch, SlotsRead};
 use cadrat_proto::{ButtonName, DeviceId, SlotReport};
 use serde_json::{Value, json};
 
@@ -108,7 +108,11 @@ pub fn slot_json(
         "occupied": slot.occupied(),
         "device_type": format!("0x{:02x}", slot.device_type()),
         "id": slot.occupied().then(|| redactor.id(slot.id_candidate())),
-        "mouse": mouse.map(|(number, m)| json!({"number": number, "key": redactor.key(m)})),
+        "mouse": mouse.map(|(number, m)| json!({
+            "number": number,
+            "key": redactor.key(m),
+            "wired": m.route(Route::Wired).is_some(),
+        })),
     });
     if let Some(raw_hex) = raw_hex {
         value["raw_hex"] = raw_hex.into();

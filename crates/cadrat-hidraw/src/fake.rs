@@ -4,11 +4,10 @@
 //! entry repeats, answers SET requests from a queue whose last entry
 //! repeats, and records every request.
 
-use std::cell::{Cell, RefCell};
 use std::collections::{HashMap, VecDeque};
 use std::io;
 use std::path::{Path, PathBuf};
-use std::rc::Rc;
+use std::sync::{Arc, Mutex, MutexGuard, PoisonError};
 use std::time::Duration;
 
 use crate::sys::{
@@ -26,7 +25,7 @@ pub enum Request {
 
 type Reply<T> = Result<T, i32>;
 
-type SetHook = Box<dyn FnMut(&[u8])>;
+type SetHook = Box<dyn FnMut(&[u8]) + Send>;
 
 #[derive(Default)]
 struct State {
@@ -73,7 +72,7 @@ pub struct FakeNode {
     pub raw_info: RawInfo,
     /// Report descriptor.
     pub descriptor: Vec<u8>,
-    state: Rc<RefCell<State>>,
+    state: Arc<Mutex<State>>,
 }
 
 /// A report descriptor declaring these Feature reports as
@@ -123,6 +122,10 @@ pub fn slot_response(slot: u8, id: Option<[u8; 6]>) -> Vec<u8> {
 }
 
 impl FakeNode {
+    fn state(&self) -> MutexGuard<'_, State> {
+        self.state.lock().unwrap_or_else(PoisonError::into_inner)
+    }
+
     /// A node with the given identity and features; every GET fails with
     /// `EPIPE` and every SET succeeds with the full length until scripted.
     #[must_use]
@@ -142,7 +145,7 @@ impl FakeNode {
                 product,
             },
             descriptor: descriptor(features),
-            state: Rc::default(),
+            state: Arc::default(),
         }
     }
 
@@ -180,8 +183,7 @@ impl FakeNode {
     /// Scripts the replies to GET `report_id`; the last one repeats.
     #[must_use]
     pub fn get(self, report_id: u8, replies: &[Reply<Vec<u8>>]) -> Self {
-        self.state
-            .borrow_mut()
+        self.state()
             .gets
             .insert(report_id, replies.iter().cloned().collect());
         self
@@ -203,54 +205,54 @@ impl FakeNode {
     /// Scripts the replies to SET requests; the last one repeats.
     #[must_use]
     pub fn set(self, replies: &[Reply<usize>]) -> Self {
-        self.state.borrow_mut().sets = replies.iter().copied().collect();
+        self.state().sets = replies.iter().copied().collect();
         self
     }
 
     /// Runs `hook` with the data of every SET request, before it is
     /// answered (e.g. to edit a file while a send is in progress).
     #[must_use]
-    pub fn on_set(self, hook: impl FnMut(&[u8]) + 'static) -> Self {
-        self.state.borrow_mut().on_set = Some(Box::new(hook));
+    pub fn on_set(self, hook: impl FnMut(&[u8]) + Send + 'static) -> Self {
+        self.state().on_set = Some(Box::new(hook));
         self
     }
 
     /// Every request received so far.
     #[must_use]
     pub fn log(&self) -> Vec<Request> {
-        self.state.borrow().log.clone()
+        self.state().log.clone()
     }
 
     /// Unplugs the device: descriptors already open answer `ENODEV` from
     /// now on. Remove the node from the [`FakeSystem`] as well, or replace
     /// it with a new node on the same path to model a reconnect.
     pub fn unplug(&self) {
-        self.state.borrow_mut().gone = true;
+        self.state().gone = true;
     }
 
     /// Another process takes the write lock on this node (`flock(LOCK_EX)`)
     /// until [`FakeNode::unlock_elsewhere`]. A lock this process already
     /// holds is not affected.
     pub fn lock_elsewhere(&self) {
-        self.state.borrow_mut().locked_elsewhere = true;
+        self.state().locked_elsewhere = true;
     }
 
     /// The other process releases the write lock.
     pub fn unlock_elsewhere(&self) {
-        self.state.borrow_mut().locked_elsewhere = false;
+        self.state().locked_elsewhere = false;
     }
 
     /// Whether a descriptor opened through the [`FakeSystem`] holds the
     /// write lock.
     #[must_use]
     pub fn is_locked(&self) -> bool {
-        self.state.borrow().locks > 0
+        self.state().locks > 0
     }
 
     /// How many descriptors of this node are open.
     #[must_use]
     pub fn open_count(&self) -> usize {
-        self.state.borrow().open
+        self.state().open
     }
 
     /// Only the SET requests received so far.
@@ -279,7 +281,7 @@ const ENODEV: i32 = 19;
 
 impl FakeDevice {
     fn new(node: FakeNode) -> Self {
-        node.state.borrow_mut().open += 1;
+        node.state().open += 1;
         Self {
             node,
             dead: false,
@@ -288,7 +290,7 @@ impl FakeDevice {
     }
 
     fn gone(&self) -> bool {
-        self.dead || self.node.state.borrow().gone
+        self.dead || self.node.state().gone
     }
 
     fn check<T>(&mut self, reply: Reply<T>) -> io::Result<T> {
@@ -305,7 +307,7 @@ fn os_error(errno: i32) -> io::Error {
 
 impl Drop for FakeDevice {
     fn drop(&mut self) {
-        let mut state = self.node.state.borrow_mut();
+        let mut state = self.node.state();
         state.open -= 1;
         if self.locked {
             state.locks -= 1;
@@ -315,7 +317,7 @@ impl Drop for FakeDevice {
 
 impl Device for FakeDevice {
     fn raw_info(&mut self) -> io::Result<RawInfo> {
-        if self.node.state.borrow().gone {
+        if self.node.state().gone {
             return Err(os_error(ENODEV));
         }
         Ok(self.node.raw_info)
@@ -330,7 +332,7 @@ impl Device for FakeDevice {
             return Err(os_error(ENODEV));
         }
         let node = self.node.clone();
-        let mut state = node.state.borrow_mut();
+        let mut state = node.state();
         state.log.push(Request::Get(report_id));
         let epipe = rustix::io::Errno::PIPE.raw_os_error();
         let reply = state
@@ -350,7 +352,7 @@ impl Device for FakeDevice {
             return Err(os_error(ENODEV));
         }
         let node = self.node.clone();
-        let mut state = node.state.borrow_mut();
+        let mut state = node.state();
         state.log.push(Request::Set(data.to_vec()));
         if let Some(hook) = state.on_set.as_mut() {
             hook(data);
@@ -372,7 +374,7 @@ impl Device for FakeDevice {
         if self.locked {
             return Ok(());
         }
-        let mut state = self.node.state.borrow_mut();
+        let mut state = self.node.state();
         // Like flock, a second descriptor conflicts even in the same process.
         if state.locked_elsewhere || state.locks > 0 {
             return Err(os_error(rustix::io::Errno::WOULDBLOCK.raw_os_error()));
@@ -426,36 +428,45 @@ impl System for FakeSystem {
 /// A clock that only moves when slept on.
 #[derive(Default)]
 pub struct FakeClock {
-    now: Cell<Duration>,
+    now: Mutex<Duration>,
     /// Called after every sleep, e.g. to raise an interrupt.
     #[allow(clippy::type_complexity)]
-    on_sleep: RefCell<Option<Box<dyn FnMut(Duration)>>>,
+    on_sleep: Mutex<Option<Box<dyn FnMut(Duration) + Send>>>,
 }
 
 impl std::fmt::Debug for FakeClock {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.debug_struct("FakeClock")
-            .field("now", &self.now.get())
+            .field("now", &self.now())
             .finish_non_exhaustive()
     }
 }
 
 impl FakeClock {
     /// Runs `hook` with the new time after every sleep.
-    pub fn on_sleep(&self, hook: impl FnMut(Duration) + 'static) {
-        *self.on_sleep.borrow_mut() = Some(Box::new(hook));
+    pub fn on_sleep(&self, hook: impl FnMut(Duration) + Send + 'static) {
+        *self.on_sleep.lock().unwrap_or_else(PoisonError::into_inner) = Some(Box::new(hook));
     }
 }
 
 impl Clock for FakeClock {
     fn now(&self) -> Duration {
-        self.now.get()
+        *self.now.lock().unwrap_or_else(PoisonError::into_inner)
     }
 
     fn sleep(&self, duration: Duration) {
-        self.now.set(self.now.get() + duration);
-        if let Some(hook) = self.on_sleep.borrow_mut().as_mut() {
-            hook(self.now.get());
+        let now = {
+            let mut now = self.now.lock().unwrap_or_else(PoisonError::into_inner);
+            *now += duration;
+            *now
+        };
+        if let Some(hook) = self
+            .on_sleep
+            .lock()
+            .unwrap_or_else(PoisonError::into_inner)
+            .as_mut()
+        {
+            hook(now);
         }
     }
 }

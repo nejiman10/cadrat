@@ -30,8 +30,13 @@
    - `cadratctl` が応答を待たずに終わっても、`cadratd` は接続が消えたことで待機をやめ、停止packetを送る（[daemon §5](../daemon/daemon.md#5-要求の処理)）。
 
 **unpair**
-1. `ReceiverSlots` で対象slotを読む。空きなら `SlotChanged`（16）で終える。
+1. `ReceiverSlots` で対象slotを読む。
+   - 読めなければ（Receiverが無い、slotの応答の誤りなど）、その結果を `command` を `receiver unpair` に変えて出す。
+   - 空きなら確認をせずに手順3へ進む。`cadratd` が `SlotChanged`（16）を返し、`cadrat-tool` と同じ結果になる。
+   - 警告と `-v` の行は、ここで1度だけ出す。手順3の結果に同じ警告があっても、もう1度は出さない。
 2. `cadrat-tool` と同じ内容で確認を取る（[receiver §4](../receiver.md#4-unpair) の手順3）。`--yes`、端末でない場合、`--json` の扱いも同じである。
+   - 断られたら、`cadrat-tool` と同じ `Aborted`（18）の結果（`receiver`、`target`、`sent`、`slots_after`）を手順1の結果から作って出し、`ReceiverUnpair` は呼ばない。
+   - 有線の経路が無いマウスへの注意は、slotのオブジェクトの `mouse.wired`（[tool/cli §5](../tool/cli.md#5-出力)）で決める。
 3. 確認で見せたslotの生の値を `expected` に、手順1の結果にあったReceiverのkeyを `receiver` に入れて、`ReceiverUnpair` を呼ぶ。
    - 確認してから実行するまでにslotが変わっていないかは、`cadratd` が照合する。
 4. 手順3の応答を待つ間（slotが空になるのを待つ間）にSIGINTかSIGTERMを受けたら、`cadrat-tool` と同じく、シグナルの既定の動作で終わる。`cadratd` は接続が消えたことで待機をやめる。解除要求はすでに送っているので、結果は `receiver slots` で確かめる（[tool/cli §3](../tool/cli.md#receiver-unpair-slot---receiverkey---yes---timeout秒---poll-interval秒)）。手順3より前に終われば、何も送られない。
@@ -49,7 +54,7 @@
 
 | コード | 名前 | 意味 |
 |---:|---|---|
-| 21 | DaemonUnavailable | `cadratd` に届かない（session busが無い、起動できない、応答が無い、呼び出しを拒否された）。呼び出しのtimeoutの場合は、要求が実行されたかどうか分からないと表示する |
+| 21 | DaemonUnavailable | `cadratd` に届かない（session busが無い、起動できない、応答が無い、呼び出しを拒否された）。呼び出しのtimeoutの場合は、要求が実行されたかどうか分からないと表示する。D-Busのエラーでは `AccessDenied`、`ServiceUnknown`、`NameHasNoOwner`、`NoReply`、`Spawn.*` と、§5の表に無いもの |
 | 22 | Busy | `cadratd` が別の書き込む操作を実行中だった（`Busy`）、または起動の準備中だった（`Starting`）。何もしていない。メッセージに理由（実行中のコマンド名、または `cadrat-tool` の終わりを待っていること）を出す。`cadratd` が対象のnodeの書き込みのロックを取れなかった場合も、結果のJSONの `exit_code` が22になる（[device §7.2](../device.md#72-書き込みのロック)） |
 
 - 20（`DaemonRunning`）は `cadrat-tool` だけが使う（[tool/cli §8](../tool/cli.md#8-cadratd-との排他)）。22は `cadrat-tool` も使う（書き込みのロック）。

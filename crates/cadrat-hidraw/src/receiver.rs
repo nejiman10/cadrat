@@ -395,6 +395,10 @@ pub enum UnpairResult {
     /// `Busy` (22): another process holds the management node's write lock
     /// (spec device §7.2). Nothing was sent.
     Busy(Errno),
+    /// `UnpairNotConfirmed` (15): the wait for the slot to empty was
+    /// interrupted (`cadratd` stopping, or its caller gone; spec daemon §5).
+    /// The request was sent.
+    Interrupted,
 }
 
 /// The full record of an unpair attempt.
@@ -427,6 +431,24 @@ pub fn unpair(
     slot: Slot,
     clock: &dyn Clock,
     polling: Polling,
+    confirm: &mut dyn FnMut(&SlotReport) -> bool,
+) -> Result<UnpairOutcome, SlotReadError> {
+    unpair_until(link, slot, clock, polling, &|| false, confirm)
+}
+
+/// [`unpair`] that stops waiting for the slot to empty once `interrupted`
+/// returns `true` ([`UnpairResult::Interrupted`]). It is polled between slot
+/// reads after the request was sent.
+///
+/// # Errors
+///
+/// Only the slot reads before the request; nothing has been sent then.
+pub fn unpair_until(
+    link: &mut dyn Link,
+    slot: Slot,
+    clock: &dyn Clock,
+    polling: Polling,
+    interrupted: &dyn Fn() -> bool,
     confirm: &mut dyn FnMut(&SlotReport) -> bool,
 ) -> Result<UnpairOutcome, SlotReadError> {
     let target = read_slot(link.device(), slot)?;
@@ -470,6 +492,9 @@ pub fn unpair(
         }
         if clock.now() >= deadline {
             break UnpairResult::NotConfirmed;
+        }
+        if interrupted() {
+            break UnpairResult::Interrupted;
         }
         clock.sleep(polling.interval);
     };

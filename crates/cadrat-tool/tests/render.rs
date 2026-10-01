@@ -406,6 +406,7 @@ fn receiver() {
             receiver: None,
             slot: Slot::new(3).unwrap(),
             yes: true,
+            expected: None,
             polling: polling(15, 500),
         },
     );
@@ -456,7 +457,7 @@ impl Frontend for Recorder {
     fn warning(&mut self, code: &str, _: &str) {
         self.warnings.push(code.to_owned());
     }
-    fn pairing_started(&mut self, _: Duration) {}
+    fn pairing_started(&mut self, _: &str, _: Duration) {}
     fn can_confirm(&self) -> bool {
         false
     }

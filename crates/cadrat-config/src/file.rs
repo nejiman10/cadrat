@@ -19,7 +19,7 @@ const LOCK_POLL: Duration = Duration::from_millis(50);
 #[derive(Debug, thiserror::Error)]
 pub enum FileError {
     /// The configuration file does not exist.
-    #[error("{} does not exist; create it with `cadrat-tool init`", .0.display())]
+    #[error("{} does not exist", .0.display())]
     NotFound(PathBuf),
     /// The file is not UTF-8, so it cannot be TOML.
     #[error("{} is not valid UTF-8", .0.display())]

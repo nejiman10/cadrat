@@ -11,6 +11,7 @@
 // `expect` is used only where the caller or this crate already guarantees the value.
 #![allow(clippy::missing_panics_doc)]
 
+pub mod cli;
 mod cmd;
 mod ctx;
 mod daemon;
@@ -19,6 +20,7 @@ mod format;
 pub mod render;
 mod request;
 
+pub use cmd::receiver::{no_mouse, not_confirmed, unpair_arguments};
 pub use ctx::{Env, Frontend, Interrupt, envelope};
 pub use daemon::DaemonLock;
 pub use exit::{Exit, Failure};
@@ -59,8 +61,16 @@ pub fn execute(
             receiver,
             slot,
             yes,
+            expected,
             polling,
-        } => cmd::receiver::unpair(&mut ctx, receiver.as_deref(), *slot, *yes, *polling),
+        } => cmd::receiver::unpair(
+            &mut ctx,
+            receiver.as_deref(),
+            *slot,
+            *yes,
+            *expected,
+            *polling,
+        ),
     };
     ctx.finish(command.name(), &result)
 }

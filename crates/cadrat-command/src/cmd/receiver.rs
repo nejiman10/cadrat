@@ -1,7 +1,7 @@
 //! `receiver slots`, `receiver pair` and `receiver unpair` (spec receiver).
 
 use cadrat_hidraw::receiver::{self, PairResult, Polling, SlotReadError, UnpairResult};
-use cadrat_hidraw::{Inventory, ManagementTarget, Route, select_management_node, select_receiver};
+use cadrat_hidraw::{Inventory, ManagementTarget, select_management_node, select_receiver};
 use cadrat_proto::Slot;
 use serde_json::json;
 
@@ -10,10 +10,15 @@ use crate::ctx::Ctx;
 use crate::exit::{Exit, Failure};
 use crate::format::{self, Redactor};
 use crate::render;
+use crate::request::Options;
 
 /// Spec receiver §5: receiver commands do not take a mouse.
-fn no_mouse(ctx: &Ctx) -> Result<(), Failure> {
-    if ctx.options.mouse.is_some() || ctx.options.route.is_some() {
+///
+/// # Errors
+///
+/// `Usage` with `--mouse` or `--route`.
+pub fn no_mouse(options: &Options) -> Result<(), Failure> {
+    if options.mouse.is_some() || options.route.is_some() {
         return Err(Failure::new(
             Exit::Usage,
             "receiver commands do not take --mouse or --route",
@@ -60,7 +65,7 @@ fn protocol(error: &SlotReadError) -> Failure {
 }
 
 pub fn slots(ctx: &mut Ctx, receiver: Option<&str>, redact: bool) -> Result<(), Failure> {
-    no_mouse(ctx)?;
+    no_mouse(ctx.options)?;
     let (mut target, inventory) = target(ctx, receiver, false)?;
     let slots = receiver::read_slots(target.device()).map_err(|e| protocol(&e))?;
     ctx.set(
@@ -71,9 +76,10 @@ pub fn slots(ctx: &mut Ctx, receiver: Option<&str>, redact: bool) -> Result<(), 
 }
 
 pub fn pair(ctx: &mut Ctx, receiver: Option<&str>, polling: Polling) -> Result<(), Failure> {
-    no_mouse(ctx)?;
+    no_mouse(ctx.options)?;
     let _daemon = ctx.hold_daemon_lock("receiver pair")?;
     let (mut target, inventory) = target(ctx, receiver, true)?;
+    let key = target.receiver.key.to_string();
     let interrupt = ctx.env.interrupt;
     let clock = ctx.env.clock;
     let system = ctx.env.system;
@@ -83,7 +89,7 @@ pub fn pair(ctx: &mut Ctx, receiver: Option<&str>, polling: Polling) -> Result<(
         &mut target.link(system, true),
         clock,
         polling,
-        &mut || frontend.pairing_started(polling.timeout),
+        &mut || frontend.pairing_started(&key, polling.timeout),
         &|| interrupt.is_set(),
     );
     interrupt.disarm();
@@ -140,48 +146,73 @@ pub fn pair(ctx: &mut Ctx, receiver: Option<&str>, polling: Polling) -> Result<(
     }
 }
 
-pub fn unpair(
-    ctx: &mut Ctx,
-    receiver: Option<&str>,
-    slot: Slot,
-    yes: bool,
-    polling: Polling,
-) -> Result<(), Failure> {
-    no_mouse(ctx)?;
-    if !yes && !ctx.frontend.can_confirm() {
+/// Spec receiver §4 step 3: without `--yes`, unpair needs someone to ask.
+///
+/// # Errors
+///
+/// `Usage` with `--mouse` or `--route`, or when nobody can be asked.
+pub fn unpair_arguments(options: &Options, yes: bool, can_confirm: bool) -> Result<(), Failure> {
+    no_mouse(options)?;
+    if !yes && !can_confirm {
         return Err(Failure::new(
             Exit::Usage,
             "unpair asks for confirmation on a terminal; pass --yes to skip it",
         ));
     }
+    Ok(())
+}
+
+/// The refused confirmation (`Aborted`, 18).
+#[must_use]
+pub fn not_confirmed() -> Failure {
+    Failure::new(Exit::Aborted, "not confirmed; nothing was done")
+}
+
+pub fn unpair(
+    ctx: &mut Ctx,
+    receiver: Option<&str>,
+    slot: Slot,
+    yes: bool,
+    expected: Option<[u8; 8]>,
+    polling: Polling,
+) -> Result<(), Failure> {
+    let confirmed = yes || expected.is_some();
+    unpair_arguments(ctx.options, confirmed, ctx.frontend.can_confirm())?;
     let _daemon = ctx.hold_daemon_lock(&format!("receiver unpair {slot}"))?;
     let (mut target, inventory) = target(ctx, receiver, true)?;
     let mut redactor = Redactor::new(false);
     let clock = ctx.env.clock;
     let system = ctx.env.system;
+    let interrupt = ctx.env.interrupt;
     let frontend = &mut *ctx.frontend;
     let mut shown = false;
+    let mut changed = false;
     let mut management = target.link(system, true);
-    let outcome = receiver::unpair(&mut management, slot, clock, polling, &mut |report| {
-        let mouse = format::mouse_for_slot(&inventory, report);
-        let mut lines = vec![render::slot_line(&format::slot_json(
-            report,
-            mouse,
-            &mut redactor,
-        ))];
-        if mouse.is_some_and(|(_, m)| m.route(Route::Wired).is_none()) {
-            lines.push(
-                "this mouse is connected only through this Receiver; after unpairing it stops \
-                 working until you pair it again, or connect it by cable or Bluetooth"
-                    .to_owned(),
-            );
-        }
-        frontend.unpair_target(&lines);
-        shown = true;
-        yes || frontend.confirm_unpair(slot)
-    });
+    let outcome = receiver::unpair_until(
+        &mut management,
+        slot,
+        clock,
+        polling,
+        &|| interrupt.is_set(),
+        &mut |report| {
+            shown = true;
+            if let Some(expected) = expected {
+                // The caller showed this slot and asked (spec dbus §6).
+                changed = *report.raw() != expected;
+                return !changed;
+            }
+            let mouse = format::mouse_for_slot(&inventory, report);
+            frontend.unpair_target(&render::unpair_target_lines(&format::slot_json(
+                report,
+                mouse,
+                &mut redactor,
+            )));
+            yes || frontend.confirm_unpair(slot)
+        },
+    );
     let outcome = outcome.map_err(|e| protocol(&e))?;
     let path = target.path.clone();
+    let program = ctx.program;
 
     let mut redactor = Redactor::new(false);
     ctx.set(
@@ -209,14 +240,9 @@ pub fn unpair(
             Exit::SlotChanged,
             format!("slot {slot} is empty; nothing was done"),
         )),
-        UnpairResult::SlotChanged => Err(Failure::new(
-            Exit::SlotChanged,
-            format!("slot {slot} changed after it was shown; nothing was done"),
-        )),
-        UnpairResult::Aborted => Err(Failure::new(
-            Exit::Aborted,
-            "not confirmed; nothing was done",
-        )),
+        UnpairResult::SlotChanged => Err(changed_after_shown(slot)),
+        UnpairResult::Aborted if changed => Err(changed_after_shown(slot)),
+        UnpairResult::Aborted => Err(not_confirmed()),
         UnpairResult::CommandFailed(result) => Err(Failure::new(
             Exit::ReceiverCommandFailed,
             format!("the unpair request failed ({result})"),
@@ -227,5 +253,17 @@ pub fn unpair(
         )),
         UnpairResult::SlotReadFailed(e) => Err(protocol(&e)),
         UnpairResult::Busy(errno) => Err(busy(&path, errno)),
+        UnpairResult::Interrupted => Err(Failure::new(
+            Exit::UnpairNotConfirmed,
+            format!("stopped waiting for slot {slot} to become empty; the unpair request was sent"),
+        )
+        .hint(format!("check the result with `{program} receiver slots`"))),
     }
+}
+
+fn changed_after_shown(slot: Slot) -> Failure {
+    Failure::new(
+        Exit::SlotChanged,
+        format!("slot {slot} changed after it was shown; nothing was done"),
+    )
 }

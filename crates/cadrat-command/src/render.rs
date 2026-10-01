@@ -144,6 +144,79 @@ pub(crate) fn slot_line(slot: &Value) -> String {
     line
 }
 
+/// The lines shown before the unpair confirmation: the slot, and a caution
+/// when the mouse in it has no wired route (spec receiver §4 step 3).
+#[must_use]
+pub fn unpair_target_lines(slot: &Value) -> Vec<String> {
+    let mut lines = vec![slot_line(slot)];
+    if slot["mouse"]["wired"] == false {
+        lines.push(
+            "this mouse is connected only through this Receiver; after unpairing it stops \
+             working until you pair it again, or connect it by cable or Bluetooth"
+                .to_owned(),
+        );
+    }
+    lines
+}
+
+/// The unpair confirmation question, printed without a newline.
+#[must_use]
+pub fn unpair_question(slot: cadrat_proto::Slot) -> String {
+    format!("Unpair slot {slot}? [y/N] ")
+}
+
+/// Whether an answer to [`unpair_question`] confirms.
+#[must_use]
+pub fn confirms(answer: &str) -> bool {
+    matches!(answer.trim(), "y" | "Y" | "yes" | "Yes" | "YES")
+}
+
+/// The line asking for the mouse to be put in pairing mode, unless `-q`.
+#[must_use]
+pub fn pairing_prompt(timeout: std::time::Duration) -> String {
+    format!(
+        "put the mouse in pairing mode now (waiting up to {} s; Ctrl-C stops pairing)",
+        timeout.as_secs_f64()
+    )
+}
+
+/// One `-v` line from a row of the JSON `nodes`:
+/// `node /dev/hidraw5: rejected (no setting feature)`.
+#[must_use]
+pub fn node_line(row: &Value) -> String {
+    let status = text(&row["status"]);
+    if status == "candidate" {
+        format!("node {}: {status}", text(&row["node"]))
+    } else {
+        format!(
+            "node {}: {status} ({})",
+            text(&row["node"]),
+            text(&row["detail"])
+        )
+    }
+}
+
+/// The `-v` lines of a result that has the JSON `nodes` (spec ctl/cli §3).
+#[must_use]
+pub fn verbose_lines(result: &Value) -> Vec<String> {
+    array(&result["nodes"]).iter().map(node_line).collect()
+}
+
+/// The warnings of a result as printed on standard error.
+#[must_use]
+pub fn warning_lines(result: &Value) -> Vec<String> {
+    array(&result["warnings"])
+        .iter()
+        .map(|w| warning_line(&text(&w["code"]), &text(&w["message"])))
+        .collect()
+}
+
+/// `warning: CODE: message`.
+#[must_use]
+pub fn warning_line(code: &str, message: &str) -> String {
+    format!("warning: {code}: {message}")
+}
+
 /// A JSON scalar as plain text (strings without quotes).
 fn text(value: &Value) -> String {
     match value {

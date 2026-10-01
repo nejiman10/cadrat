@@ -12,16 +12,19 @@ use crate::Io;
 use crate::cli::Global;
 
 pub fn run(env: &Env, mut io: Io, global: &Global, poll_interval: f64) -> i32 {
-    let usage = if global.mouse.is_some() || global.route.is_some() || global.hidraw.is_some() {
+    let usage = if global.common.mouse.is_some()
+        || global.common.route.is_some()
+        || global.hidraw.is_some()
+    {
         Some("hold-open does not take --mouse, --route or --hidraw")
-    } else if global.json {
+    } else if global.common.json {
         Some("hold-open does not support --json")
     } else {
         None
     };
     if let Some(message) = usage {
         let _ = writeln!(io.stderr, "error: {message}");
-        if global.json {
+        if global.common.json {
             let failure = Failure::new(Exit::Usage, message);
             let json = cadrat_command::envelope(
                 Some("hold-open"),
@@ -35,7 +38,7 @@ pub fn run(env: &Env, mut io: Io, global: &Global, poll_interval: f64) -> i32 {
     }
     let interval = Duration::from_secs_f64(poll_interval);
     let (system, clock, interrupt) = (env.system, env.clock, env.interrupt);
-    if !global.quiet {
+    if !global.common.quiet {
         let _ = writeln!(
             io.stderr,
             "note: keeping the wired C658's hidraw nodes open; stop with Ctrl-C"

@@ -47,7 +47,8 @@ Phase 2aの `cadratd` は、TOML以外に設定の状態を持たない。マウ
 
 終了:
 
-- SIGTERMまたはSIGINTで終わる。実行中の操作があれば、`cadrat-tool` がSIGINTを受けた場合と同じように止める。pairなら停止packetを必ず送る（[receiver §3](../receiver.md#3-pair)）。その操作の要求には結果を返してから終わる。
+- SIGTERMまたはSIGINTで終わる。実行中の操作があれば、`cadrat-tool` がSIGINTを受けた場合と同じように止める。pairなら停止packetを必ず送る（[receiver §3](../receiver.md#3-pair)）。その操作の要求には結果を返してから終わる。unpairの待機中なら、呼び出し側が消えたとき（§5）と同じく待機をやめる。
+- 終了を始めた後に届いた、デバイスに触れる要求は、何もせずに `Busy` のエラーにする。
 - 終了コードは、シグナルで止めた場合0、起動の失敗は1。
 - `Restart=on-failure` とする。
 
@@ -84,7 +85,7 @@ Phase 2aの `cadratd` は、TOML以外に設定の状態を持たない。マウ
 - **設定ファイル**: 要求で渡された絶対パスを使う（[dbus §3](dbus.md#3-共通の引数)）。保存の手順（ロック、H0の照合、原子的な保存）は `cadrat-tool` と同じである（[config §7](../config.md#7-書き戻し)）。
 - **unpairの確認**: `cadratd` は対話しない。確認は呼び出し側が行い、そのとき見せたslotの生の値を要求に付ける。`cadratd` は実行の直前にslotを読み直し、一致しなければ何もせずに `SlotChanged`（16）を返す（[receiver §4](../receiver.md#4-unpair) の手順4）。
 - **pairの中断**: `Cancel` の要求か、pairを要求した接続がbusから消えたときに、SIGINTと同じ扱いで待機をやめ、停止packetを送る。結果は `PairTimeout`（12）になる（停止に失敗すれば13）。
-- **unpairの待機中に呼び出し側が消えたとき**: 待機（[receiver §4](../receiver.md#4-unpair) の手順6）をやめる。解除要求はすでに送っており、取り消す手段は無い。`cadrat-tool` がこの待機中にシグナルで終わった場合と同じ扱いである（[tool/cli §3](../tool/cli.md#receiver-unpair-slot---receiverkey---yes---timeout秒---poll-interval秒)）。`Cancel` はunpairには効かない。
+- **unpairの待機中に呼び出し側が消えたとき**: 待機（[receiver §4](../receiver.md#4-unpair) の手順6）をやめる。解除要求はすでに送っており、取り消す手段は無い。`cadrat-tool` がこの待機中にシグナルで終わった場合と同じ扱いである（[tool/cli §3](../tool/cli.md#receiver-unpair-slot---receiverkey---yes---timeout秒---poll-interval秒)）。結果は `UnpairNotConfirmed`（15）とし、解除要求は送ったこと、結果は `receiver slots` で確かめることをメッセージと `hint` で伝える。`Cancel` はunpairには効かない。
 - `--hidraw` に当たる指定は受け付けない。nodeを直接指定する開発者向けの操作は `cadrat-tool` で行う。
 
 ## 6. 接続中の機器の公開
@@ -101,7 +102,9 @@ Phase 2aの `cadratd` は、TOML以外に設定の状態を持たない。マウ
 
 - 標準エラーに1行ずつ出し、journalに残す。
 - 残すもの: 起動と終了、ロックの取得、操作ごとの要求と結果（コマンド、終了コード名、送信した経路、保存したか）、警告。
+  - 操作の行は `set: Success, sent via wired, saved` の形にする。警告は `warning: <code>: <message>` の形で続ける。
 - 機器IDとslotの識別子は、常に `--redact` と同じ形（`id-N`）で伏せる（[tool/cli §3](../tool/cli.md#list---nodes---redact)）。journalは不具合の報告に貼られることが多いためである。
+  - 行を書く直前に、ちょうど12桁の小文字16進の語（6 byteのIDを `cadrat` が表示する形）をすべて置き換える。警告の文に混ざったkeyも伏せるためである。
   - 番号は `cadratd` のプロセス全体で1つの対応表から振る。同じプロセスのログの中では、同じ個体は同じ `id-N` になり、行どうしで照合できる。`cadratd` を再起動すると振り直す。
   - D-Busの応答では伏せない（`redact` を指定した場合を除く）。応答の `id-N` は、`cadrat-tool --redact` と同じく、その応答の中だけで振る。
 - wire reportのhexはログに出してよい。個体を識別する情報を含まない。
