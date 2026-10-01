@@ -4,7 +4,7 @@
 //! `cadrat-tool` and `cadratctl` both print what [`human`] returns, so they
 //! show the same lines for the same result. What has to be shown while a
 //! command runs (warnings, `-v` detail, prompts) is not here; it goes
-//! through [`crate::Frontend`].
+//! through `cadrat_command::Frontend`.
 
 use std::fmt::Write as _;
 

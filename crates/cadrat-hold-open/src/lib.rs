@@ -11,10 +11,66 @@ use std::io::Write;
 use std::os::fd::BorrowedFd;
 use std::path::PathBuf;
 
-use cadrat_command::Exit;
 use cadrat_hidraw::sys::{BUS_USB, PRODUCT_C658, VENDOR};
 use cadrat_hidraw::{Errno, System, Wait};
 use clap::Parser;
+
+/// The exit codes this program uses (spec hold-open/cli §3.1). Their numbers
+/// and names are those of the shared table (spec tool/cli §6); a test checks
+/// them against `cadrat-command`, which this root service does not link.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum Exit {
+    /// 0: stopped by a signal, or the node disappeared.
+    Success,
+    /// 1: unexpected internal error.
+    Internal,
+    /// 2: invalid arguments.
+    Usage,
+    /// 4: the node does not exist.
+    NoDevice,
+    /// 6: no permission to open the node.
+    PermissionDenied,
+    /// 7: the node is not a wired C658.
+    DeviceInvalid,
+}
+
+impl Exit {
+    /// Every exit code, for the test against the shared table.
+    pub const ALL: [Self; 6] = [
+        Self::Success,
+        Self::Internal,
+        Self::Usage,
+        Self::NoDevice,
+        Self::PermissionDenied,
+        Self::DeviceInvalid,
+    ];
+
+    /// The process exit code.
+    #[must_use]
+    pub fn code(self) -> i32 {
+        match self {
+            Self::Success => 0,
+            Self::Internal => 1,
+            Self::Usage => 2,
+            Self::NoDevice => 4,
+            Self::PermissionDenied => 6,
+            Self::DeviceInvalid => 7,
+        }
+    }
+
+    /// The name, as in the shared table.
+    #[must_use]
+    pub fn name(self) -> &'static str {
+        match self {
+            Self::Success => "Success",
+            Self::Internal => "Internal",
+            Self::Usage => "Usage",
+            Self::NoDevice => "NoDevice",
+            Self::PermissionDenied => "PermissionDenied",
+            Self::DeviceInvalid => "DeviceInvalid",
+        }
+    }
+}
 
 /// The version shown by `--version`: `CADRAT_VERSION` at build time (set by
 /// the packaging scripts), else the crate version.
@@ -39,6 +95,47 @@ struct Cli {
 #[must_use]
 pub fn command() -> clap::Command {
     <Cli as clap::CommandFactory>::command()
+}
+
+/// Standard error for the journal: every line it writes is an error, so
+/// each gets the priority `<3>` (sd-daemon(3), spec hold-open/cli §3).
+pub struct ErrorLevel<W> {
+    inner: W,
+    line_start: bool,
+}
+
+impl<W: Write> ErrorLevel<W> {
+    /// Wraps `inner`.
+    pub fn new(inner: W) -> Self {
+        Self {
+            inner,
+            line_start: true,
+        }
+    }
+
+    /// The wrapped writer.
+    pub fn into_inner(self) -> W {
+        self.inner
+    }
+}
+
+impl<W: Write> Write for ErrorLevel<W> {
+    fn write(&mut self, buf: &[u8]) -> std::io::Result<usize> {
+        let mut out = Vec::with_capacity(buf.len() + 3);
+        for &byte in buf {
+            if self.line_start {
+                out.extend_from_slice(b"<3>");
+            }
+            out.push(byte);
+            self.line_start = byte == b'\n';
+        }
+        self.inner.write_all(&out)?;
+        Ok(buf.len())
+    }
+
+    fn flush(&mut self) -> std::io::Result<()> {
+        self.inner.flush()
+    }
 }
 
 /// SIGINT and SIGTERM.

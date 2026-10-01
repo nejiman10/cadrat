@@ -11,20 +11,18 @@
 // `expect` is used only where the caller or this crate already guarantees the value.
 #![allow(clippy::missing_panics_doc)]
 
-pub mod cli;
 mod cmd;
 mod ctx;
 mod daemon;
-mod exit;
 mod format;
-pub mod render;
-mod request;
+mod select;
 
-pub use cmd::receiver::{no_mouse, not_confirmed, unpair_arguments};
-pub use ctx::{Env, Frontend, Interrupt, envelope};
+pub use cadrat_cli::{
+    Command, Exit, Failure, Options, cli, envelope, no_mouse, not_confirmed, render,
+    unpair_arguments,
+};
+pub use ctx::{Env, Frontend, Interrupt};
 pub use daemon::DaemonLock;
-pub use exit::{Exit, Failure};
-pub use request::{Command, Options};
 
 use serde_json::Value;
 

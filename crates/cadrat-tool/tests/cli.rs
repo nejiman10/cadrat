@@ -1055,6 +1055,44 @@ fn root_checks_every_users_cadratd() {
     assert_eq!(h.run(&["apply"]).code, 0);
 }
 
+/// As root, another user's `cadrat/` is not trusted: a symbolic link or a
+/// FIFO in place of the lock file is no lock, and is neither followed nor
+/// waited on.
+#[test]
+fn root_does_not_follow_other_users_links() {
+    use std::os::unix::fs::symlink;
+    let node = wired();
+    let h = Harness::new(vec![node.clone()]);
+    h.write_config(&baseline());
+    h.uid.set(0);
+    let run = h.dir.path().join("run");
+    // A link to a file that another process holds exclusively.
+    let target = h.dir.path().join("elsewhere");
+    fs::write(&target, "").unwrap();
+    let held = fs::File::open(&target).unwrap();
+    rustix::fs::flock(&held, rustix::fs::FlockOperation::LockExclusive).unwrap();
+    fs::create_dir_all(run.join("1001/cadrat")).unwrap();
+    symlink(&target, run.join("1001/cadrat/cadratd.lock")).unwrap();
+    // A linked cadrat/ directory.
+    fs::create_dir_all(h.dir.path().join("linked")).unwrap();
+    fs::create_dir_all(run.join("1002")).unwrap();
+    symlink(h.dir.path().join("linked"), run.join("1002/cadrat")).unwrap();
+    fs::copy(&target, h.dir.path().join("linked/cadratd.lock")).unwrap();
+    // A FIFO, which a blocking open would wait on forever.
+    fs::create_dir_all(run.join("1003/cadrat")).unwrap();
+    rustix::fs::mknodat(
+        rustix::fs::CWD,
+        run.join("1003/cadrat/cadratd.lock"),
+        rustix::fs::FileType::Fifo,
+        rustix::fs::Mode::from_raw_mode(0o600),
+        0,
+    )
+    .unwrap();
+    let out = h.run(&["apply"]);
+    assert_eq!(out.code, 0, "{}", out.stderr);
+    assert_eq!(node.sets().len(), 1);
+}
+
 #[test]
 fn a_locked_node_is_busy() {
     let node = wired();

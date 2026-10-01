@@ -7,8 +7,7 @@
 use std::path::PathBuf;
 use std::time::Duration;
 
-use cadrat_hidraw::receiver::Polling;
-use cadrat_proto::Slot;
+use cadrat_proto::{Polling, Slot};
 use clap::{Args, Subcommand, ValueEnum};
 
 use crate::request::{Command, Options};
@@ -54,7 +53,7 @@ pub enum RouteArg {
     Receiver,
 }
 
-impl From<RouteArg> for cadrat_hidraw::Route {
+impl From<RouteArg> for cadrat_proto::Route {
     fn from(route: RouteArg) -> Self {
         match route {
             RouteArg::Wired => Self::Wired,

@@ -4,13 +4,13 @@
 # [Install] section: stop it with `systemctl mask cadrat-hold-open@.service`.
 [Unit]
 Description=Keep wired CadMouse Compact Wireless (C658) node %I open (cadrat)
-Documentation=man:cadrat-hold-open(1)
+Documentation=man:cadrat-hold-open(8)
 BindsTo=dev-%i.device
 After=dev-%i.device
 
 [Service]
 Type=exec
-ExecStart=/usr/bin/cadrat-hold-open /dev/%I
+ExecStart=/usr/libexec/cadrat/cadrat-hold-open /dev/%I
 Restart=on-failure
 RestartPreventExitStatus=7
 

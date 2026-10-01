@@ -11,10 +11,11 @@ publish.workspace = true
 workspace = true
 
 [dependencies]
-cadrat-command = { path = "../cadrat-command" }
 cadrat-hidraw = { path = "../cadrat-hidraw" }
 clap = { version = "4.6.7", features = ["derive"] }
+rustix = { version = "1.1.5", features = ["fs"] }
 signal-hook = "0.4.4"
 
 [dev-dependencies]
+cadrat-command = { path = "../cadrat-command" }
 cadrat-hidraw = { path = "../cadrat-hidraw", features = ["fake"] }

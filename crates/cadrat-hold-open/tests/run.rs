@@ -153,3 +153,35 @@ fn interface_is_left_out_when_unknown() {
         "held      /dev/hidraw5\nreleased  /dev/hidraw5\n"
     );
 }
+
+/// The codes are those of the shared table (spec hold-open/cli §3.1), which
+/// this program does not link.
+#[test]
+fn exit_codes_match_the_shared_table() {
+    use cadrat_command::Exit as Shared;
+    use cadrat_hold_open::Exit;
+    let shared = [
+        Shared::Success,
+        Shared::Internal,
+        Shared::Usage,
+        Shared::NoDevice,
+        Shared::PermissionDenied,
+        Shared::DeviceInvalid,
+    ];
+    for (own, shared) in Exit::ALL.into_iter().zip(shared) {
+        assert_eq!((own.code(), own.name()), (shared.code(), shared.name()));
+    }
+}
+
+#[test]
+fn error_lines_get_their_journal_priority() {
+    use std::io::Write;
+    let mut out = cadrat_hold_open::ErrorLevel::new(Vec::new());
+    write!(out, "error: cannot open").unwrap();
+    writeln!(out, " /dev/hidraw5: ENOENT").unwrap();
+    writeln!(out, "error: second").unwrap();
+    assert_eq!(
+        String::from_utf8(out.into_inner()).unwrap(),
+        "<3>error: cannot open /dev/hidraw5: ENOENT\n<3>error: second\n"
+    );
+}

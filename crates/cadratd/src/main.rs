@@ -40,6 +40,16 @@ impl Stop for Signals {
     }
 }
 
+/// Whether standard error is the journal's stream: `JOURNAL_STREAM` names
+/// its device and inode (systemd.exec(5)).
+fn stderr_is_journal() -> bool {
+    let Some(stream) = std::env::var_os("JOURNAL_STREAM") else {
+        return false;
+    };
+    rustix::fs::fstat(std::io::stderr())
+        .is_ok_and(|stat| stream.to_str() == Some(&format!("{}:{}", stat.st_dev, stat.st_ino)))
+}
+
 fn main() {
     if let Err(error) = cadratd::command().try_get_matches() {
         let _ = error.print();
@@ -63,6 +73,7 @@ fn main() {
         bus: Bus::Session,
         start_wait: Duration::from_secs(90),
         settle: Duration::from_millis(250),
+        journal: stderr_is_journal(),
     };
     let code = run(world, &signals, Box::new(std::io::stderr()));
     std::process::exit(code);

@@ -2,7 +2,7 @@
 //!
 //! It parses the same commands as `cadrat-tool`, sends them to `cadratd`
 //! over D-Bus and prints the returned JSON exactly as `cadrat-tool` prints
-//! its own result (`cadrat_command::render`). It never opens hidraw.
+//! its own result (`cadrat_cli::render`). It never opens hidraw.
 //! [`run`] takes the arguments, the outside world ([`Env`]) and the standard
 //! streams ([`Io`]) so the D-Bus tests run it against a private bus.
 
@@ -16,8 +16,8 @@ use std::io::{BufRead, Write};
 use std::path::PathBuf;
 use std::time::Duration;
 
-use cadrat_command::cli::{Common, Shared, VERSION};
-use cadrat_command::{Command, Exit, Failure, Options, envelope, render};
+use cadrat_cli::cli::{Common, Shared, VERSION};
+use cadrat_cli::{Command, Exit, Failure, Options, envelope, render};
 pub use cadrat_dbus::Bus;
 use cadrat_dbus::{BUS_NAME, CALL_MARGIN, CALL_TIMEOUT, INTERFACE, PATH, encode};
 use clap::Parser;
@@ -162,11 +162,11 @@ impl Ctl<'_, '_> {
         let mut options = self.options.clone();
         match &self.command {
             Command::ReceiverSlots { .. } | Command::ReceiverPair { .. } => {
-                cadrat_command::no_mouse(&options)?;
+                cadrat_cli::no_mouse(&options)?;
             }
             Command::ReceiverUnpair { yes, .. } => {
                 let can_confirm = !self.json && self.io.stdin_is_terminal;
-                cadrat_command::unpair_arguments(&options, *yes, can_confirm)?;
+                cadrat_cli::unpair_arguments(&options, *yes, can_confirm)?;
             }
             Command::Set { assignments, .. } => {
                 cadrat_config::parse_assignments(assignments)
@@ -196,7 +196,18 @@ impl Ctl<'_, '_> {
                     )
                 })?,
             };
-            options.config = Some(self.env.cwd.join(path));
+            let path = self.env.cwd.join(path);
+            // D-Bus strings are UTF-8; a converted path would name another file.
+            if path.to_str().is_none() {
+                return Err(Failure::new(
+                    Exit::Usage,
+                    format!(
+                        "{} is not valid UTF-8, which cadratd cannot be sent; use cadrat-tool",
+                        path.display()
+                    ),
+                ));
+            }
+            options.config = Some(path);
         }
         Ok(options)
     }
@@ -476,7 +487,7 @@ impl Ctl<'_, '_> {
                     Some(command.name()),
                     fields,
                     warnings,
-                    &Err(cadrat_command::not_confirmed()),
+                    &Err(cadrat_cli::not_confirmed()),
                 );
             }
         }

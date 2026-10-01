@@ -10,10 +10,8 @@ use std::fmt;
 use std::path::PathBuf;
 use std::time::Duration;
 
-use cadrat_command::{Command, Exit, Failure, Options};
-use cadrat_hidraw::Route;
-use cadrat_hidraw::receiver::Polling;
-use cadrat_proto::Slot;
+use cadrat_cli::{Command, Exit, Failure, Options};
+use cadrat_proto::{Polling, Route, Slot};
 use zbus::message::{Header, Message};
 use zbus::names::ErrorName;
 use zbus::zvariant::{OwnedValue, Value};
@@ -184,7 +182,8 @@ pub type Args = HashMap<String, OwnedValue>;
 
 /// The argument dictionary for `command` (the caller's side).
 ///
-/// `options.config` must already be absolute (spec dbus §3). `-q` and
+/// `options.config` must already be absolute (spec dbus §3) and UTF-8:
+/// `cadratctl` refuses other paths, so the lossy conversion never applies. `-q` and
 /// `--json` only change the output and are not sent.
 #[must_use]
 pub fn encode(options: &Options, command: &Command) -> HashMap<&'static str, Value<'static>> {

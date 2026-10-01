@@ -11,8 +11,10 @@ publish.workspace = true
 workspace = true
 
 [dependencies]
+# Never cadrat-hidraw or cadrat-command: cadratctl only talks to cadratd
+# (AGENTS.md). Tests use them below to run cadratd and cadrat-tool.
 async-channel = "2.5.0"
-cadrat-command = { path = "../cadrat-command" }
+cadrat-cli = { path = "../cadrat-cli" }
 cadrat-config = { path = "../cadrat-config" }
 cadrat-dbus = { path = "../cadrat-dbus" }
 cadrat-proto = { path = "../cadrat-proto" }

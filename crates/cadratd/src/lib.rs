@@ -70,6 +70,9 @@ pub struct World {
     pub start_wait: Duration,
     /// How long to let `/dev` settle before enumerating again (250 ms).
     pub settle: Duration,
+    /// Whether the log stream is the journal's: lines then carry their
+    /// priority (spec daemon §7).
+    pub journal: bool,
 }
 
 /// The request to stop (SIGTERM or SIGINT in the binary).
@@ -83,7 +86,7 @@ pub trait Stop {
 /// Runs `cadratd` until stopped. Returns the exit code: 0 when stopped by
 /// [`Stop`], 1 when starting failed (spec daemon §3).
 pub fn run(world: World, stop: &dyn Stop, log: Box<dyn Write + Send>) -> i32 {
-    let log = Arc::new(Log::new(log));
+    let log = Arc::new(Log::new(log, world.journal));
     match serve(world, stop, &log) {
         Ok(()) => 0,
         Err(message) => {

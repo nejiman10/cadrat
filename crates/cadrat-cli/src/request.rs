@@ -3,9 +3,7 @@
 use std::path::PathBuf;
 
 use cadrat_config::Preset;
-use cadrat_hidraw::Route;
-use cadrat_hidraw::receiver::Polling;
-use cadrat_proto::Slot;
+use cadrat_proto::{Polling, Route, Slot};
 
 /// Options every command accepts (spec tool/cli §1).
 #[derive(Debug, Clone, Default)]
@@ -18,7 +16,7 @@ pub struct Options {
     pub route: Option<Route>,
     /// `--hidraw` (`cadrat-tool` only).
     pub hidraw: Option<PathBuf>,
-    /// `-v`: per-node detail through [`crate::Frontend::verbose`].
+    /// `-v`: per-node detail through `cadrat_command::Frontend::verbose`.
     pub verbose: bool,
     /// The per-node detail of `-v` also goes into the JSON `nodes`
     /// (`cadratd`'s `verbose` key, spec dbus §3). [`crate::render::verbose_lines`]

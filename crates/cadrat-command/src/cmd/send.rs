@@ -7,8 +7,8 @@ use serde_json::json;
 use crate::cmd::config::{load, read, warn_config};
 use crate::cmd::list::inventory;
 use crate::ctx::Ctx;
-use crate::exit::{Exit, Failure};
 use crate::format;
+use crate::{Exit, Failure};
 
 pub fn set(
     ctx: &mut Ctx,
@@ -92,11 +92,15 @@ fn run(
 
     // 7. Choose the mouse.
     let (mut target, number) = if let Some(node) = &ctx.options.hidraw {
-        (select_node(ctx.env.system, node)?, None)
+        (
+            select_node(ctx.env.system, node).map_err(crate::select::failure)?,
+            None,
+        )
     } else {
         let mut inventory = inventory(ctx)?;
         let route = ctx.options.route;
-        let target = select_mouse(&mut inventory, ctx.options.mouse.as_deref(), route)?;
+        let target = select_mouse(&mut inventory, ctx.options.mouse.as_deref(), route)
+            .map_err(crate::select::failure)?;
         let number = inventory
             .mice
             .iter()
