@@ -1,5 +1,6 @@
-# Builds the release .deb on Ubuntu 22.04, the oldest supported LTS
-# (spec implementation §7), and tries it in the same container.
+# Builds the three release .deb packages (cadrat-common, cadrat-tool,
+# cadratd) on Ubuntu 22.04, the oldest supported LTS (spec implementation §7),
+# and tries them in the same container, including the upgrade from v0.1.0.
 #
 # - Pull request: build and try only.
 # - Tag v<version>: also attest the build and create a DRAFT GitHub Release.
@@ -56,29 +57,20 @@ jobs:
       - name: Checksum
         run: |
           cd target/debian
-          sha256sum cadrat-tool_*.deb > SHA256SUMS
+          sha256sum *.deb > SHA256SUMS
           cat SHA256SUMS
-      - name: Install, run and remove
-        run: |
-          apt-get install -y ./target/debian/cadrat-tool_*.deb
-          useradd --create-home tester
-          su tester -c 'cadrat-tool --version'
-          # No devices here: list succeeds and finds nothing.
-          su tester -c 'cadrat-tool list'
-          test -f /usr/lib/udev/rules.d/69-cadrat.rules
-          test -f /usr/lib/systemd/user/cadrat-hold-open.service
-          dpkg -r cadrat-tool
-          test ! -e /usr/bin/cadrat-tool
+      - name: Install, run, upgrade and remove
+        run: sh packaging/try-debs.sh target/debian
       - name: Attest build provenance
         if: github.ref_type == 'tag'
         uses: actions/attest-build-provenance@v2
         with:
-          subject-path: target/debian/cadrat-tool_*.deb
+          subject-path: target/debian/*.deb
       - uses: actions/upload-artifact@v4
         with:
           name: deb
           path: |
-            target/debian/cadrat-tool_*.deb
+            target/debian/*.deb
             target/debian/SHA256SUMS
           if-no-files-found: error
 
@@ -97,6 +89,6 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           gh release create "$GITHUB_REF_NAME" --repo "$GITHUB_REPOSITORY" \
-              --draft --verify-tag --title "cadrat-tool ${GITHUB_REF_NAME#v}" \
-              --notes "Debian package for Ubuntu 22.04 or later (amd64). Built by the Release workflow; see docs/packaging.md. Verify with \`sha256sum -c SHA256SUMS\` or \`gh attestation verify <file> --repo $GITHUB_REPOSITORY\`." \
-              cadrat-tool_*.deb SHA256SUMS
+              --draft --verify-tag --title "cadrat ${GITHUB_REF_NAME#v}" \
+              --notes "Debian packages for Ubuntu 22.04 or later (amd64): cadrat-common, cadrat-tool and cadratd. Built by the Release workflow; see docs/packaging.md. Verify with \`sha256sum -c SHA256SUMS\` or \`gh attestation verify <file> --repo $GITHUB_REPOSITORY\`." \
+              *.deb SHA256SUMS

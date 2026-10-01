@@ -3,7 +3,7 @@ resolver = "3"
 members = ["crates/cadrat-proto", "crates/cadrat-config", "crates/cadrat-hidraw", "crates/cadrat-cli", "crates/cadrat-command", "crates/cadrat-tool", "crates/cadrat-hold-open", "crates/cadrat-dbus", "crates/cadratd", "crates/cadratctl", "xtask"]
 
 [workspace.package]
-version = "0.1.0"
+version = "0.2.0"
 edition = "2024"
 license = "MIT"
 repository = "https://github.com/nejiman10/cadrat"

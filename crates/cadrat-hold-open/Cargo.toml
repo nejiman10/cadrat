@@ -19,3 +19,36 @@ signal-hook = "0.4.4"
 [dev-dependencies]
 cadrat-command = { path = "../cadrat-command" }
 cadrat-hidraw = { path = "../cadrat-hidraw", features = ["fake"] }
+
+# The cadrat-common `.deb` package (spec implementation §7): what both
+# cadrat-tool and cadratd need, and the hold-open service. Built with the
+# other two by packaging/build-deb.sh or packaging/build-release.sh.
+[package.metadata.deb]
+name = "cadrat-common"
+maintainer = "nejiman10 <72682963+nejiman10@users.noreply.github.com>"
+copyright = "2026, nejiman10"
+license-file = ["../../LICENSE", "0"]
+section = "utils"
+priority = "optional"
+depends = "$auto, udev, systemd"
+# v0.1.0's cadrat-tool package shipped the udev rule.
+breaks = "cadrat-tool (<< 0.2.0)"
+replaces = "cadrat-tool (<< 0.2.0)"
+extended-description = """\
+Files shared by cadrat-tool and cadratd, which configure the CadMouse \
+Compact Wireless (C658) and its Universal Receiver (C652): the udev rule that \
+gives the logged-in user access to their hidraw nodes, and the \
+cadrat-hold-open system service, which udev starts for each wired C658 hidraw \
+node and which keeps the node open so that the mouse keeps sending input. \
+Not affiliated with 3Dconnexion.
+"""
+maintainer-scripts = "../../packaging/debian/cadrat-common"
+assets = [
+    ["target/release/cadrat-hold-open", "usr/libexec/cadrat/", "755"],
+    ["../../udev/69-cadrat.rules", "usr/lib/udev/rules.d/", "644"],
+    ["../../udev/69-cadrat-hold-open.rules", "usr/lib/udev/rules.d/", "644"],
+    ["../../packaging/systemd/cadrat-hold-open@.service", "usr/lib/systemd/system/", "644"],
+    ["../../target/dist/man/man8/cadrat-hold-open.8.gz", "usr/share/man/man8/", "644"],
+    ["../../README.md", "usr/share/doc/cadrat-common/", "644"],
+    ["../../NOTICE.md", "usr/share/doc/cadrat-common/", "644"],
+]

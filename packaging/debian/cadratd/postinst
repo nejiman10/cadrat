@@ -1,0 +1,21 @@
+#!/bin/sh
+# cadratd: enable the user service for every user on first installation only
+# (spec implementation §7). These are the steps dh_installsystemduser
+# generates: deb-systemd-helper records the links it made, so "was-enabled"
+# is true on first installation and while the links remain, and false once
+# an administrator ran `systemctl --global disable cadratd.service`. An
+# upgrade then keeps it disabled. Running daemons are not restarted.
+set -e
+
+if [ "$1" = "configure" ] || [ "$1" = "abort-upgrade" ] || [ "$1" = "abort-deconfigure" ] || [ "$1" = "abort-remove" ]; then
+    # Removes only the mask that postrm made on removal.
+    deb-systemd-helper --user unmask 'cadratd.service' >/dev/null || true
+    if deb-systemd-helper --quiet --user was-enabled 'cadratd.service'; then
+        deb-systemd-helper --user enable 'cadratd.service' >/dev/null || true
+    else
+        deb-systemd-helper --user update-state 'cadratd.service' >/dev/null || true
+    fi
+fi
+
+#DEBHELPER#
+exit 0

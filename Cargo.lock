@@ -237,7 +237,7 @@ checksum = "72f5acc6cb2ba439de613abc23857ec3d78374d8ed5ac84e9d11336e87da8649"
 
 [[package]]
 name = "cadrat-cli"
-version = "0.1.0"
+version = "0.2.0"
 dependencies = [
  "cadrat-config",
  "cadrat-proto",
@@ -247,7 +247,7 @@ dependencies = [
 
 [[package]]
 name = "cadrat-command"
-version = "0.1.0"
+version = "0.2.0"
 dependencies = [
  "cadrat-cli",
  "cadrat-config",
@@ -260,7 +260,7 @@ dependencies = [
 
 [[package]]
 name = "cadrat-config"
-version = "0.1.0"
+version = "0.2.0"
 dependencies = [
  "cadrat-proto",
  "rustix",
@@ -272,7 +272,7 @@ dependencies = [
 
 [[package]]
 name = "cadrat-dbus"
-version = "0.1.0"
+version = "0.2.0"
 dependencies = [
  "cadrat-cli",
  "cadrat-config",
@@ -283,7 +283,7 @@ dependencies = [
 
 [[package]]
 name = "cadrat-hidraw"
-version = "0.1.0"
+version = "0.2.0"
 dependencies = [
  "cadrat-hidraw",
  "cadrat-proto",
@@ -295,7 +295,7 @@ dependencies = [
 
 [[package]]
 name = "cadrat-hold-open"
-version = "0.1.0"
+version = "0.2.0"
 dependencies = [
  "cadrat-command",
  "cadrat-hidraw",
@@ -306,14 +306,14 @@ dependencies = [
 
 [[package]]
 name = "cadrat-proto"
-version = "0.1.0"
+version = "0.2.0"
 dependencies = [
  "serde_json",
 ]
 
 [[package]]
 name = "cadrat-tool"
-version = "0.1.0"
+version = "0.2.0"
 dependencies = [
  "cadrat-command",
  "cadrat-config",
@@ -328,7 +328,7 @@ dependencies = [
 
 [[package]]
 name = "cadratctl"
-version = "0.1.0"
+version = "0.2.0"
 dependencies = [
  "async-channel",
  "cadrat-cli",
@@ -350,7 +350,7 @@ dependencies = [
 
 [[package]]
 name = "cadratd"
-version = "0.1.0"
+version = "0.2.0"
 dependencies = [
  "blocking",
  "cadrat-command",
@@ -1187,9 +1187,12 @@ dependencies = [
 
 [[package]]
 name = "xtask"
-version = "0.1.0"
+version = "0.2.0"
 dependencies = [
+ "cadrat-hold-open",
  "cadrat-tool",
+ "cadratctl",
+ "cadratd",
  "clap",
  "clap_complete",
  "clap_mangen",

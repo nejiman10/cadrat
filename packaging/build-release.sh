@@ -1,7 +1,8 @@
 #!/bin/sh
-# Builds the cadrat-tool .deb as a RELEASE BUILD (spec implementation §7).
+# Builds the three .deb packages (cadrat-common, cadrat-tool, cadratd) as a
+# RELEASE BUILD (spec implementation §7).
 #
-# Run it on Ubuntu 22.04, the oldest supported LTS, so the binary needs no
+# Run it on Ubuntu 22.04, the oldest supported LTS, so the binaries need no
 # newer glibc than 2.35. docs/packaging.md shows how to prepare that
 # environment in a container. Run it in a fresh clone: the script refuses
 # an existing target/ (whose binaries may come from a newer system), other
@@ -16,6 +17,7 @@ max_glibc=2.35
 
 root=$(CDPATH= cd -- "$(dirname -- "$0")/.." && pwd)
 cd "$root"
+. packaging/debs.sh
 
 fail() {
     echo "build-release: $*" >&2
@@ -31,20 +33,23 @@ fail() {
 version=$(cargo metadata --format-version 1 --no-deps \
     | sed -n 's/.*"name":"cadrat-tool","version":"\([^"]*\)".*/\1/p')
 
-cargo run --locked --quiet -p xtask -- dist
-# xz rather than zstd, which older dpkg cannot read.
 # CADRAT_VERSION must not carry a test-build label into a release.
-deb=$(env -u CADRAT_VERSION \
-    cargo deb --locked -p cadrat-tool --deb-version "$version" --compress-type xz \
-    --output target/debian/ | tail -n 1)
+unset CADRAT_VERSION
+debs=$(make_debs "$version")
 
-binary=target/release/cadrat-tool
-needed=$(objdump -T "$binary" | grep -o 'GLIBC_[0-9.]*' | sed 's/GLIBC_//' | sort -uV | tail -n 1)
-[ "$(printf '%s\n%s\n' "$needed" "$max_glibc" | sort -V | tail -n 1)" = "$max_glibc" ] \
-    || fail "$binary needs glibc $needed, newer than $max_glibc"
+needed=0
+for binary in cadrat-hold-open cadrat-tool cadratd cadratctl; do
+    binary=target/release/$binary
+    glibc=$(objdump -T "$binary" | grep -o 'GLIBC_[0-9.]*' | sed 's/GLIBC_//' | sort -uV | tail -n 1)
+    [ "$(printf '%s\n%s\n' "$glibc" "$max_glibc" | sort -V | tail -n 1)" = "$max_glibc" ] \
+        || fail "$binary needs glibc $glibc, newer than $max_glibc"
+    needed=$(printf '%s\n%s\n' "$glibc" "$needed" | sort -V | tail -n 1)
+done
 
-[ -f "$deb" ] || fail "cargo deb did not report the package it built"
-ar t "$deb" | grep -qx 'data.tar.xz' || fail "$deb is not xz-compressed"
+for deb in $debs; do
+    ar t "$deb" | grep -qx 'data.tar.xz' || fail "$deb is not xz-compressed"
+done
 
-echo "RELEASE BUILD: cadrat-tool ${version} (commit $(git rev-parse --short=7 HEAD), glibc >= ${needed})"
-sha256sum "$deb"
+echo "RELEASE BUILD: cadrat ${version} (commit $(git rev-parse --short=7 HEAD), glibc >= ${needed})"
+# shellcheck disable=SC2086
+sha256sum $debs

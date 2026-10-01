@@ -34,8 +34,8 @@ pub enum Command {
     /// Keep the wired C658's hidraw nodes open until stopped
     ///
     /// Without this, a wired C658 was seen to stop sending input a few
-    /// seconds after it was plugged in. Runs in the foreground; the
-    /// cadrat-hold-open.service user unit runs it in the background.
+    /// seconds after it was plugged in. Runs in the foreground, for testing;
+    /// the cadrat-hold-open system service keeps the nodes open day to day.
     HoldOpen {
         /// Seconds between checks for plugged and unplugged nodes
         #[arg(long, default_value = "1.0", value_parser = seconds)]
