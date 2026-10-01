@@ -210,27 +210,7 @@ impl Waiting {
     }
 }
 
-/// Timing of a polling procedure.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub struct Polling {
-    /// Give up after this long.
-    pub timeout: Duration,
-    /// Time between slot reads.
-    pub interval: Duration,
-}
-
-impl Polling {
-    /// Pair defaults: 60 s, every 1 s.
-    pub const PAIR: Self = Self {
-        timeout: Duration::from_secs(60),
-        interval: Duration::from_secs(1),
-    };
-    /// Unpair defaults: 15 s, every 0.5 s.
-    pub const UNPAIR: Self = Self {
-        timeout: Duration::from_secs(15),
-        interval: Duration::from_millis(500),
-    };
-}
+pub use cadrat_proto::Polling;
 
 /// How pairing ended (spec receiver §3).
 #[derive(Debug, Clone, PartialEq, Eq)]

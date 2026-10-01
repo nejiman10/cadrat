@@ -7,9 +7,9 @@ use std::time::Duration;
 use cadrat_hidraw::{Clock, System};
 use serde_json::{Map, Value};
 
+use crate::Options;
 use crate::daemon::{DaemonGuard, DaemonLock};
-use crate::exit::{Exit, Failure};
-use crate::request::Options;
+use cadrat_cli::{Exit, Failure, envelope};
 
 /// A SIGINT/SIGTERM flag that is only active while armed, so Ctrl-C keeps
 /// its normal meaning outside `receiver pair`.
@@ -140,36 +140,4 @@ impl<'e, 'f> Ctx<'e, 'f> {
     pub fn finish(self, command: &str, result: &Result<(), Failure>) -> Value {
         envelope(Some(command), self.fields, self.warnings, result)
     }
-}
-
-/// The common `--json` frame around a command's fields (spec tool/cli §5).
-/// `command` is `None` when the arguments could not be parsed.
-#[must_use]
-pub fn envelope(
-    command: Option<&str>,
-    mut fields: Map<String, Value>,
-    warnings: Vec<Value>,
-    result: &Result<(), Failure>,
-) -> Value {
-    let (exit, error) = match result {
-        Ok(()) => (Exit::Success, Value::Null),
-        Err(failure) => (
-            failure.exit,
-            serde_json::json!({
-                "code": failure.exit.name(),
-                "message": failure.message,
-                "hints": failure.hints,
-                "details": failure.details,
-            }),
-        ),
-    };
-    let mut object = Map::new();
-    object.insert("format".into(), 1.into());
-    object.insert("command".into(), command.into());
-    object.insert("ok".into(), (exit == Exit::Success).into());
-    object.insert("exit_code".into(), exit.code().into());
-    object.append(&mut fields);
-    object.insert("warnings".into(), Value::Array(warnings));
-    object.insert("error".into(), error);
-    Value::Object(object)
 }

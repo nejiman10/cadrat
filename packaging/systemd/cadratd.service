@@ -5,7 +5,7 @@
 
 [Unit]
 Description=cadrat daemon for the CadMouse Compact Wireless (C658) and its Receiver
-Documentation=man:cadratd(1) man:cadratctl(1)
+Documentation=man:cadratd(8) man:cadratctl(1)
 # Not for the login screen or other system users' sessions.
 ConditionUser=!@system
 

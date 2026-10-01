@@ -31,6 +31,7 @@ cadrat-hold-open <hidraw node のパス>
 - 設定ファイルもD-Busも使わない。reportの送受信もしない。
 - `--version` と `--help` を持つ。引数が1つでなければUsage（2）とする。
 - 出力の文言は英語にする（[tool/cli §5](../tool/cli.md#5-出力)）。journalに残すため、保持と解放の行は `cadrat-tool hold-open` と同じ形にする。
+- 標準エラー出力がjournalにつながっているときは、エラーの行の先頭に重要度 `<3>` を付ける（[daemon §7](../daemon/daemon.md#7-ログ) と同じ規則）。
 
 ### 3.1 終了コード
 
@@ -64,7 +65,7 @@ SUBSYSTEM=="hidraw", ATTRS{idVendor}=="256f", ATTRS{idProduct}=="c658", TAG+="sy
 `/usr/lib/systemd/system/cadrat-hold-open@.service`（template unit）。instance名はnodeのカーネル名（`hidraw5`）である。
 
 - `BindsTo=dev-%i.device`、`After=dev-%i.device`。nodeが消えれば止まる。
-- `ExecStart=/usr/bin/cadrat-hold-open /dev/%I`、`Type=exec`。
+- `ExecStart=/usr/libexec/cadrat/cadrat-hold-open /dev/%I`、`Type=exec`。利用者が打つコマンドではないので、`$PATH` に出さない（[implementation §7](../implementation.md#7-配布)）。manは `cadrat-hold-open(8)`。
 - `Restart=on-failure`、`RestartPreventExitStatus=7`。対象でないnodeは開き直しても同じ結果になるので、再起動しない。
 - `[Install]` は持たない。`systemctl enable` は使わず、udevルールが起動を決める。
 - **rootで動かし、権限を最小にする。** hidrawのnodeはrootが所有者なので、capabilityが無くても開ける。

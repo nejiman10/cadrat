@@ -8,7 +8,8 @@ crates/
   cadrat-proto/           # I/Oなし、no_stdにできる形で書く
   cadrat-hidraw/          # Linuxのみ
   cadrat-config/          # TOMLスキーマと書き戻し
-  cadrat-command/         # コマンドの手順と結果、出力の整形（Phase 2a）
+  cadrat-cli/             # コマンドライン、要求、終了コード、出力の整形（Phase 2a、デバイスに触れない）
+  cadrat-command/         # コマンドの手順と結果（Phase 2a）
   cadrat-dbus/            # D-Busの名前、引数、エラーの対応（Phase 2a）
   cadrat-tool/            # バイナリ（独立設定ツール）
   cadrat-hold-open/       # バイナリ（hold-openのシステムサービス、Phase 2a）
@@ -23,15 +24,16 @@ docs/spec/
 
 | crate | 責務 | 後のデーモンで再利用するか |
 |---|---|---|
-| `cadrat-proto` | `Report10Config`、actionのenum、blob・wireの生成と `inspect`、HID descriptorの長さ解析、Report `0x03` のparser、Receiver管理packet（`41 02 …` / `41 04 …`）の生成、slot応答とIDプローブ応答（GET `0x08`）の解析 | する |
+| `cadrat-proto` | `Report10Config`、actionのenum、blob・wireの生成と `inspect`、HID descriptorの長さ解析、Report `0x03` のparser、Receiver管理packet（`41 02 …` / `41 04 …`）の生成、slot応答とIDプローブ応答（GET `0x08`）の解析。I/Oの無い小さな型として、経路（`Route`）とpair / unpairの待ち方（`Polling`）も置く。`cadrat-hidraw` に依存しないフロントエンドが名前を使えるようにするためである | する |
 | `cadrat-hidraw` | 列挙、ioctl、候補の判定・選択、送信、Receiver管理（管理nodeの選択、slotのpoll、pair/unpairの手順）、hold-open、`/dev` の見張り（Phase 2a）。I/Oと時計はtraitの裏に隠し、テストではfakeに差し替える | する |
 | `cadrat-config` | schema 1の型、検証、`toml_edit` での部分更新、原子的な保存、lock | する |
-| `cadrat-command` | 各コマンドの手順（[tool/cli §4](tool/cli.md#4-set-の処理順序) など）。結果は `--json` のオブジェクト（`serde_json` の値）で返し、人間向けの表示はそのオブジェクトだけから作る（`render`、[tool/cli §5](tool/cli.md#5-出力)）。実行中に利用者へ出すもの（警告、pairの案内、unpairの確認）はフロントエンドのtraitを通す。`cadratd` との排他のロック（[daemon §4](daemon/daemon.md#4-デバイスへの書き込みの排他q9)）。Phase 1で `cadrat-tool` にあった `cmd` と `render` をここへ移す。`cadrat-tool` と `cadratctl` に共通のコマンドラインの定義（`cli`、clap）も置く | する。`cadrat-tool` と `cadratd` が手順を、`cadratctl` が表示を使う（P11） |
-| `cadrat-dbus` | bus名、path、interface、引数のkey、エラー名と終了コードの対応（[daemon/dbus.md](daemon/dbus.md)） | `cadratd` と `cadratctl` が使う |
+| `cadrat-cli` | デバイスに触れずに決まるもの: `cadrat-tool` と `cadratctl` に共通のコマンドラインの定義（`cli`、clap）、要求（`Command`、`Options`）、終了コード（[tool/cli §6](tool/cli.md#6-終了コード)）、`--json` の外枠、JSONのオブジェクトだけから人間向けの表示を作る `render`（[tool/cli §5](tool/cli.md#5-出力)）、デバイスを見ずに決まる引数の検査。`cadrat-hidraw` に依存しない | する。3つのフロントエンドが同じ定義と表示を使う（P11） |
+| `cadrat-command` | 各コマンドの手順（[tool/cli §4](tool/cli.md#4-set-の処理順序) など）。結果は `--json` のオブジェクト（`serde_json` の値）で返す。実行中に利用者へ出すもの（警告、pairの案内、unpairの確認）はフロントエンドのtraitを通す。`cadratd` との排他のロック（[daemon §4](daemon/daemon.md#4-デバイスへの書き込みの排他q9)）。`cadrat-cli` の型をそのまま公開する | する。`cadrat-tool` と `cadratd` が手順を使う（P11） |
+| `cadrat-dbus` | bus名、path、interface、引数のkey、エラー名と終了コードの対応（[daemon/dbus.md](daemon/dbus.md)）。`cadrat-cli` だけに依存する | `cadratd` と `cadratctl` が使う |
 | `cadrat-tool` | clap、終了コード | 独立ツールとして残す（デーモンのフロントエンド `cadratctl` とは別） |
-| `cadrat-hold-open` | 引数の解析、シグナル、1つのnodeを開いて確かめ、消えるまで待つ（[hold-open/cli §3](hold-open/cli.md#3-コマンド)） | — |
+| `cadrat-hold-open` | 引数の解析、シグナル、1つのnodeを開いて確かめ、消えるまで待つ（[hold-open/cli §3](hold-open/cli.md#3-コマンド)）。依存は `cadrat-hidraw` だけで、使う終了コードは自分で持つ（番号と名前が共通の表と同じことはテストで確かめる）。rootで動くので、設定ファイルやコマンドの手順のコードを持たない | — |
 | `cadratd` | D-Busのobject、要求の直列化、変化の検出、起動と終了 | — |
-| `cadratctl` | clap、D-Busの呼び出し、Receiverの対話、終了コード | — |
+| `cadratctl` | clap、D-Busの呼び出し、Receiverの対話、終了コード。`cadrat-cli` と `cadrat-dbus` だけを使い、`cadrat-hidraw` と `cadrat-command` には依存しない。hidrawに触れないことを、依存の側でも保つ | — |
 
 依存は必要最小限にする。候補は `clap`、`toml_edit`、`serde`、`serde_json`、`thiserror`、`rustix`（ioctl、flock、inotify）、`sha2`。Phase 2aで `zbus` を加える（pure Rustで、`libdbus` や `libsystemd` にリンクしない）。非同期ランタイム（`tokio` など）は入れず、`zbus` が自分で持つ実行スレッドと、`zbus` のblocking API・`zbus::block_on` とスレッドで組む。`cadratd` のD-Busのobjectは `zbus` のinterfaceの非同期メソッドで受け、デバイスに触れる処理は別のスレッド（`blocking`）で行う。`zbus` の依存に含まれる小さなcrate（`blocking`、`futures-lite`、`async-channel`）は直接使ってよい。`cadrat-tool` と `cadrat-hold-open` は `zbus` に依存しない。`hidapi` は使わない。descriptorの取得とGET/SET Featureを直接制御したいため。
 
@@ -159,17 +161,23 @@ v0.1.0で満たした（[実機確認](../hardware-test.md)）。
 
 | パッケージ | 含むもの | 依存 |
 |---|---|---|
-| `cadrat-common` | `/usr/lib/udev/rules.d/69-cadrat.rules`（hidrawの `uaccess`）、`/usr/lib/udev/rules.d/69-cadrat-hold-open.rules`、`/usr/bin/cadrat-hold-open`、`/usr/lib/systemd/system/cadrat-hold-open@.service`（[hold-open/cli.md](hold-open/cli.md)）、manページ | `udev`、`systemd` |
-| `cadrat-tool` | `/usr/bin/cadrat-tool`、manページ、シェル補完 | `cadrat-common`（同じ版） |
-| `cadratd` | `/usr/bin/cadratd`、`/usr/bin/cadratctl`、`/usr/lib/systemd/user/cadratd.service`、`/usr/share/dbus-1/services/cc.nejiman10.Cadrat1.service`、manページ、`cadratctl` のシェル補完 | `cadrat-common`（同じ版）、`default-dbus-session-bus \| dbus-session-bus` |
+| `cadrat-common` | `/usr/lib/udev/rules.d/69-cadrat.rules`（hidrawの `uaccess`）、`/usr/lib/udev/rules.d/69-cadrat-hold-open.rules`、`/usr/libexec/cadrat/cadrat-hold-open`、`/usr/lib/systemd/system/cadrat-hold-open@.service`（[hold-open/cli.md](hold-open/cli.md)）、manページ（`cadrat-hold-open(8)`） | `udev`、`systemd` |
+| `cadrat-tool` | `/usr/bin/cadrat-tool`、manページ（1章）、シェル補完 | `cadrat-common`（同じ版） |
+| `cadratd` | `/usr/bin/cadratd`、`/usr/bin/cadratctl`、`/usr/lib/systemd/user/cadratd.service`、`/usr/share/dbus-1/services/cc.nejiman10.Cadrat1.service`、manページ（`cadratd(8)`、`cadratctl(1)`）、`cadratctl` のシェル補完 | `cadrat-common`（同じ版）、`default-dbus-session-bus \| dbus-session-bus` |
 
+- **置き場所とmanの章。** FHS 3.0とsystemdの慣習に合わせる。
+  - 利用者が打つコマンド（`cadrat-tool`、`cadratctl`）は `/usr/bin` に置き、manは1章。
+  - systemdがnodeのパスを渡して起動するだけの `cadrat-hold-open` は、`$PATH` に出さず `/usr/libexec/cadrat/` に置く。
+  - デーモンとシステムサービス（`cadratd`、`cadrat-hold-open`）のmanは8章（`bluetoothd(8)`、`ratbagd(8)` と同じ）。`cadratd` は利用者が `--version` で版を確かめることがあるので、`/usr/bin` に置く。
+  - unitの `Documentation=` も同じ章を指す。
 - `cadrat-common`: インストール後に `udevadm control --reload` と `udevadm trigger` を実行する。hold-openのサービスは `enable` せず、udevルールが起動する。すでにつながっているC658には、そのnodeだけに `add` のイベントを起こし直す（[hold-open/cli §4.3](hold-open/cli.md#43-有効無効と更新)）。更新ではhold-openのサービスを止めも再起動もしない。削除では動いているinstanceを止め、有線C658の入力が止まることを表示する。hold-openのサービスは `enable` しないので、cargo-debの `systemd-units` の有効化は使わず、これらはmaintainer scriptに書く。
 - `cadrat-common` は `Replaces: cadrat-tool (<< 0.2.0)` と `Breaks: cadrat-tool (<< 0.2.0)` を持つ。v0.1.0では `cadrat-tool` がudevルールを持っていたためである。
 - `cadratd`: **初めてインストールしたときだけ**、全ユーザーについて有効にする。`postinst configure` で前の版が無いときに `deb-systemd-helper --user enable cadratd.service` を実行する。更新では有効・無効に触れない。管理者が無効にしたものを、更新で有効に戻さないためである（Debian Policyと `deb-systemd-helper` の考え方）。
   - Ubuntu 22.04のinit-system-helpersが `--user` に対応しているかは確かめていない（TODO 18）。対応していなければ、初回だけ `systemctl --global enable cadratd.service` を実行する。
   - すでに動いているユーザーの `cadratd` は、更新でも再起動しない。新しい版は次のログインか、`systemctl --user restart cadratd.service` から使われる。その間の版のずれは `cadratctl` が扱う（[ctl/cli §4.1](ctl/cli.md#41-cadratd-との版のずれ)）。
   - 削除では `systemctl --global disable` を行い、`postrm purge` で有効化の記録を消す。
-  - デーモンを使わず `cadrat-tool` だけで運用する方法を、READMEに書く。`cadratd` のパッケージを入れないか、`systemctl --user disable --now cadratd.service` で止める。止めた後も、`cadratctl` を呼べばD-Busのactivationで起動する。
+  - デーモンを使わず `cadrat-tool` だけで運用する方法を、READMEに書く。`cadratd` のパッケージを入れないか、`systemctl --user mask --now cadratd.service` で止める。`mask` はD-Busのactivationも止める（activationファイルの `SystemdService=` がmaskされたunitを指すので、起動に失敗する）。
+  - `systemctl --user disable --now cadratd.service` は、ログイン時の起動をやめるだけである。`cadratctl` を呼べばD-Busのactivationで起動し、ログアウトまで動き続けるので、その間 `cadrat-tool` の送信系コマンドは20で止まる。READMEでは、`cadrat-tool` だけで使う方法として `mask` を、必要なときだけ起動する方法として `disable` を、分けて書く。
 - Phase 1のuser unit（`/usr/lib/systemd/user/cadrat-hold-open.service`）は配らない。有効にしていた利用者には、リリースノートと `cadrat-common` のインストール時の表示で `systemctl --user disable cadrat-hold-open.service` を案内する。
 - 後のPhaseでは、GNOME Shell拡張（`/usr/share/gnome-shell/extensions/`）を別のパッケージで追加する。
 - manページとシェル補完は、CLIの定義から `cargo run -p xtask -- dist` で生成する。
@@ -177,5 +185,5 @@ v0.1.0で満たした（[実機確認](../hardware-test.md)）。
 - flatpakとAppImageは採用しない。
   - flatpak: サンドボックスの中からudevルール、systemd unit、GNOME Shell拡張をホストに入れられない。hidrawへのアクセスにも `--device=all` が要る。CLIの起動も `flatpak run …` になる。
   - AppImage: udevルールとunitを別の手順で入れる必要がある。最近のUbuntuでは、AppImageの実行にlibfuse2の追加インストールが要る。
-- 開発者と、22.04より古い環境の利用者には `cargo install --path crates/cadrat-tool` を案内する（`cadrat-hold-open`、`cadratd`、`cadratctl` も同じ形）。この場合、udevルール、systemd unit、D-Busのactivationファイルは手動で入れる。
+- 開発者と、22.04より古い環境の利用者には `cargo install --path crates/cadrat-tool` を案内する（`cadrat-hold-open`、`cadratd`、`cadratctl` も同じ形）。この場合、udevルール、systemd unit、D-Busのactivationファイルは手動で入れる。`cargo install` は `cadrat-hold-open` も `~/.cargo/bin` に置くので、unitの `ExecStart=` を書き換えるか、`/usr/libexec/cadrat/` へコピーする。
 

@@ -11,23 +11,7 @@ use crate::sys::{Device, Errno, NodeInfo, RawInfo};
 /// Index of a node in [`Inventory::nodes`].
 pub type NodeIndex = usize;
 
-/// `wired` (C658 directly) or `receiver` (through C652).
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, PartialOrd, Ord)]
-pub enum Route {
-    /// C658 connected by cable.
-    Wired,
-    /// C658 through a C652 Receiver.
-    Receiver,
-}
-
-impl fmt::Display for Route {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        f.write_str(match self {
-            Self::Wired => "wired",
-            Self::Receiver => "receiver",
-        })
-    }
-}
+pub use cadrat_proto::Route;
 
 /// Whether a route is the one settings go to by default (spec device §2.3).
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]

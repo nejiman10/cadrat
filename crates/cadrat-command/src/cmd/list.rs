@@ -4,9 +4,9 @@ use cadrat_hidraw::{Inventory, NodeStatus, enumerate};
 use serde_json::{Value, json};
 
 use crate::ctx::Ctx;
-use crate::exit::{Exit, Failure};
 use crate::format::{self, Redactor};
 use crate::render;
+use crate::{Exit, Failure};
 
 /// Enumerates devices, reporting unreadable nodes with the udev hint.
 pub fn inventory(ctx: &mut Ctx) -> Result<Inventory, Failure> {

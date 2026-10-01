@@ -27,8 +27,9 @@ These instructions apply to the entire repository. Keep this file timeless: do n
 ## Design rules
 
 - `cadrat-tool` is stateless: the TOML file is its only state. It never uses the research baseline as an implicit default, never guesses between multiple targets, and saves the TOML only after a successful send.
-- `cadratctl` is only a D-Bus front end for `cadratd`; it never opens hidraw. The `ctl` suffix is reserved for daemon front ends.
-- Shared logic lives in library crates (`cadrat-proto`, `cadrat-hidraw`, `cadrat-config`) so that `cadrat-tool` and `cadratd` behave identically.
+- `cadratctl` is only a D-Bus front end for `cadratd`; it never opens hidraw, and it does not depend on `cadrat-hidraw` or `cadrat-command`, so the build keeps it that way. The `ctl` suffix is reserved for daemon front ends.
+- Shared logic lives in library crates (`cadrat-proto`, `cadrat-hidraw`, `cadrat-config`, `cadrat-cli`, `cadrat-command`) so that `cadrat-tool` and `cadratd` behave identically. What needs no device (command line, requests, exit codes, output) is in `cadrat-cli`, which does not depend on `cadrat-hidraw`.
+- `cadrat-hold-open` runs as root: it depends only on `cadrat-hidraw` and carries no configuration or command code.
 - `cadrat-proto` performs no I/O.
 - While `cadratd` runs, only `cadratd` writes to devices; `cadrat-tool` refuses its device-writing commands. Reading commands stay available.
 - `cadratd`, `cadratctl` and `cadrat-tool` give the same result, exit code and output for the same command.

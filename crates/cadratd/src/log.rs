@@ -10,21 +10,34 @@ use std::sync::{Mutex, PoisonError};
 pub struct Log {
     out: Mutex<Box<dyn Write + Send>>,
     ids: Mutex<HashMap<String, usize>>,
+    journal: bool,
 }
 
 impl Log {
-    pub fn new(out: Box<dyn Write + Send>) -> Self {
+    /// `journal`: the stream is the journal's, so lines carry their
+    /// priority (spec daemon §7).
+    pub fn new(out: Box<dyn Write + Send>, journal: bool) -> Self {
         Self {
             out: Mutex::new(out),
             ids: Mutex::new(HashMap::new()),
+            journal,
         }
     }
 
     /// Writes one line. Logging is best effort.
     pub fn line(&self, text: &str) {
         let text = self.scrub(text);
+        let level = if !self.journal {
+            ""
+        } else if text.starts_with("error:") {
+            "<3>"
+        } else if text.starts_with("warning:") {
+            "<4>"
+        } else {
+            ""
+        };
         let mut out = self.out.lock().unwrap_or_else(PoisonError::into_inner);
-        let _ = writeln!(out, "{text}");
+        let _ = writeln!(out, "{level}{text}");
         let _ = out.flush();
     }
 
@@ -69,7 +82,7 @@ mod tests {
 
     #[test]
     fn ids_are_hidden_and_numbered_for_the_process() {
-        let log = Log::new(Box::new(std::io::sink()));
+        let log = Log::new(Box::new(std::io::sink()), false);
         assert_eq!(
             log.scrub("mouse c658:0a1b2c3d4e5f → slot id 112233445566"),
             "mouse c658:id-1 → slot id id-2"
@@ -80,5 +93,48 @@ mod tests {
             log.scrub("10 00 05 recv:port-1-4 0a1b2c3d4e5f00 abcdef"),
             "10 00 05 recv:port-1-4 0a1b2c3d4e5f00 abcdef"
         );
+    }
+
+    /// A writer the test can read back.
+    #[derive(Clone, Default)]
+    struct Shared(std::sync::Arc<Mutex<Vec<u8>>>);
+
+    impl Write for Shared {
+        fn write(&mut self, buf: &[u8]) -> std::io::Result<usize> {
+            self.0.lock().unwrap().extend_from_slice(buf);
+            Ok(buf.len())
+        }
+        fn flush(&mut self) -> std::io::Result<()> {
+            Ok(())
+        }
+    }
+
+    #[test]
+    fn priorities_only_on_the_journal() {
+        let lines = [
+            "cadratd 0.1.0 starting",
+            "warning: W-RAW: raw",
+            "error: no bus",
+        ];
+        for (journal, expected) in [
+            (
+                true,
+                "cadratd 0.1.0 starting\n<4>warning: W-RAW: raw\n<3>error: no bus\n",
+            ),
+            (
+                false,
+                "cadratd 0.1.0 starting\nwarning: W-RAW: raw\nerror: no bus\n",
+            ),
+        ] {
+            let out = Shared::default();
+            let log = Log::new(Box::new(out.clone()), journal);
+            for line in lines {
+                log.line(line);
+            }
+            assert_eq!(
+                String::from_utf8(out.0.lock().unwrap().clone()).unwrap(),
+                expected
+            );
+        }
     }
 }

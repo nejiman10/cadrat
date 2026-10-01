@@ -7,25 +7,9 @@ use serde_json::json;
 
 use crate::cmd::list::inventory;
 use crate::ctx::Ctx;
-use crate::exit::{Exit, Failure};
 use crate::format::{self, Redactor};
 use crate::render;
-use crate::request::Options;
-
-/// Spec receiver §5: receiver commands do not take a mouse.
-///
-/// # Errors
-///
-/// `Usage` with `--mouse` or `--route`.
-pub fn no_mouse(options: &Options) -> Result<(), Failure> {
-    if options.mouse.is_some() || options.route.is_some() {
-        return Err(Failure::new(
-            Exit::Usage,
-            "receiver commands do not take --mouse or --route",
-        ));
-    }
-    Ok(())
-}
+use cadrat_cli::{Exit, Failure, no_mouse, not_confirmed, unpair_arguments};
 
 /// Enumerates and chooses the management node (spec receiver §1).
 fn target(
@@ -35,8 +19,10 @@ fn target(
 ) -> Result<(ManagementTarget, Inventory), Failure> {
     let mut inventory = inventory(ctx)?;
     let target = match &ctx.options.hidraw {
-        Some(node) => select_management_node(ctx.env.system, node, require_pairing)?,
-        None => select_receiver(&mut inventory, receiver, require_pairing)?,
+        Some(node) => select_management_node(ctx.env.system, node, require_pairing)
+            .map_err(crate::select::failure)?,
+        None => select_receiver(&mut inventory, receiver, require_pairing)
+            .map_err(crate::select::failure)?,
     };
     ctx.set(
         "receiver",
@@ -144,28 +130,6 @@ pub fn pair(ctx: &mut Ctx, receiver: Option<&str>, polling: Polling) -> Result<(
         .hint("unplug the Receiver and plug it in again to leave pairing mode")),
         PairResult::Busy(errno) => Err(busy(&path, errno)),
     }
-}
-
-/// Spec receiver §4 step 3: without `--yes`, unpair needs someone to ask.
-///
-/// # Errors
-///
-/// `Usage` with `--mouse` or `--route`, or when nobody can be asked.
-pub fn unpair_arguments(options: &Options, yes: bool, can_confirm: bool) -> Result<(), Failure> {
-    no_mouse(options)?;
-    if !yes && !can_confirm {
-        return Err(Failure::new(
-            Exit::Usage,
-            "unpair asks for confirmation on a terminal; pass --yes to skip it",
-        ));
-    }
-    Ok(())
-}
-
-/// The refused confirmation (`Aborted`, 18).
-#[must_use]
-pub fn not_confirmed() -> Failure {
-    Failure::new(Exit::Aborted, "not confirmed; nothing was done")
 }
 
 pub fn unpair(

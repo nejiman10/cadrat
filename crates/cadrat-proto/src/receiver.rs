@@ -4,6 +4,7 @@
 //! slot 2 and pairing into slot 3 with these packets.
 
 use core::fmt;
+use core::time::Duration;
 
 use crate::device_id::DeviceId;
 
@@ -23,6 +24,29 @@ pub const SLOT_REPORT_BASE: u8 = 0x43;
 pub const SLOT_REPORT_LEN: usize = 8;
 /// Number of Receiver slots.
 pub const SLOT_COUNT: u8 = 5;
+
+/// Timing of a polling procedure: how long pair and unpair wait for the
+/// slots to change, and how often they read them (spec receiver §3, §4).
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct Polling {
+    /// Give up after this long.
+    pub timeout: Duration,
+    /// Time between slot reads.
+    pub interval: Duration,
+}
+
+impl Polling {
+    /// Pair defaults: 60 s, every 1 s.
+    pub const PAIR: Self = Self {
+        timeout: Duration::from_secs(60),
+        interval: Duration::from_secs(1),
+    };
+    /// Unpair defaults: 15 s, every 0.5 s.
+    pub const UNPAIR: Self = Self {
+        timeout: Duration::from_secs(15),
+        interval: Duration::from_millis(500),
+    };
+}
 
 /// Receiver slot, 0..=4.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]

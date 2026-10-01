@@ -152,28 +152,6 @@ impl Failure {
     }
 }
 
-impl From<cadrat_hidraw::SelectError> for Failure {
-    fn from(error: cadrat_hidraw::SelectError) -> Self {
-        use cadrat_hidraw::SelectError as E;
-        let exit = match &error {
-            E::NoDevice => Exit::NoDevice,
-            E::Ambiguous(_) => Exit::AmbiguousTarget,
-            E::PermissionDenied(_) => Exit::PermissionDenied,
-            E::DeviceInvalid(_) => Exit::DeviceInvalid,
-        };
-        let failure = Self::new(exit, error.to_string());
-        match error {
-            E::Ambiguous(keys) => failure
-                .hint("choose one with --mouse=<number or key> (or --receiver=<key>)")
-                .details(serde_json::json!({ "candidates": keys })),
-            E::PermissionDenied(paths) => failure.details(serde_json::json!({
-                "nodes": paths.iter().map(|p| p.display().to_string()).collect::<Vec<_>>()
-            })),
-            _ => failure,
-        }
-    }
-}
-
 impl From<cadrat_config::FileError> for Failure {
     fn from(error: cadrat_config::FileError) -> Self {
         use cadrat_config::FileError as E;

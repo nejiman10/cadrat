@@ -8,7 +8,7 @@ use std::path::{Path, PathBuf};
 
 use rustix::fs::{FlockOperation, flock};
 
-use crate::exit::{Exit, Failure};
+use crate::{Exit, Failure};
 
 /// Where `cadratd` keeps its lock: `<run_user>/<uid>/cadrat/cadratd.lock`.
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -92,18 +92,16 @@ impl DaemonLock {
             Err(e) if e.kind() == io::ErrorKind::NotFound => return Ok(DaemonGuard(Vec::new())),
             Err(e) => return Err(io_failure(&self.run_user, &e)),
         };
-        let mut paths: Vec<PathBuf> = entries
+        let mut homes: Vec<PathBuf> = entries
             .filter_map(Result::ok)
-            .map(|entry| entry.path().join("cadrat/cadratd.lock"))
-            .filter(|path| path.is_file())
+            .map(|entry| entry.path())
             .collect();
-        paths.sort();
+        homes.sort();
         let mut files = Vec::new();
-        for path in paths {
-            let file = match File::open(&path) {
-                Ok(file) => file,
-                Err(e) if e.kind() == io::ErrorKind::NotFound => continue,
-                Err(e) => return Err(io_failure(&path, &e)),
+        for home in homes {
+            let path = home.join("cadrat/cadratd.lock");
+            let Some(file) = open_other(&home).map_err(|e| io_failure(&path, &e))? else {
+                continue;
             };
             lock(&file, &path, || {
                 format!(
@@ -115,6 +113,43 @@ impl DaemonLock {
         }
         Ok(DaemonGuard(files))
     }
+}
+
+/// Opens another user's `<home>/cadrat/cadratd.lock` for reading, as root.
+///
+/// The user can write `<home>`, so neither `cadrat/` nor the lock file is
+/// followed if it is a symbolic link, the open does not wait (a FIFO swapped
+/// in would block it), and only a regular file counts. Anything else is no
+/// lock file: `cadratd` creates a regular one. `None` when there is none.
+fn open_other(home: &Path) -> io::Result<Option<File>> {
+    use rustix::fs::{FileType, Mode, OFlags, fstat, open, openat};
+    let skip = |e: rustix::io::Errno| match e {
+        rustix::io::Errno::NOENT | rustix::io::Errno::NOTDIR | rustix::io::Errno::LOOP => Ok(None),
+        e => Err(io::Error::from(e)),
+    };
+    let flags = OFlags::RDONLY | OFlags::NOFOLLOW | OFlags::CLOEXEC;
+    let dir = match open(
+        home.join("cadrat"),
+        flags | OFlags::DIRECTORY,
+        Mode::empty(),
+    ) {
+        Ok(dir) => dir,
+        Err(e) => return skip(e),
+    };
+    let fd = match openat(
+        &dir,
+        "cadratd.lock",
+        flags | OFlags::NONBLOCK,
+        Mode::empty(),
+    ) {
+        Ok(fd) => fd,
+        Err(e) => return skip(e),
+    };
+    let stat = fstat(&fd)?;
+    if FileType::from_raw_mode(stat.st_mode) != FileType::RegularFile {
+        return Ok(None);
+    }
+    Ok(Some(File::from(fd)))
 }
 
 /// Shared locks on `cadratd.lock`, released when dropped.

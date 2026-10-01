@@ -86,7 +86,7 @@ impl Shared {
         }
         if result["ok"] != true {
             self.log.line(&format!(
-                "listing devices failed: {}",
+                "warning: listing devices failed: {}",
                 result["error"]["message"].as_str().unwrap_or_default()
             ));
             return false;

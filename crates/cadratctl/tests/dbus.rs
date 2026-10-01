@@ -268,6 +268,7 @@ impl Harness {
             bus: Bus::Address(self.bus.address.clone()),
             start_wait: Duration::from_secs(20),
             settle: Duration::from_millis(50),
+            journal: false,
         };
         let stop = Arc::clone(&self.stop);
         let log = self.log.clone();
@@ -979,6 +980,7 @@ fn only_one_cadratd_per_bus() {
         bus: Bus::Address(h.bus.address.clone()),
         start_wait: Duration::from_millis(100),
         settle: Duration::from_millis(50),
+        journal: false,
     };
     let stop = TestStop::new();
     assert_eq!(cadratd::run(world, &stop, Box::new(log.clone())), 1);
@@ -1077,4 +1079,44 @@ fn no_cadratd_is_unavailable() {
         false,
     );
     assert_eq!(out.code, 2, "{out:?}");
+}
+
+/// D-Bus strings are UTF-8: a path that is not is refused before calling,
+/// instead of being sent as another file's name.
+#[test]
+fn non_utf8_config_is_a_usage_error() {
+    use std::ffi::OsStr;
+    use std::os::unix::ffi::OsStrExt;
+
+    struct NoSignals;
+    impl cadratctl::Signals for NoSignals {
+        fn catch(&self, _: Box<dyn Fn() + Send + Sync>) -> Box<dyn std::any::Any> {
+            Box::new(())
+        }
+    }
+    let dir = tempfile::tempdir().unwrap();
+    let env = cadratctl::Env {
+        // Never reached.
+        bus: Bus::Address("unix:path=/nonexistent/cadrat-test-bus".to_owned()),
+        xdg_config_home: Some(dir.path().into()),
+        home: None,
+        cwd: dir.path().to_path_buf(),
+        signals: &NoSignals,
+    };
+    let (mut stdout, mut stderr) = (Vec::new(), Vec::new());
+    let io = cadratctl::Io {
+        stdout: &mut stdout,
+        stderr: &mut stderr,
+        stdin: &mut &b""[..],
+        stdin_is_terminal: false,
+    };
+    let args = [
+        OsStr::new("cadratctl"),
+        OsStr::new("check"),
+        OsStr::from_bytes(b"--config=caf\xe9.toml"),
+    ]
+    .map(OsStr::to_os_string);
+    assert_eq!(cadratctl::run(args, &env, io), 2);
+    let stderr = String::from_utf8(stderr).unwrap();
+    assert!(stderr.contains("not valid UTF-8"), "{stderr}");
 }

@@ -21,14 +21,16 @@ mod int;
 pub mod receiver;
 pub mod report03;
 pub mod report10;
+mod route;
 
 pub use action::{Action, DirectAction, HostIndex, ParseActionError, RawWire};
 pub use descriptor::{DescriptorError, ReportLengths};
 pub use device_id::{DeviceId, DeviceIdError};
 pub use int::parse_u32;
-pub use receiver::{Slot, SlotError, SlotReport};
+pub use receiver::{Polling, Slot, SlotError, SlotReport};
 pub use report03::{Report03Error, Report03Frame};
 pub use report10::{
     ButtonName, Buttons, Dpi, InspectError, InspectedReport10, Lift, PollingRate, Report10Config,
     WheelMode, WireButton,
 };
+pub use route::Route;

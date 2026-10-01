@@ -101,8 +101,9 @@ Phase 2aの `cadratd` は、TOML以外に設定の状態を持たない。マウ
 ## 7. ログ
 
 - 標準エラーに1行ずつ出し、journalに残す。
+- **重要度。** 標準エラー出力がjournalにつながっているとき（環境変数 `JOURNAL_STREAM` の `<device>:<inode>` が標準エラー出力の `fstat` と一致するとき）だけ、行の先頭にsd-daemon(3)の接頭辞を付ける。`error:` で始まる行は `<3>`、`warning:` で始まる行は `<4>`、それ以外は付けない（journalの既定のinfo）。`journalctl --user -u cadratd -p warning` で警告とエラーを拾えるようにするためである。端末やファイルにつないだときは付けないので、行の形は変わらない。
 - 残すもの: 起動と終了、ロックの取得、操作ごとの要求と結果（コマンド、終了コード名、送信した経路、保存したか）、警告。
-  - 操作の行は `set: Success, sent via wired, saved` の形にする。警告は `warning: <code>: <message>` の形で続ける。
+  - 操作の行は `set: Success, sent via wired, saved` の形にする。警告は `warning: <code>: <message>` の形で続ける。列挙し直しの失敗は `warning: listing devices failed: <message>` とする。
 - 機器IDとslotの識別子は、常に `--redact` と同じ形（`id-N`）で伏せる（[tool/cli §3](../tool/cli.md#list---nodes---redact)）。journalは不具合の報告に貼られることが多いためである。
   - 行を書く直前に、ちょうど12桁の小文字16進の語（6 byteのIDを `cadrat` が表示する形）をすべて置き換える。警告の文に混ざったkeyも伏せるためである。
   - 番号は `cadratd` のプロセス全体で1つの対応表から振る。同じプロセスのログの中では、同じ個体は同じ `id-N` になり、行どうしで照合できる。`cadratd` を再起動すると振り直す。

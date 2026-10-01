@@ -7,8 +7,8 @@ use cadrat_config::{Checked, Config, ConfigError, ConfigLock, Document, Key, Pre
 use serde_json::{Map, Value, json};
 
 use crate::ctx::Ctx;
-use crate::exit::{Exit, Failure};
 use crate::format;
+use crate::{Exit, Failure};
 
 /// Reads and parses the configuration file (spec tool/cli §4 step 3).
 pub fn read(path: &Path, program: &str) -> Result<(Loaded, Document), Failure> {
