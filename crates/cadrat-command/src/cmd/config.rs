@@ -6,18 +6,17 @@ use cadrat_config::file::{self, Loaded};
 use cadrat_config::{Checked, Config, ConfigError, ConfigLock, Document, Key, Preset};
 use serde_json::{Map, Value, json};
 
-use crate::cli;
 use crate::ctx::Ctx;
 use crate::exit::{Exit, Failure};
-use crate::render;
+use crate::format;
 
 /// Reads and parses the configuration file (spec tool/cli §4 step 3).
-pub fn read(path: &Path) -> Result<(Loaded, Document), Failure> {
+pub fn read(path: &Path, program: &str) -> Result<(Loaded, Document), Failure> {
     let loaded = file::load(path).map_err(|e| {
         let missing = matches!(e, cadrat_config::FileError::NotFound(_));
         let failure = Failure::from(e);
         if missing {
-            failure.hint("create it with `cadrat-tool init`")
+            failure.hint(format!("create it with `{program} init`"))
         } else {
             failure
         }
@@ -47,8 +46,8 @@ pub fn invalid(path: &Path, error: &ConfigError) -> Failure {
 }
 
 /// Reads and validates the configuration file (steps 3–4).
-pub fn load(path: &Path) -> Result<(Loaded, Document, Config), Failure> {
-    let (loaded, document) = read(path)?;
+pub fn load(path: &Path, program: &str) -> Result<(Loaded, Document, Config), Failure> {
+    let (loaded, document) = read(path, program)?;
     let config = document.config().map_err(|e| invalid(path, &e))?;
     Ok((loaded, document, config))
 }
@@ -60,12 +59,8 @@ pub fn warn_config(ctx: &mut Ctx, config: &Config) {
     }
 }
 
-pub fn init(ctx: &mut Ctx, preset: Option<cli::Preset>, force: bool) -> Result<(), Failure> {
+pub fn init(ctx: &mut Ctx, preset: Preset, force: bool) -> Result<(), Failure> {
     let path = ctx.config_path()?;
-    let preset = match preset {
-        Some(cli::Preset::ResearchBaseline) => Preset::ResearchBaseline,
-        None => Preset::Empty,
-    };
     // Serialize with a concurrent `set` once the directory exists.
     if let Some(dir) = path.parent().filter(|d| !d.as_os_str().is_empty()) {
         std::fs::create_dir_all(dir).map_err(|e| {
@@ -86,16 +81,17 @@ pub fn init(ctx: &mut Ctx, preset: Option<cli::Preset>, force: bool) -> Result<(
         }
     })?;
     ctx.set("path", path.display().to_string());
-    ctx.info(format!("created {}", path.display()));
-    if preset == Preset::Empty {
-        ctx.note("every value is commented out; edit the file before sending");
-    } else {
-        ctx.note("these values are a research baseline, not values read from the mouse");
-    }
+    ctx.set(
+        "preset",
+        match preset {
+            Preset::Empty => Value::Null,
+            Preset::ResearchBaseline => "research-baseline".into(),
+        },
+    );
     Ok(())
 }
 
-pub fn get(ctx: &mut Ctx, keys: &[String], wire: bool, values_only: bool) -> Result<(), Failure> {
+pub fn get(ctx: &mut Ctx, keys: &[String], wire: bool) -> Result<(), Failure> {
     let keys: Vec<Key> = if keys.is_empty() {
         Key::ALL.to_vec()
     } else {
@@ -107,18 +103,13 @@ pub fn get(ctx: &mut Ctx, keys: &[String], wire: bool, values_only: bool) -> Res
             .collect::<Result<_, _>>()?
     };
     let path = ctx.config_path()?;
-    let (_, document) = read(&path)?;
+    let (_, document) = read(&path, ctx.program)?;
     let Checked { values, problems } = document.check();
 
     let mut shown = Map::new();
     for key in &keys {
         if let Some(value) = values[key.index()] {
-            shown.insert(key.to_string(), render::value_json(value));
-            ctx.out(if values_only {
-                value.to_string()
-            } else {
-                format!("{key}={value}")
-            });
+            shown.insert(key.to_string(), format::value_json(value));
         }
     }
     ctx.set("values", Value::Object(shown));
@@ -127,26 +118,16 @@ pub fn get(ctx: &mut Ctx, keys: &[String], wire: bool, values_only: bool) -> Res
     let config = checked.into_config().map_err(|e| invalid(&path, &e))?;
     if wire {
         let report = config.to_report().to_wire();
-        ctx.set("wire_hex", render::hex(&report).replace(' ', ""));
-        ctx.set(
-            "wire_layout",
-            render::wire_layout(&config, &report)
-                .into_iter()
-                .map(|(offset, bytes, meaning)| json!({"offset": offset, "bytes": bytes, "meaning": meaning}))
-                .collect::<Vec<_>>(),
-        );
-        for line in render::wire_lines(&config, &report) {
-            ctx.out(line);
-        }
+        ctx.set("wire_hex", format::hex(&report).replace(' ', ""));
+        ctx.set("wire_layout", format::wire_layout_json(&config, &report));
     }
     Ok(())
 }
 
 pub fn check(ctx: &mut Ctx) -> Result<(), Failure> {
     let path = ctx.config_path()?;
-    let (_, _, config) = load(&path)?;
+    let (_, _, config) = load(&path, ctx.program)?;
     warn_config(ctx, &config);
     ctx.set("path", path.display().to_string());
-    ctx.info(format!("ok: {}", path.display()));
     Ok(())
 }

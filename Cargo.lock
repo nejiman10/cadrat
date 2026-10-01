@@ -74,6 +74,16 @@ dependencies = [
 ]
 
 [[package]]
+name = "cadrat-command"
+version = "0.1.0"
+dependencies = [
+ "cadrat-config",
+ "cadrat-hidraw",
+ "cadrat-proto",
+ "serde_json",
+]
+
+[[package]]
 name = "cadrat-config"
 version = "0.1.0"
 dependencies = [
@@ -108,6 +118,7 @@ dependencies = [
 name = "cadrat-tool"
 version = "0.1.0"
 dependencies = [
+ "cadrat-command",
  "cadrat-config",
  "cadrat-hidraw",
  "cadrat-proto",

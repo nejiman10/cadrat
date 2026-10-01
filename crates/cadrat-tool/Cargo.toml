@@ -11,6 +11,7 @@ publish.workspace = true
 workspace = true
 
 [dependencies]
+cadrat-command = { path = "../cadrat-command" }
 cadrat-config = { path = "../cadrat-config" }
 cadrat-hidraw = { path = "../cadrat-hidraw" }
 cadrat-proto = { path = "../cadrat-proto" }

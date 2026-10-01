@@ -2,13 +2,7 @@
 
 このファイルは未完了項目と達成条件の正本です。項目番号は再開時の参照に使うため、完了や並べ替えの後も再利用しません。
 
-Phase 1 は [v0.1.0](https://github.com/nejiman10/cadrat/releases/tag/v0.1.0) の公開で完了しました。Phase 2a の仕様（v0.24）は所有者が承認し、develop にマージしました（TODO 13 完了）。以下は Phase 2a（[仕様 README §2.2](docs/spec/README.md#22-phase-2a)）の実装の項目です。実装はおおむね番号の順に進めます。
-
-## 14. コマンド層を共有 crate に移す
-
-目的: `cadrat-tool` の `cmd` と `render` を `cadrat-command` に移し、`cadratd` と `cadratctl` が同じ手順と表示を使えるようにする（[implementation §1](docs/spec/implementation.md#1-crate構成)、P11）。
-
-達成条件: `cadrat-tool` の既存のテストが変更なしで通る。JSON から作った人間向けの表示が、直接作った表示と一致するテストがある。`ReceiverSlots` の JSON に `raw_hex` が載る。
+Phase 1 は [v0.1.0](https://github.com/nejiman10/cadrat/releases/tag/v0.1.0) の公開で完了しました。Phase 2a の仕様（v0.24）は所有者が承認し、develop にマージしました（TODO 13 完了）。コマンド層は `cadrat-command` に移しました（TODO 14 完了、仕様 v0.25 で `--json` のフィールドを追記）。以下は Phase 2a（[仕様 README §2.2](docs/spec/README.md#22-phase-2a)）の実装の項目です。実装はおおむね番号の順に進めます。
 
 ## 15. `cadrat-tool` の `cadratd` との排他
 

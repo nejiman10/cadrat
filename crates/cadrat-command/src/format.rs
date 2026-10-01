@@ -1,10 +1,9 @@
-//! Shared formatting of devices, slots and wire reports.
+//! The JSON forms of devices, slots and wire reports (spec tool/cli §5).
 
 use std::collections::HashMap;
-use std::fmt::Write as _;
 
 use cadrat_config::{Config, Key};
-use cadrat_hidraw::{Inventory, Mouse, MouseRoute, Receiver, RouteState, SlotMatch, SlotsRead};
+use cadrat_hidraw::{Inventory, Mouse, MouseRoute, Receiver, SlotMatch, SlotsRead};
 use cadrat_proto::{ButtonName, DeviceId, SlotReport};
 use serde_json::{Value, json};
 
@@ -32,6 +31,11 @@ impl Redactor {
         }
     }
 
+    /// Whether IDs are hidden.
+    pub fn enabled(&self) -> bool {
+        self.enabled
+    }
+
     /// The ID, or `id-N` where equal IDs get the same N.
     pub fn id(&mut self, id: DeviceId) -> String {
         if !self.enabled {
@@ -48,36 +52,6 @@ impl Redactor {
             None => mouse.key.to_string(),
         }
     }
-}
-
-/// `MI_01`.
-pub fn interface(n: u8) -> String {
-    format!("MI_{n:02}")
-}
-
-/// `wired (/dev/hidraw5, MI_01)` or
-/// `receiver standby (recv:port-3-2 slot 3, /dev/hidraw9, MI_03)`.
-pub fn route(route: &MouseRoute) -> String {
-    let state = match route.state {
-        RouteState::Active => String::new(),
-        RouteState::Standby => " standby".to_owned(),
-    };
-    let receiver = match (&route.receiver, route.slot) {
-        (Some(key), Some(SlotMatch::Slot(slot))) => format!("{key} slot {slot}, "),
-        (Some(key), _) => format!("{key} slot ?, "),
-        (None, _) => String::new(),
-    };
-    let ambiguous = if route.ambiguous {
-        " ambiguous-node"
-    } else {
-        ""
-    };
-    format!(
-        "{}{state} ({receiver}{}, {}){ambiguous}",
-        route.route,
-        route.path.display(),
-        interface(route.interface)
-    )
 }
 
 pub fn route_json(route: &MouseRoute) -> Value {
@@ -121,41 +95,25 @@ pub fn mouse_for_slot<'a>(
         .map(|(i, m)| (i + 1, m))
 }
 
-/// One `receiver slots` line, e.g.
-/// `slot 2  occupied  type 0x59  id 0a1b2c3d4e5f   → mouse 1 (c658:0a1b2c3d4e5f)`.
-pub fn slot_line(
-    slot: &SlotReport,
-    mouse: Option<(usize, &Mouse)>,
-    redactor: &mut Redactor,
-) -> String {
-    if !slot.occupied() {
-        return format!("slot {}  empty", slot.slot());
-    }
-    let mut line = format!(
-        "slot {}  occupied  type 0x{:02x}  id {}",
-        slot.slot(),
-        slot.device_type(),
-        redactor.id(slot.id_candidate())
-    );
-    if let Some((number, mouse)) = mouse {
-        let key = redactor.key(mouse);
-        let _ = write!(line, "   → mouse {number} ({key})");
-    }
-    line
-}
-
 pub fn slot_json(
     slot: &SlotReport,
     mouse: Option<(usize, &Mouse)>,
     redactor: &mut Redactor,
 ) -> Value {
-    json!({
+    // The raw response is what `ReceiverUnpair` compares (spec dbus §6); it
+    // contains the slot identifier, so `--redact` leaves it out.
+    let raw_hex = (!redactor.enabled()).then(|| hex(slot.raw()).replace(' ', ""));
+    let mut value = json!({
         "slot": slot.slot().get(),
         "occupied": slot.occupied(),
         "device_type": format!("0x{:02x}", slot.device_type()),
         "id": slot.occupied().then(|| redactor.id(slot.id_candidate())),
         "mouse": mouse.map(|(number, m)| json!({"number": number, "key": redactor.key(m)})),
-    })
+    });
+    if let Some(raw_hex) = raw_hex {
+        value["raw_hex"] = raw_hex.into();
+    }
+    value
 }
 
 pub fn slots_json(slots: &[SlotReport], inventory: &Inventory, redactor: &mut Redactor) -> Value {
@@ -239,13 +197,14 @@ pub fn wire_layout(config: &Config, wire: &[u8; 32]) -> Vec<(String, String, Str
     rows
 }
 
-/// Human lines for [`wire_layout`].
-pub fn wire_lines(config: &Config, wire: &[u8; 32]) -> Vec<String> {
-    let mut lines = vec![format!("wire    {}", hex(wire))];
-    for (offset, bytes, meaning) in wire_layout(config, wire) {
-        lines.push(format!("        {offset:<7} {bytes:<33}  {meaning}"));
-    }
-    lines
+/// [`wire_layout`] as JSON objects (`get --wire`, `set --dry-run`).
+pub fn wire_layout_json(config: &Config, wire: &[u8; 32]) -> Value {
+    Value::Array(
+        wire_layout(config, wire)
+            .into_iter()
+            .map(|(offset, bytes, meaning)| json!({"offset": offset, "bytes": bytes, "meaning": meaning}))
+            .collect(),
+    )
 }
 
 /// JSON value of a setting: integers as numbers, the rest as strings.

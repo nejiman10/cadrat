@@ -1,0 +1,17 @@
+[package]
+name = "cadrat-command"
+description = "The commands shared by cadrat-tool and cadratd, and their output"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+publish.workspace = true
+
+[lints]
+workspace = true
+
+[dependencies]
+cadrat-config = { path = "../cadrat-config" }
+cadrat-hidraw = { path = "../cadrat-hidraw" }
+cadrat-proto = { path = "../cadrat-proto" }
+serde_json = "1.0.151"
