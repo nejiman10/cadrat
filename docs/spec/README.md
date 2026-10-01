@@ -81,7 +81,7 @@ hold-openは当初、調査リポジトリのuser service（`c658-hidraw-hold-op
 | [receiver.md](receiver.md) | 共通 | Receiver管理nodeの検出、slotの読み取り、pair/unpairの手順と判定 |
 | [implementation.md](implementation.md) | 共通 | crate構成、テスト方針、達成条件、未決事項、配布 |
 | [tool/cli.md](tool/cli.md) | `cadrat-tool` | コマンド体系、`set` の処理順序、出力、終了コード、`cadratd` との排他 |
-| [hold-open/cli.md](hold-open/cli.md) | `cadrat-hold-open` | システムサービスにする理由、コマンド、systemd unit |
+| [hold-open/cli.md](hold-open/cli.md) | `cadrat-hold-open` | システムサービスにする理由、udevからの起動、コマンド、systemd unit |
 | [daemon/daemon.md](daemon/daemon.md) | `cadratd` | 実行形態、起動と終了、書き込みの排他、要求の処理、機器の公開、ログ |
 | [daemon/dbus.md](daemon/dbus.md) | `cadratd` | D-Bus API |
 | [ctl/cli.md](ctl/cli.md) | `cadratctl` | コマンド、Receiverの対話、出力、終了コード |

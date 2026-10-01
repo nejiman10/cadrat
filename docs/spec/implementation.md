@@ -16,6 +16,7 @@ crates/
   cadratctl/              # バイナリ（デーモンのフロントエンド、Phase 2a）
 vectors/                   # 調査リポジトリから版を固定して取り込む
 udev/69-cadrat.rules
+udev/69-cadrat-hold-open.rules   # hold-openのサービスを起動する（Phase 2a）
 packaging/                 # systemd unit、D-Busのactivationファイル、maintainer script
 docs/spec/
 ```
@@ -28,7 +29,7 @@ docs/spec/
 | `cadrat-command` | 各コマンドの手順（[tool/cli §4](tool/cli.md#4-set-の処理順序) など）と、その結果の型。結果はserdeで `--json` の形になり、人間向けの表示もここで作る。`cadratd` との排他のロック（[daemon §4](daemon/daemon.md#4-デバイスへの書き込みの排他q9)）。Phase 1で `cadrat-tool` にあった `cmd` と `render` をここへ移す | する。`cadrat-tool` と `cadratd` が手順を、`cadratctl` が表示を使う（P11） |
 | `cadrat-dbus` | bus名、path、interface、引数のkey、エラー名と終了コードの対応（[daemon/dbus.md](daemon/dbus.md)） | `cadratd` と `cadratctl` が使う |
 | `cadrat-tool` | clap、終了コード | 独立ツールとして残す（デーモンのフロントエンド `cadratctl` とは別） |
-| `cadrat-hold-open` | 引数の解析、シグナル、`cadrat-hidraw` のhold-openを回すだけ | — |
+| `cadrat-hold-open` | 引数の解析、シグナル、1つのnodeを開いて確かめ、消えるまで待つ（[hold-open/cli §3](hold-open/cli.md#3-コマンド)） | — |
 | `cadratd` | D-Busのobject、要求の直列化、変化の検出、起動と終了 | — |
 | `cadratctl` | clap、D-Busの呼び出し、Receiverの対話、終了コード | — |
 
@@ -110,7 +111,7 @@ v0.1.0で満たした（[実機確認](../hardware-test.md)）。
 4. `cadratctl` で `receiver slots` → `receiver unpair`（確認表示 → 実行）→ `receiver pair` → `list` → `apply` の1サイクルを行い、Phase 1の条件8と同じ結果になる。`receiver pair` の待機中のCtrl-Cで停止packetが送られて12になり、unpairの確認で `n` を押すと18になる。
 5. `cadratd` が動いている間、`cadrat-tool set` が20で終わり、TOMLとマウスの設定が変わらない。`cadrat-tool list` は動く。`cadratd` を止めると、`cadrat-tool set` が動く。
 6. ケーブルの抜き差し、有線とReceiverのモード切り替え、再ペアリングの後に、`cadratd` を再起動しなくても `cadratctl list` と `Devices` が新しい状態を示す。
-7. `cadrat-hold-open` のシステムサービスだけで（user unitと調査側のserviceは無効）、有線C658の入力が次の場面で止まらない: 起動直後のログイン画面、ログイン後、ログアウトした後のログイン画面、ケーブルの抜き差しの後。journalに保持と解放の行が残る（Q20）。
+7. `cadrat-hold-open` のシステムサービスだけで（user unitと調査側のserviceは無効）、有線C658の入力が次の場面で止まらない: 起動直後のログイン画面、ログイン後、ログアウトした後のログイン画面、ケーブルの抜き差しの後。journalに保持と解放の行が残る（Q20）。抜き差しのたびに `cadrat-hold-open@hidrawN.service` が起動・停止し、`systemctl mask cadrat-hold-open@.service` の後は起動しない。
 8. `cadratd` を再起動しても、有線C658の入力が止まらない。
 9. Ubuntu 22.04と24.04で、3つの `.deb` をインストール・削除できる。v0.1.0の `cadrat-tool` を入れた状態から更新でき、udevルールの持ち主が `cadrat-common` に移る。ログインすると `cadratd` が動き、止めていても `cadratctl` の呼び出しで起動する。
 10. 実機試験の手順と結果を `docs/hardware-test.md` に記録する。
@@ -139,8 +140,8 @@ v0.1.0で満たした（[実機確認](../hardware-test.md)）。
 | Q16 | モード切り替え後に設定が変わって見える原因 | 調査側TODO 13 | 送信は有効な経路だけに行い、切り替え後の `apply` を案内する（[device §7.1](device.md#71-モード切り替えとの関係)） |
 | Q17 | GET `0x08` bytes 2..7 の正式な意味と一意性 | 未検証 | 機器IDとして使う。複数機器での一意性は調査側TODO 10で確認する |
 | Q18 | `cadratd` のD-Busの名前とAPIの形 | 決定 | bus名 `cc.nejiman10.Cadrat1`（所有者のドメインによる）。object・interfaceは1つで、1つのメソッドが1つのコマンドに当たる。引数は `a{sv}`、結果は `--json` と同じJSONの文字列（[daemon/dbus.md](daemon/dbus.md)） |
-| Q19 | hold-openの実行形態 | 決定 | root・capabilityなし・sandboxのシステムサービス（`cadrat-hold-open`）にし、既定で有効にする。user unitではログイン画面とログアウトの後に入力が止まるため。`cadratd` はhold-openを行わない（[hold-open/cli.md](hold-open/cli.md)） |
-| Q20 | `cadrat-hold-open` が開くまでの間に入力が止まった場合に、開けば入力が戻るか（起動直後と、`Restart=on-failure` での再起動の後） | 未検証 | `multi-user.target` で起動する。Phase 2aの実機確認（§5.2 の7）で確かめ、戻らなければunitの起動を早める（udevの `SYSTEMD_WANTS` など）。新しい挙動が見つかれば調査リポジトリへ報告する |
+| Q19 | hold-openの実行形態 | 決定 | root・capabilityなし・sandboxのシステムサービスにする。user unitではログイン画面とログアウトの後に入力が止まるため。udevがC658のhidraw nodeごとにtemplate unit（`cadrat-hold-open@<node>.service`）を起動し、nodeが消えればsystemdが止める。周期的なsysfsの列挙はしない。既定で動き、`systemctl mask` で止められる。`cadratd` はhold-openを行わない（[hold-open/cli.md](hold-open/cli.md)） |
+| Q20 | `cadrat-hold-open` が開くまでの間に入力が止まった場合に、開けば入力が戻るか（起動直後と、`Restart=on-failure` での再起動の後） | 未検証 | udevの `SYSTEMD_WANTS` で、nodeが現れた直後に起動する（Q19）。Phase 2aの実機確認（§5.2 の7）で確かめ、戻らなければ `DefaultDependencies=no` でさらに早める。新しい挙動が見つかれば調査リポジトリへ報告する |
 | Q21 | ユーザーを切り替えたとき、別のユーザーの `cadratd` と同時に書き込まないか | 決定（短い窓が残る） | `cadratd` はhidrawのfdを1つの操作の間だけ開く（[daemon §5](daemon/daemon.md#5-要求の処理)）。`uaccess` の権限はアクティブなユーザーにだけ付くので、アクティブでないユーザーの `cadratd` は新しく開けない。`cadratd.lock` はユーザーごとなので、ユーザーをまたぐ排他はこの規則に頼る。1つの操作の途中（pairの待機など）で切り替わると、その操作が終わるまでは開いたfdが使え、書き込みが重なり得る |
 
 ## 7. 配布
@@ -158,11 +159,11 @@ v0.1.0で満たした（[実機確認](../hardware-test.md)）。
 
 | パッケージ | 含むもの | 依存 |
 |---|---|---|
-| `cadrat-common` | `/usr/lib/udev/rules.d/69-cadrat.rules`（hidrawの `uaccess`）、`/usr/bin/cadrat-hold-open`、`/usr/lib/systemd/system/cadrat-hold-open.service`（[hold-open/cli.md](hold-open/cli.md)）、manページ | `udev`、`systemd` |
+| `cadrat-common` | `/usr/lib/udev/rules.d/69-cadrat.rules`（hidrawの `uaccess`）、`/usr/lib/udev/rules.d/69-cadrat-hold-open.rules`、`/usr/bin/cadrat-hold-open`、`/usr/lib/systemd/system/cadrat-hold-open@.service`（[hold-open/cli.md](hold-open/cli.md)）、manページ | `udev`、`systemd` |
 | `cadrat-tool` | `/usr/bin/cadrat-tool`、manページ、シェル補完 | `cadrat-common`（同じ版） |
 | `cadratd` | `/usr/bin/cadratd`、`/usr/bin/cadratctl`、`/usr/lib/systemd/user/cadratd.service`、`/usr/share/dbus-1/services/cc.nejiman10.Cadrat1.service`、manページ、`cadratctl` のシェル補完 | `cadrat-common`（同じ版）、`default-dbus-session-bus \| dbus-session-bus` |
 
-- `cadrat-common`: インストール後に `udevadm control --reload` と `udevadm trigger` を実行し、`cadrat-hold-open.service` を有効にして起動する。更新では止めも再起動もしない。cargo-debの `[package.metadata.deb.systemd-units]` に `enable = true`、`start = true`、`restart-after-upgrade = false`、`stop-on-upgrade = false` を指定して行う。削除では止め、有線C658の入力が止まることを表示する。
+- `cadrat-common`: インストール後に `udevadm control --reload` と `udevadm trigger` を実行する。hold-openのサービスは `enable` せず、udevルールが起動する。すでにつながっているC658には、そのnodeだけに `add` のイベントを起こし直す（[hold-open/cli §4.3](hold-open/cli.md#43-有効無効と更新)）。更新ではhold-openのサービスを止めも再起動もしない。削除では動いているinstanceを止め、有線C658の入力が止まることを表示する。hold-openのサービスは `enable` しないので、cargo-debの `systemd-units` の有効化は使わず、これらはmaintainer scriptに書く。
 - `cadrat-common` は `Replaces: cadrat-tool (<< 0.2.0)` と `Breaks: cadrat-tool (<< 0.2.0)` を持つ。v0.1.0では `cadrat-tool` がudevルールを持っていたためである。
 - `cadratd`: インストール後に `systemctl --global enable cadratd.service` で全ユーザーについて有効にする。すでに動いているユーザーの `cadratd` は、更新でも再起動しない。新しい版は次のログインか、`systemctl --user restart cadratd.service` から使われる。削除では `systemctl --global disable` を行う。
 - Phase 1のuser unit（`/usr/lib/systemd/user/cadrat-hold-open.service`）は配らない。有効にしていた利用者には、リリースノートと `cadrat-common` のインストール時の表示で `systemctl --user disable cadrat-hold-open.service` を案内する。

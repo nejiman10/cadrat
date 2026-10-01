@@ -26,9 +26,9 @@ Phase 1 は [v0.1.0](https://github.com/nejiman10/cadrat/releases/tag/v0.1.0) �
 
 ## 16. `cadrat-hold-open` とシステムサービス
 
-目的: hold-open のシステムサービスを作る（[hold-open/cli.md](docs/spec/hold-open/cli.md)）。
+目的: udev が node ごとに起動する hold-open のシステムサービスを作る（[hold-open/cli.md](docs/spec/hold-open/cli.md)）。
 
-達成条件: `cadrat-hold-open` のバイナリと system unit があり、`systemd-analyze verify` と `systemd-analyze security` で unit を確かめた結果を記録している。実機の確認は 19 で行う。
+達成条件: `cadrat-hold-open` のバイナリ、template unit（`cadrat-hold-open@.service`）、udev ルール（`69-cadrat-hold-open.rules`）があり、`systemd-analyze verify` と `systemd-analyze security` で unit を確かめた結果を記録している。Ubuntu 22.04 で、`systemctl mask cadrat-hold-open@.service` で起動が止まることと、インストール時に `add` を起こし直す対象を C658 の node に絞る方法を確かめ、hold-open/cli §4.3 に書いている。実機の確認は 19 で行う。
 
 ## 17. `cadratd` と `cadratctl`
 
