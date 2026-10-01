@@ -11,7 +11,10 @@
 | エラー名の接頭辞 | `cc.nejiman10.Cadrat1.Error.` |
 
 - 名前は、所有者のドメイン `nejiman10.cc` を逆順にしたものである。
-- 末尾の `1` はAPIの大きな版である。互換性を壊す変更をするときは `Cadrat2` として並べて置く。メソッド、引数のkey、JSONのフィールドを足すだけなら上げない。
+- **Phase 2aでは、このinterfaceは安定していない。** 支えるクライアントは、`cadratd` と同じパッケージ・同じ版の `cadratctl` だけである。メソッド、引数、結果の形は、Phase 3で外部のクライアント（cadrat Radial）と一緒に設計し直してよい。外部のプログラムはまだこのAPIに依存しないこと、とこの文書とmanページに書く。
+  - 理由: 今の形（コマンドごとのメソッド、`a{sv}` で渡し、JSONの文字列で返す）は、`cadrat-tool` と同じ結果を返す（P11）には向いている。一方、外部のクライアントには、機器ごとのobject、`org.freedesktop.DBus.ObjectManager`、型付きのプロパティの形がLinuxでは普通である（BlueZ、ratbagd）。今安定と宣言すると、その形に移るときに `Cadrat2` が要る。
+- 安定させた後は、末尾の `1` をAPIの大きな版とする。互換性を壊す変更をするときは `Cadrat2` として並べて置く。メソッド、引数のkey、JSONのフィールドを足すだけなら上げない。
+- bus名、object path、エラー名の接頭辞は、Phase 2aのものをPhase 3でも使う。`/cc/nejiman10/Cadrat1/` の下は、Phase 3の機器ごとのobjectのために空けておく。
 - Phase 2aでは、objectとinterfaceは1つだけとする。マウスごとのobjectは作らない。マウスのkeyは `:` を含み、object pathにするには変換が要ること、keyの集合は列挙のたびに変わることによる。
 
 ## 2. 方針
@@ -45,7 +48,7 @@
 
 | 名前 | 型 | 内容 |
 |---|---|---|
-| `Version` | `s`（読み取り専用） | `cadratd` の版（例: `0.2.0`） |
+| `Version` | `s`（読み取り専用） | `cadratd` の版（例: `0.2.0`）。`cadratctl` が版のずれを見つけるのに使う（[ctl/cli §4.1](../ctl/cli.md#41-cadratd-との版のずれ)） |
 | `Devices` | `s`（読み取り専用） | 最後の列挙結果。`list --json` の `mice` と `receivers` を持つJSON。機器IDは伏せない |
 | `Busy` | `s`（読み取り専用） | 実行中の、デバイスへ書き込む操作のコマンド名（例: `receiver pair`）。無ければ空文字列 |
 | `Ready` | `b`（読み取り専用） | 起動の準備（[daemon §3](daemon.md#3-起動と終了)）が終わり、デバイスに触れる要求を受け付けるか |

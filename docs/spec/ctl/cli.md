@@ -56,6 +56,13 @@
 - D-Busの `InvalidArgs` はUsage（2）、`Internal` はInternal（1）とする。
 - シグナルで終わった場合は、シグナルの既定の動作に従う（§2）。
 
+### 4.1 `cadratd` との版のずれ
+
+パッケージを更新しても、動いている `cadratd` は再起動されない（[implementation §7](../implementation.md#7-配布)）。そのため、新しい `cadratctl` が古い `cadratd` を呼ぶことがある。D-Bus APIはPhase 2aでは安定していない（[dbus §1](../daemon/dbus.md#1-名前)）ので、`cadratctl` が次のように扱う。
+
+1. 最初の呼び出しの前に `Version` プロパティを読む。自分の版と違えば、stderrに警告を出して続ける（"cadratd <版> is running, but cadratctl is <版>; run `systemctl --user restart cadratd.service`"）。`--json` のときも、警告はstderrだけに出す。
+2. 版が違うときに、呼び出しが `org.freedesktop.DBus.Error.UnknownMethod` か `InvalidArgs` で失敗したら、Usage（2）ではなく `DaemonUnavailable`（21）で終え、1と同じ再起動の案内を出す。版が同じときの `InvalidArgs` は、これまでどおりUsage（2）とする。
+
 ## 5. 呼び出しのtimeout
 
 - `ReceiverPair` と `ReceiverUnpair`: 要求したtimeoutに30秒を足した時間。
