@@ -130,7 +130,7 @@ v0.1.0で満たした（[実機確認](../hardware-test.md)）。
 | Q6 | `--deny-warnings` を用意するか | 決定 | 用意しない |
 | Q7 | Receiver経由の送信で、再送や適用確認をするか | 決定 | 1回だけ送り、送信直前に同じfdで宛先を確認する。自動では再送せず、Receiver経由の送信の成功時と `receiver pair` の成功時に、効いていなければ送り直すよう案内する（[device §7](device.md#7-送信) 手順7、[receiver §3](receiver.md#3-pair)）。実機確認（[実施 2](../hardware-test.md)）で、再ペアリング直後の最初の送信が約5分たっても効かず、送り直すと効く事例を再現したが、再現の条件が分からないため、原因の調査（調査側 [Issue #2](https://github.com/nejiman10/3dx-hid-research/issues/2)）を待たずに案内で対処する。原因が分かれば見直す |
 | Q8 | MSRVと配布の形 | 決定 | Ubuntu LTS（最小22.04）を対象に、`.deb` をGitHub Releasesで配布する（§7）。MSRVは定めず、`rust-toolchain.toml` でツールチェーンを固定する |
-| Q9 | デーモン導入時に、CLIとデーモンが同じTOMLへ同時に書かない方法 | 決定 | デバイスへの書き込みだけを、`cadratd` が動いている間ずっと排他にする。`cadratd` は `$XDG_RUNTIME_DIR/cadrat/cadratd.lock` を `LOCK_EX` で持ち、`cadrat-tool` の送信系コマンドは `LOCK_SH | LOCK_NB` が取れなければ終了コード20で止まる。起動そのものは排他にしない（[daemon §4](daemon/daemon.md#4-デバイスへの書き込みの排他q9)、[tool/cli §8](tool/cli.md#8-cadratd-との排他)）。D-Bus上の名前で検出する案は、`cadrat-tool` にD-Busの依存が要り、確かめてから送るまでの間の競合も防げないので採らない |
+| Q9 | デーモン導入時に、CLIとデーモンが同じTOMLへ同時に書かない方法 | 決定 | デバイスへの書き込みだけを、`cadratd` が動いている間ずっと排他にする。`cadratd` は `/run/user/<uid>/cadrat/cadratd.lock` を `LOCK_EX` で持ち、`cadrat-tool` の送信系コマンドは `LOCK_SH | LOCK_NB` が取れなければ終了コード20で止まる。起動そのものは排他にしない（[daemon §4](daemon/daemon.md#4-デバイスへの書き込みの排他q9)、[tool/cli §8](tool/cli.md#8-cadratd-との排他)）。D-Bus上の名前で検出する案は、`cadrat-tool` にD-Busの依存が要り、確かめてから送るまでの間の競合も防げないので採らない |
 | Q10 | Receiverの管理nodeの選び方 | 決定（根拠は限定的） | interface番号が最小のもの。MI_02で効くことは観測済み、MI_00は状況証拠。純正の規則は不明。slotが変わると管理nodeが作り直されるので、pair / unpair の途中で消えたら同じ規則で選び直して開き直す（[receiver §6](receiver.md#6-管理nodeの開き直し)） |
 | Q11 | slot byte1で占有を判定してよいか | 決定（根拠は限定的） | `0x00` ↔ 空き、`0x59` ↔ 占有を観測。任意の非0値を占有とする一般則は未検証なので、HYPOTHESISと明記して使う |
 | Q12 | pair後に自動で `apply` するか | 決定 | しない |

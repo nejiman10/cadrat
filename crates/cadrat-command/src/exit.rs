@@ -43,6 +43,10 @@ pub enum Exit {
     Aborted,
     /// 19: the pre-send check found a different device; nothing was sent.
     TargetChanged,
+    /// 20: `cadratd` is running, so the device-writing command did nothing.
+    DaemonRunning,
+    /// 22: another process holds the write lock on the node; nothing was done.
+    Busy,
 }
 
 impl Exit {
@@ -70,6 +74,8 @@ impl Exit {
             Self::ReceiverProtocolError => 17,
             Self::Aborted => 18,
             Self::TargetChanged => 19,
+            Self::DaemonRunning => 20,
+            Self::Busy => 22,
         }
     }
 
@@ -97,6 +103,8 @@ impl Exit {
             Self::ReceiverProtocolError => "ReceiverProtocolError",
             Self::Aborted => "Aborted",
             Self::TargetChanged => "TargetChanged",
+            Self::DaemonRunning => "DaemonRunning",
+            Self::Busy => "Busy",
         }
     }
 }

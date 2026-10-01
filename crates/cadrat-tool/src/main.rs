@@ -6,7 +6,7 @@ use std::sync::Mutex;
 use std::sync::atomic::{AtomicBool, Ordering};
 
 use cadrat_hidraw::{LinuxSystem, SystemClock};
-use cadrat_tool::{Env, Interrupt, Io, run};
+use cadrat_tool::{DaemonLock, Env, Interrupt, Io, run};
 
 /// SIGINT/SIGTERM caught only while armed.
 #[derive(Default)]
@@ -54,6 +54,7 @@ fn main() {
         xdg_config_home: std::env::var_os("XDG_CONFIG_HOME"),
         home: std::env::var_os("HOME"),
         lock_timeout: cadrat_config::LOCK_TIMEOUT,
+        daemon_lock: Some(DaemonLock::system()),
     };
     let stdin = std::io::stdin();
     let stdin_is_terminal = stdin.is_terminal();

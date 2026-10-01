@@ -80,6 +80,7 @@ dependencies = [
  "cadrat-config",
  "cadrat-hidraw",
  "cadrat-proto",
+ "rustix",
  "serde_json",
 ]
 
@@ -123,6 +124,7 @@ dependencies = [
  "cadrat-hidraw",
  "cadrat-proto",
  "clap",
+ "rustix",
  "serde_json",
  "signal-hook",
  "tempfile",

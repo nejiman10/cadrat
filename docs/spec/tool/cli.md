@@ -282,6 +282,7 @@ note    the receiver route is on standby; run `cadrat-tool apply` after switchin
   - その下の `cadrat/` とロックファイルが無ければ作る（ディレクトリはmode 0700）。
   - ロックが取れなければ、何もせずに `DaemonRunning`（20）で終える。メッセージで同じ操作の `cadratctl` のコマンドを案内する（"cadratd is running; use `cadratctl set …` instead"）。
   - 取れたロックは、コマンドが終わるまで持つ。その間 `cadratd` は起動を待つ。
-- **rootで実行した場合**: `/run/user/*/cadrat/cadratd.lock` をすべて確かめ、見つかったものすべてに `LOCK_SH | LOCK_NB` をかける。1つでも取れなければ20で終える。rootは `uaccess` が無くてもhidrawを開けるので、どのユーザーの `cadratd` とも書き込みが重なり得るためである。ロックファイルは作らない（無いユーザーの `cadratd` は動いていない）。
+  - ディレクトリかロックファイルを作れない、または `flock` が `EWOULDBLOCK` 以外で失敗したときは、確かめられないので何もせずに `IoError`（10）で終える。
+- **rootで実行した場合**: `/run/user/*/cadrat/cadratd.lock` をすべて確かめ、見つかったものすべてに `LOCK_SH | LOCK_NB` をかける。1つでも取れなければ20で終える（メッセージには、そのロックファイルのパスを出す）。rootは `uaccess` が無くてもhidrawを開けるので、どのユーザーの `cadratd` とも書き込みが重なり得るためである。ロックファイルは作らない（無いユーザーの `cadratd` は動いていない）。
 - **対象外のコマンド**: `list`、`init`、`get`、`check`、`--dry-run`、`receiver slots`、`hold-open` は確かめない。デバイスへ書き込まないためである。
 - `cadrat-tool` はD-Busを使わない。

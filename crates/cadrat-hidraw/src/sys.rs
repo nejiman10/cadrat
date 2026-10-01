@@ -98,6 +98,14 @@ pub trait Device: fmt::Debug {
     ///
     /// The ioctl error.
     fn set_feature(&mut self, data: &[u8]) -> io::Result<usize>;
+
+    /// `flock(LOCK_EX | LOCK_NB)` on this descriptor: the write lock of
+    /// spec device §7.2. It is held until the descriptor is closed.
+    ///
+    /// # Errors
+    ///
+    /// `EWOULDBLOCK` when another descriptor holds the lock.
+    fn lock(&mut self) -> io::Result<()>;
 }
 
 /// Monotonic time and sleeping, replaceable in tests.
@@ -169,6 +177,12 @@ impl Errno {
     #[must_use]
     pub fn is_epipe(self) -> bool {
         self.0 == rustix::io::Errno::PIPE.raw_os_error()
+    }
+
+    /// Whether the errno is `EWOULDBLOCK`: a lock is held elsewhere.
+    #[must_use]
+    pub fn is_would_block(self) -> bool {
+        self.0 == rustix::io::Errno::WOULDBLOCK.raw_os_error()
     }
 }
 

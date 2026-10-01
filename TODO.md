@@ -2,13 +2,7 @@
 
 このファイルは未完了項目と達成条件の正本です。項目番号は再開時の参照に使うため、完了や並べ替えの後も再利用しません。
 
-Phase 1 は [v0.1.0](https://github.com/nejiman10/cadrat/releases/tag/v0.1.0) の公開で完了しました。Phase 2a の仕様（v0.24）は所有者が承認し、develop にマージしました（TODO 13 完了）。コマンド層は `cadrat-command` に移しました（TODO 14 完了、仕様 v0.25 で `--json` のフィールドを追記）。以下は Phase 2a（[仕様 README §2.2](docs/spec/README.md#22-phase-2a)）の実装の項目です。実装はおおむね番号の順に進めます。
-
-## 15. `cadrat-tool` の `cadratd` との排他
-
-目的: [tool/cli §8](docs/spec/tool/cli.md#8-cadratd-との排他) の排他を入れる（終了コード 20）。
-
-達成条件: [implementation §4](docs/spec/implementation.md#4-テスト階層) の「排他」のテストが通る。
+Phase 1 は [v0.1.0](https://github.com/nejiman10/cadrat/releases/tag/v0.1.0) の公開で完了しました。Phase 2a の仕様（v0.24）は所有者が承認し、develop にマージしました（TODO 13 完了）。コマンド層は `cadrat-command` に移しました（TODO 14 完了、仕様 v0.25 で `--json` のフィールドを追記）。`cadrat-tool` の `cadratd` との排他と、node ごとの書き込みのロックを入れました（TODO 15 完了、仕様 v0.26）。以下は Phase 2a（[仕様 README §2.2](docs/spec/README.md#22-phase-2a)）の実装の項目です。実装はおおむね番号の順に進めます。
 
 ## 16. `cadrat-hold-open` とシステムサービス
 

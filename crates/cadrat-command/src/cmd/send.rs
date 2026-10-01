@@ -31,6 +31,7 @@ fn run(
     no_save: bool,
 ) -> Result<(), Failure> {
     // 1. Arguments.
+    let given = assignments;
     let assignments = match assignments {
         Some(args) => {
             parse_assignments(args).map_err(|e| Failure::new(Exit::Usage, e.to_string()))?
@@ -38,6 +39,17 @@ fn run(
         None => Vec::new(),
     };
     let saving = !assignments.is_empty() && !no_save;
+
+    // Spec tool/cli §8: not while cadratd runs, checked before the TOML lock.
+    let _daemon = if dry_run {
+        None
+    } else {
+        let instead = match given {
+            Some(args) => format!("set {}", args.join(" ")),
+            None => "apply".to_owned(),
+        };
+        ctx.hold_daemon_lock(&instead)?
+    };
 
     // 2. Lock. A missing file is a configuration error, not a lock error.
     let path = ctx.config_path()?;
@@ -104,6 +116,9 @@ fn run(
             .hint(format!("run `{program} list` to find the mouse again")),
         SendError::Failed { .. } => Failure::new(Exit::SendFailed, e.to_string())
             .hint("the configuration file was not changed"),
+        SendError::Busy { .. } => {
+            Failure::new(Exit::Busy, e.to_string()).hint("the configuration file was not changed")
+        }
     })?;
     ctx.set("sent", true);
 
