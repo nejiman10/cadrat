@@ -239,7 +239,7 @@ note    the receiver route is on standby; run `cadrat-tool apply` after switchin
 | 19 | TargetChanged | 送信直前の宛先確認で、機器IDが一致しなかった（送信していない） |
 | 20 | DaemonRunning | `cadratd` が動いているので、送信系のコマンドを実行しなかった（§8） |
 | 21 | DaemonUnavailable | `cadratctl` だけが使う。`cadratd` に届かない（[ctl/cli §4](../ctl/cli.md#4-終了コード)） |
-| 22 | Busy | `cadratctl` だけが使う。`cadratd` が別の書き込む操作の実行中か、起動の準備中だった（[ctl/cli §4](../ctl/cli.md#4-終了コード)） |
+| 22 | Busy | 別の書き込みが実行中だった。何もしていない。対象のnodeの書き込みのロックを取れなかった場合（[device §7.2](../device.md#72-書き込みのロック)）。`cadratctl` では、`cadratd` が別の書き込む操作の実行中か、起動の準備中だった場合も含む（[ctl/cli §4](../ctl/cli.md#4-終了コード)） |
 
 ## 7. 警告コード
 

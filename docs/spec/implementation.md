@@ -75,7 +75,7 @@ docs/spec/
 | Receiver（fake） | fakeのslot列と仮想時計で、pair成功、timeout、中断（SIGINT）でも停止packetが送られること、停止の失敗、複数slotの新規占有、unpairのEPIPE後の空化・未空化、確認から実行までのslot変化、確認の拒否、端末でない場合、1台のReceiverに管理node候補が2つある場合、Receiverが2台ある場合 | 不要 |
 | CLI | 一時ディレクトリで `set` の各分岐（dry-run、no-save、送信失敗時にTOMLが変わらないこと、H0不一致で終了コード9になること、lock競合） | 不要（fake transport） |
 | コマンド層（Phase 2a） | `cadrat-command` の各コマンドを、fakeのtransportで動かす。JSONから作った人間向けの表示が、直接作った表示と一致すること。案内に出すコマンド名（`cadrat-tool` / `cadratctl`）の差し替え | 不要 |
-| 排他（Phase 2a） | `cadratd.lock` を別のプロセスが持っているときに、`cadrat-tool` の送信系コマンドが20で終わり、TOMLもデバイスも変わらないこと。対象外のコマンドは動くこと。`cadrat-tool` がロックを持つ間、`cadratd` が起動を待つこと | 不要 |
+| 排他（Phase 2a） | `cadratd.lock` を別のプロセスが持っているときに、`cadrat-tool` の送信系コマンドが20で終わり、TOMLもデバイスも変わらないこと。対象外のコマンドは動くこと。`cadrat-tool` がロックを持つ間、`cadratd` が起動を待つこと。fakeのnodeを別のプロセスが `LOCK_EX` で持っているときに、`set`、`apply`、`receiver pair`、`receiver unpair` が22で終わり、何も送らずTOMLも変わらないこと。Receiverの管理nodeだけがロックされているときに、Receiver経由の `set` が22になること。`list` と `receiver slots` はロックがあっても動くこと。unpairで、確認の間はロックを持たないこと。管理nodeの開き直しでロックを取り直せなくても、pairの停止packetが送られること | 不要 |
 | D-Bus（Phase 2a） | テストごとに起動した `dbus-daemon --session` の上で、fakeのtransportを渡した `cadratd` と `cadratctl` を動かす。同じ場面で `cadrat-tool` と `cadratctl` の標準出力と終了コードが一致すること（案内のコマンド名を除く）、`Busy`、`Cancel` と呼び出し側の切断でpairの停止packetが送られること、`PairingStarted`、unpairの `expected` の不一致で16、相対パスの `config` で `InvalidArgs`、`/dev` の変化による `Devices` の更新と `PropertiesChanged`、起動の準備中の `Starting`、書き込み中の `List` が `Busy` にならないこと、`-v` と `--json` を組み合わせた出力、`Version` が違う `cadratd` への警告と、そのときの `UnknownMethod` で21になること | 不要 |
 | 実機 | §5の達成条件 | 必要 |
 
@@ -142,7 +142,7 @@ v0.1.0で満たした（[実機確認](../hardware-test.md)）。
 | Q18 | `cadratd` のD-Busの名前とAPIの形 | 決定 | bus名 `cc.nejiman10.Cadrat1`（所有者のドメインによる）。object・interfaceは1つで、1つのメソッドが1つのコマンドに当たる。引数は `a{sv}`、結果は `--json` と同じJSONの文字列（[daemon/dbus.md](daemon/dbus.md)）。Phase 2aでは同じ版の `cadratctl` だけが使う内部のAPIとし、安定させるのはPhase 3で外部のクライアントと一緒に設計し直してからにする（[dbus §1](daemon/dbus.md#1-名前)）。それまでは、失敗の多くをD-Busのエラーではなく `"ok": false` のJSONで返す（Phase 2の方針の「エラー名は終了コード名と1:1」は、安定させるときに改めて決める） |
 | Q19 | hold-openの実行形態 | 決定 | root・capabilityなし・sandboxのシステムサービスにする。user unitではログイン画面とログアウトの後に入力が止まるため。udevがC658のhidraw nodeごとにtemplate unit（`cadrat-hold-open@<node>.service`）を起動し、nodeが消えればsystemdが止める。周期的なsysfsの列挙はしない。既定で動き、`systemctl mask` で止められる。`cadratd` はhold-openを行わない（[hold-open/cli.md](hold-open/cli.md)） |
 | Q20 | `cadrat-hold-open` が開くまでの間に入力が止まった場合に、開けば入力が戻るか（起動直後と、`Restart=on-failure` での再起動の後） | 未検証 | udevの `SYSTEMD_WANTS` で、nodeが現れた直後に起動する（Q19）。Phase 2aの実機確認（§5.2 の7）で確かめ、戻らなければ `DefaultDependencies=no` でさらに早める。新しい挙動が見つかれば調査リポジトリへ報告する |
-| Q21 | ユーザーを切り替えたとき、別のユーザーの `cadratd` と同時に書き込まないか | 決定（短い窓が残る） | `cadratd` はhidrawのfdを1つの操作の間だけ開く（[daemon §5](daemon/daemon.md#5-要求の処理)）。`uaccess` の権限はアクティブなユーザーにだけ付くので、アクティブでないユーザーの `cadratd` は新しく開けない。`cadratd.lock` はユーザーごとなので、ユーザーをまたぐ排他はこの規則に頼る。1つの操作の途中（pairの待機など）で切り替わると、その操作が終わるまでは開いたfdが使え、書き込みが重なり得る |
+| Q21 | ユーザーを切り替えたとき、別のユーザーの `cadratd` と同時に書き込まないか | 決定 | 書き込むプロセスは、書き込むhidraw nodeに `flock(LOCK_EX \| LOCK_NB)` をかけ、取れなければ22で止まる（[device §7.2](device.md#72-書き込みのロック)）。ロックはnodeのinodeにかかるので、ユーザーとプロセスをまたいで効く。加えて、`cadratd` はhidrawのfdを1つの操作の間だけ開く（[daemon §5](daemon/daemon.md#5-要求の処理)）ので、`uaccess` を失ったユーザーの `cadratd` は新しく開けない。v0.1.0の `cadrat-tool` はロックをかけないので、それとの重なりは防げない |
 
 ## 7. 配布
 

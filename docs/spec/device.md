@@ -111,7 +111,7 @@ Receiverの設定nodeでプローブが失敗しても、そのnodeが管理node
 
 ## 7. 送信
 
-1. 判定に使ったfdを**開いたまま**送信に使う。列挙し直さず、開き直さない。
+1. 判定に使ったfdを**開いたまま**送信に使う。列挙し直さず、開き直さない。手順2の前に、§7.2 の書き込みのロックを取る。取れなければ何も送らずに `Busy`（22）とする。
 2. **送信直前の宛先確認。** 同じfdで、もう一度IDプローブ（GET `0x08`）を行う。
    - `resp[1] == 0x59` であり、かつ機器IDが選んだマウスの機器IDと一致することを確かめる。
    - 一致しなければ送信せず、`TargetChanged`（終了コード19）にする。
@@ -142,6 +142,21 @@ Receiverの設定nodeでプローブが失敗しても、そのnodeが管理node
 Phase 1では次のように扱う。
 - 送信は有効な経路だけに行う（§6）。
 - `set` / `apply` の成功時、そのマウスに `standby` の経路があれば、"the <route> route is on standby; run `cadrat-tool apply` after switching modes" と注記する（`<route>` は待機中の経路名）（`-q` のときは出さない）。
+
+### 7.2 書き込みのロック
+
+デバイスへ書き込むプロセスは、書き込むhidraw nodeのfdに `flock(LOCK_EX | LOCK_NB)` をかけ、その操作が終わってfdを閉じるまで持つ。`cadrat-tool`、`cadratd` のどちらも同じ規則に従い、実行するユーザー（rootを含む）を問わない。
+
+- **目的**: 同じデバイスへの書き込みを、プロセスとユーザーをまたいで1つずつにする。`flock` はnodeのinodeにかかるので、別のユーザーのプロセスや、rootで動かした `cadrat-tool` とも排他になる。プロセスが終われば、カーネルが解放する。ユーザーを切り替えたときに、別のユーザーの `cadratd` と書き込みが重なるのを防ぐ（Q21）。
+- **先例**: systemdの [Locking Block Device Access](https://systemd.io/BLOCK_DEVICE_LOCKING/) は、ブロックデバイスのnodeそのものにBSDロックをかけ、それを尊重する約束である。同じ考え方をhidrawに当てはめる。
+- **待たない。** 取れなければ、何もせずに `Busy`（22）で終える。遅れて書き込むと、利用者の知らない送信になるためである。
+- **かけるnode**:
+  - 有線経路への送信（§7）: その設定node。
+  - Receiver経由の操作（Report `0x10` の送信、pair、unpair）: 先にそのReceiverの管理node（[receiver §1](receiver.md#1-管理nodeの検出)）、次に書き込むnode（Report `0x10` なら設定node）。どちらも取れたときだけ書き込む。1台のReceiverへの書き込みは、これで1つずつになる。Receiverの中で設定の送信とpairが干渉するかは分かっていないので、安全な側に倒す。
+- **かけないもの**: 読むだけの操作（列挙のGET `0x08`、`receiver slots`）と、hold-open。`cadrat-tool list` がpairの実行中でも動く今の挙動を保つためである。
+- 管理nodeを開き直したとき（[receiver §6](receiver.md#6-管理nodeの開き直し)）は、新しいfdでロックを取り直す。
+- `cadratd.lock`（[daemon §4](daemon/daemon.md#4-デバイスへの書き込みの排他q9)）とは別のものである。`cadratd.lock` は「`cadratd` が動いている間は `cadrat-tool` が書き込まない」という方針の排他、このロックは「今このデバイスに書き込んでいるか」の排他で、両方を使う。
+- v0.1.0の `cadrat-tool` はこのロックをかけない。`.deb` では `cadrat-common` の `Breaks: cadrat-tool (<< 0.2.0)` で更新されるので、残るのはソースから入れた古い版だけである。
 
 ## 8. 読み戻し
 

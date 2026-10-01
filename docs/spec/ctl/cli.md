@@ -50,9 +50,9 @@
 | コード | 名前 | 意味 |
 |---:|---|---|
 | 21 | DaemonUnavailable | `cadratd` に届かない（session busが無い、起動できない、応答が無い、呼び出しを拒否された）。呼び出しのtimeoutの場合は、要求が実行されたかどうか分からないと表示する |
-| 22 | Busy | `cadratd` が別の書き込む操作を実行中だった（`Busy`）、または起動の準備中だった（`Starting`）。何もしていない。メッセージに理由（実行中のコマンド名、または `cadrat-tool` の終わりを待っていること）を出す |
+| 22 | Busy | `cadratd` が別の書き込む操作を実行中だった（`Busy`）、または起動の準備中だった（`Starting`）。何もしていない。メッセージに理由（実行中のコマンド名、または `cadrat-tool` の終わりを待っていること）を出す。`cadratd` が対象のnodeの書き込みのロックを取れなかった場合も、結果のJSONの `exit_code` が22になる（[device §7.2](../device.md#72-書き込みのロック)） |
 
-- 20（`DaemonRunning`）は `cadrat-tool` だけが使う（[tool/cli §8](../tool/cli.md#8-cadratd-との排他)）。
+- 20（`DaemonRunning`）は `cadrat-tool` だけが使う（[tool/cli §8](../tool/cli.md#8-cadratd-との排他)）。22は `cadrat-tool` も使う（書き込みのロック）。
 - D-Busの `InvalidArgs` はUsage（2）、`Internal` はInternal（1）とする。
 - シグナルで終わった場合は、シグナルの既定の動作に従う（§2）。
 
