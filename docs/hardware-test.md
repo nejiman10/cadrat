@@ -1,4 +1,8 @@
-# 実機確認の手順と記録（Phase 1）
+# 実機確認の手順と記録
+
+前半は Phase 1（[仕様 implementation §5.1](spec/implementation.md#51-phase-1)）、後半の「[Phase 2a](#phase-2a)」は Phase 2a（[§5.2](spec/implementation.md#52-phase-2a)）の手順と記録です。
+
+# Phase 1
 
 [仕様 implementation §5.1](spec/implementation.md#51-phase-1) の達成条件を、実機で確かめる手順です。記録の形式は調査リポジトリの `HARDWARE_TEST.md` に倣います。
 
@@ -427,4 +431,218 @@ F6の修正（commit `2657786`、試験ビルド test4）の後、unpair → pai
 - [#2](https://github.com/nejiman10/3dx-hid-research/issues/2): 再ペアリング直後の最初の Report `0x10` が効かず、送り直すと効いた。効果の遅れ（C-B5、F10、F10′、R7、R8）
 - [#3](https://github.com/nejiman10/3dx-hid-research/issues/3): 待機中の経路への送信が効かず、設定が経路ごとに保持されているように見える（D6、F0）
 - [#4](https://github.com/nejiman10/3dx-hid-research/issues/4): 有線 C658 の hidraw を接続中に閉じると、抜き差しなしでも入力が止まる（実施 3 の H5）
+
+# Phase 2a
+
+[仕様 implementation §5.2](spec/implementation.md#52-phase-2a) の達成条件を、実機で確かめる手順です（TODO 19）。対象は3つのパッケージ（`cadrat-common`、`cadrat-tool`、`cadratd`）の試験ビルドです。
+
+**状態: 手順のみ。未実施。** 実施には、所有者の明示的な指示、復元値の記録、この手順書の3つが要る（[AGENTS.md](../AGENTS.md)「Safety」）。
+
+## P0. 実施の前提
+
+### P0.1 決まりごと
+
+- Phase 1 の [§0.1](#01-決まりごと) の決まりごとをそのまま使う。特に、識別子を記録しない、ログをリポジトリの外に置く、予定と違う挙動が出たらそこで止めて復元する。
+- **D-Bus の `Devices` には識別子が入る。** `busctl` の出力をそのまま貼らない。下の `devices` の短縮形は、台数と経路の状態だけを表示する。
+- **hold-open を止めると、有線 C658 の入力が止まる**（Phase 1 の H5）。止める手順（P2-5、P10-4）の前に、キーボードか別のマウスで操作できることを確かめておく。
+- **cadratd が動いている間、`cadrat-tool` の送信は 20 で止まる。** 書き込む手順は、P7 と P9 を除いて `cadratctl` で行う。
+- 各行の結果は PASS / FAIL / INCONCLUSIVE で記録する（Phase 1 と同じ）。
+
+### P0.2 試験ビルドを作る
+
+リリース前なので、3つとも試験ビルドを使う（[docs/packaging.md](packaging.md)「試験ビルド」）。所有者の PC（Ubuntu 24.04）で、develop の commit から作る。
+
+```sh
+git -C <cadratのclone> switch develop && git -C <cadratのclone> pull
+cd <cadratのclone>
+cargo install cargo-deb --locked --version 3.8.0   # 入っていなければ
+packaging/build-deb.sh 1                           # target/debian/ に3つ。版は 0.2.0~test1+g<commit>
+```
+
+P10 の更新の確認に、同じ commit から試験番号だけを変えたものも作る（`packaging/build-deb.sh 2`、`packaging/build-deb.sh 3`）。
+
+### P0.3 復元値と試験値
+
+Phase 1 の `$T/restore.hex`、`$T/restore.toml`（[§0.3](#03-復元値)）を使う。所有者が今の値として使ってよいかを確かめてから始める。試験値も Phase 1 と同じ（dpi 400、radial `host:1`）でよい。違う値にしたら記録する。
+
+```sh
+T=~/cadrat-hwtest
+cp "$T/restore.toml" "$T/test.toml"
+ct() { cadrat-tool --config "$T/test.toml" "$@"; }
+cc() { cadratctl --config "$T/test.toml" "$@"; }
+# D-Bus の Devices を、識別子を出さずに要約する（台数と経路の状態だけ）
+devices() {
+    busctl --user --json=short get-property cc.nejiman10.Cadrat1 /cc/nejiman10/Cadrat1 \
+        cc.nejiman10.Cadrat1.Manager Devices | python3 -c '
+import json, sys
+d = json.loads(json.load(sys.stdin)["data"])
+mice = d.get("mice") or []
+for i, m in enumerate(mice, 1):
+    routes = ", ".join(r["route"] + " " + r["state"] for r in m["routes"])
+    print("mouse {}: active {}; {}".format(i, m["active_route"], routes))
+print("mice: {}, receivers: {}".format(len(mice), len(d.get("receivers") or [])))'
+}
+```
+
+`$T` は絶対パスにする（`cadratctl` は相対パスを自分で絶対パスにするが、記録をそろえるため）。
+
+### P0.4 環境の記録
+
+```sh
+lsb_release -ds; uname -r
+git -C <cadratのclone> rev-parse --short HEAD
+dpkg-query -W 'cadrat*'
+systemctl --user is-enabled cadrat-hold-open.service c658-hidraw-hold-open.service 2>&1
+```
+
+## P1. インストールと v0.1.0 からの更新（条件 9）
+
+v0.1.0 が入っていて、Phase 1 の user unit（`cadrat-hold-open.service`）が動いている今の状態から始める。有線 C658 をつないだまま行う。
+
+| # | 手順 | 期待 |
+|---|---|---|
+| P1-1 | `dpkg-query -W cadrat-tool`、`systemctl --user is-active cadrat-hold-open.service` | `0.1.0`、`active` |
+| P1-2 | `sudo apt install ./target/debian/*~test1+*_amd64.deb` | 3つが入る。`cadrat: wired C658 hidraw nodes are now kept open …` の案内が出る |
+| P1-3 | `dpkg-query -W 'cadrat*'`、`dpkg -S /usr/lib/udev/rules.d/69-cadrat.rules` | 3つとも `0.2.0~test1+…`。ルールの持ち主が `cadrat-common` |
+| P1-4 | `ls /usr/lib/systemd/user/cadrat-hold-open.service /usr/libexec/cadrat/cadrat-hold-open /usr/bin/cadrat-hold-open` | 1つ目と3つ目は無い、2つ目はある |
+| P1-5 | `systemctl list-units --all 'cadrat-hold-open@*'` | 接続中の有線 C658 の node ごとに `active`（インストール時の `add` の起こし直し） |
+| P1-6 | `systemctl --user disable --now cadrat-hold-open.service`。1分ほど有線で操作する | 入力が止まらない（システムサービスが保持している） |
+| P1-7 | `systemctl --user is-enabled cadratd.service`、`ls /etc/systemd/user/default.target.wants/` | `enabled`、`cadratd.service` がある |
+| P1-8 | `cadrat-tool --version`、`cadratctl --version`、`cadratd --version`、`/usr/libexec/cadrat/cadrat-hold-open --version` | どれも `0.2.0~test1+… (test build)` |
+| P1-9 | `man -w cadrat-tool cadratctl cadratctl-receiver-pair`、`man -w 8 cadratd cadrat-hold-open` | どれも見つかる。8章の2つは `man8/` |
+| P1-10 | `ct list --redact` | `W-INACCESSIBLE` が出ずに、マウスが見える（udev ルールが効いている） |
+
+## P2. hold-open のシステムサービス（条件 7、Q20）
+
+調査側の service と Phase 1 の user unit は無効のまま（P0.4、P1-6）。マウスは有線で使う。
+
+| # | 手順 | 期待 |
+|---|---|---|
+| P2-1 | `journalctl -u 'cadrat-hold-open@*' -b -o cat -n 20` | node ごとに `held      /dev/hidrawN (MI_0x)` |
+| P2-2 | 有線ケーブルを抜き、`systemctl list-units --all 'cadrat-hold-open@*'`。挿し直して同じコマンド。1分以上カーソル移動・クリック・スクロールを試す | 抜くと instance が消え、挿すと node ごとに新しい instance が `active`。入力が止まらない。journal に `released` と `held` の行 |
+| P2-3 | 再起動し、ログイン画面で1分ほど有線で操作する | 入力が止まらない |
+| P2-4 | ログインして1分ほど操作し、ログアウトしてログイン画面でも1分ほど操作する | どちらでも入力が止まらない |
+| P2-5 | `sudo systemctl mask cadrat-hold-open@.service`。ケーブルを抜き差しする | instance が起動しない。数秒で入力が止まる（Phase 1 の H1 と同じ。止まらなければそれも記録） |
+| P2-6 | `sudo systemctl unmask cadrat-hold-open@.service`。ケーブルを抜き差しする | instance が起動し、入力が戻る |
+| P2-7 | `journalctl -u 'cadrat-hold-open@*' -b -p err` | 出力なし（エラーが無い）。エラーがあれば、`-o verbose` の `PRIORITY=3` とともに記録する |
+
+## P3. cadratd の起動（条件 8、9）
+
+| # | 手順 | 期待 |
+|---|---|---|
+| P3-1 | ログイン後に `systemctl --user is-active cadratd.service`、`journalctl --user -u cadratd -b -o cat` | `active`。`starting`、`holding …/cadratd.lock`、`ready` の行 |
+| P3-2 | `cc list --redact` と `ct list --redact` を実行し、`diff` で比べる | 同じ出力、どちらも終了コード 0 |
+| P3-3 | `devices` | P3-2 と同じ台数と経路 |
+| P3-4 | `systemctl --user stop cadratd.service` の後で `cc list --redact`、`systemctl --user is-active cadratd.service` | D-Bus の activation で起動して 0 で終わる。`active` |
+| P3-5 | 有線で操作しながら `systemctl --user restart cadratd.service` | 入力が止まらない（条件 8） |
+
+## P4. 有線での送信（条件 1、2）
+
+Phase 1 の §B を `cadratctl` で行う。有線で接続したまま。
+
+| # | 手順 | 期待 |
+|---|---|---|
+| P4-1 | `ct apply --dry-run` と `cc apply --dry-run` を比べる | 同じ出力。wire が `$T/restore.hex` と一致 |
+| P4-2 | `cc set mouse.dpi=<試験値>` | 終了コード 0。`sent` と `saved` |
+| P4-3 | カーソルを動かす | 速さが変わる |
+| P4-4 | `cc set buttons.radial=host:1`。`python3 $T/watch03.py 30 <C658の全node>` を動かし、radial を10回押す | 終了コード 0。`03 01` と `03 00` が10組 |
+| P4-5 | `cc get` と `ct get` を比べる。`diff "$T/restore.toml" "$T/test.toml"` | 同じ出力。変わったのは2行だけ |
+| P4-6 | `cadratctl --config "$T/restore.toml" apply` | 終了コード 0。DPI と radial が元に戻る |
+
+## P5. Receiver 経由での送信（条件 3）
+
+マウスを Receiver モードにし、有線ケーブルを外す。`cp "$T/restore.toml" "$T/test.toml"` で戻してから、P4-1〜P4-6 を同じように行う（入力 node は Receiver 側）。行番号は P5-1〜P5-6 とする。各送信について、1回目の送信で効果が現れたかを記録する（Phase 1 の条件 3a、調査リポジトリ #2）。
+
+## P6. Receiver の管理と Busy（条件 4、22）
+
+**始める前に:** 有線ケーブルでマウスを操作に戻せることを確かめておく。Receiver モードで行う。
+
+| # | 手順 | 期待 |
+|---|---|---|
+| P6-1 | `cc receiver slots --redact` と `ct receiver slots --redact` を比べる | 同じ出力。マウスの slot が `occupied` |
+| P6-2 | `cc receiver unpair <slot>`、確認で `n` | 確認の表示が出て、終了コード 18。slot は変わらない |
+| P6-3 | 端末 1 で `cc receiver pair`。待機の表示が出たら、端末 2 で `cc apply` と `busctl --user get-property cc.nejiman10.Cadrat1 /cc/nejiman10/Cadrat1 cc.nejiman10.Cadrat1.Manager Busy` | 端末 2 の `apply` は終了コード 22、メッセージに `receiver pair`。`Busy` は `s "receiver pair"` |
+| P6-4 | 端末 1 で Ctrl-C | 終了コード 12、`interrupted; pairing mode was stopped`。その後 30 秒マウスをペアリング操作しても slot が変わらない |
+| P6-5 | `cc receiver unpair <slot>`、確認で `y` | 終了コード 0、slot が `empty`。マウスが Receiver で動かない |
+| P6-6 | `cc receiver pair` を実行し、表示に従ってペアリング操作する | 終了コード 0、`paired  slot M` |
+| P6-7 | `cc list --redact` と `devices` | マウスが再び見え、key が P6-1 の前と一致（一致・不一致だけ記録）。`devices` も同じ状態 |
+| P6-8 | `cc apply` と入力の確認（P4-4 と同じ方法） | 終了コード 0、効果が現れる。1回目で効かなければもう一度 `cc apply` して記録する（調査リポジトリ #2） |
+
+## P7. cadrat-tool との排他（条件 5）
+
+cadratd が動いている状態で行う。
+
+| # | 手順 | 期待 |
+|---|---|---|
+| P7-1 | `sha256sum "$T/test.toml"`、`ct set mouse.dpi=<試験値>`、もう一度 `sha256sum` | 終了コード 20、`use cadratctl set …` の案内。ハッシュが変わらない。カーソルの速さが変わらない |
+| P7-2 | `ct list --redact` | 終了コード 0 |
+| P7-3 | `systemctl --user stop cadratd.service` の後で `ct set mouse.dpi=<試験値>`、続けて `ct apply`（`cc` は使わない。使うと起動する） | どちらも 0。速さが変わる。最後に `cp "$T/restore.toml" "$T/test.toml"` と `ct apply` で戻す |
+| P7-4 | cadratd を止めたまま、端末 1 で `ct receiver pair`。待機中に端末 2 で `cc list --redact` | 端末 2 は終了コード 22。メッセージは起動の準備中であることと、`cadrat-tool` の終了を待っていること |
+| P7-5 | 端末 1 で Ctrl-C。端末 2 で `cc list --redact` | 端末 1 は 12。端末 2 は 0（cadratd が準備を終えた）。`journalctl --user -u cadratd -o cat -n 10` に `waiting for cadrat-tool …` と `ready` |
+
+## P8. 抜き差しとモード切り替えへの追従（条件 6）
+
+cadratd を再起動せずに続けて行う。各手順の後に `cc list --redact` と `devices` を実行する。
+
+| # | 手順 | 期待 |
+|---|---|---|
+| P8-1 | 有線モードでケーブルを抜く | マウスが消える（Receiver が無ければ `no mice found`） |
+| P8-2 | ケーブルを挿す | 有線の経路で見える |
+| P8-3 | Receiver を挿したまま、マウスを Receiver モードに切り替えてケーブルを抜く | `ACTIVE` が `receiver` |
+| P8-4 | 有線モードに戻してケーブルを挿す | `ACTIVE` が `wired`、receiver は `standby` |
+| P8-5 | Receiver を抜き、挿し直す | Receiver が消えて、また見える |
+
+再ペアリング後の追従は P6-7 で確かめている。
+
+## P9. mask と disable、journal（README の案内、daemon §7）
+
+| # | 手順 | 期待 |
+|---|---|---|
+| P9-1 | `cc set mouse.dpi=<復元値の dpi> --no-save`、`journalctl --user -u cadratd -p warning -o cat -n 5` | `warning: W-NOT-SAVED …` が出る（重要度 warning で拾える）。最後に `cc apply` で TOML の値を送り直す |
+| P9-2 | `journalctl --user -u cadratd -b -o cat \| grep -cE '\b[0-9a-f]{12}\b'` | `0`（機器 ID が `id-N` に伏せられている） |
+| P9-3 | `systemctl --user mask --now cadratd.service`、`cc list --redact` | 終了コード 21（activation も止まる） |
+| P9-4 | mask したまま `ct apply`、`ct set mouse.dpi=<試験値>`、`ct set mouse.dpi=<復元値の dpi>` | どれも 0 |
+| P9-5 | mask したまま、端末 1 で `ct receiver pair`、待機中に端末 2 で `ct receiver pair`（Receiver モード） | 端末 2 は終了コード 22。端末 1 は Ctrl-C で 12 |
+| P9-6 | `systemctl --user unmask cadratd.service`、`systemctl --user disable --now cadratd.service`、`cc list --redact`、`systemctl --user is-active cadratd.service` | `cc` は 0。`active`（disable してもD-Bus から起動する） |
+| P9-7 | `systemctl --user enable cadratd.service`、`systemctl --user is-enabled cadratd.service` | `enabled` |
+
+P9-7 の `--user enable` は所有者のユーザーだけのリンクを作る。全ユーザー分のリンク（P1-7）はそのまま残る。
+
+## P10. 更新と削除（条件 9）
+
+有線 C658 をつないだまま行う。
+
+| # | 手順 | 期待 |
+|---|---|---|
+| P10-1 | `systemctl list-units 'cadrat-hold-open@*'` で instance 名を見て、それぞれの `systemctl show -p MainPID cadrat-hold-open@hidrawN.service` と `systemctl --user show -p MainPID cadratd.service` を控える。`sudo apt install ./target/debian/*~test2+*_amd64.deb` | 3つが `~test2` になる。hold-open と cadratd の MainPID が変わらない（止めも再起動もしない）。有線の入力が止まらない |
+| P10-2 | `sudo systemctl --global disable cadratd.service`。`sudo apt install ./target/debian/*~test3+*_amd64.deb`、`ls /etc/systemd/user/default.target.wants/` | 更新の後も `cadratd.service` のリンクが無い（無効のまま） |
+| P10-3 | `sudo systemctl --global enable cadratd.service` | リンクが戻る |
+| P10-4 | `sudo apt remove cadratd cadrat-tool cadrat-common` | `cadrat: stopped cadrat-hold-open …` の表示。instance が無くなる。有線の入力が止まることがある。ファイルが消える |
+| P10-5 | `sudo apt install ./target/debian/*~test3+*_amd64.deb`、`systemctl --user is-enabled cadratd.service` | 入れ直すと hold-open が起動し（P1-5 と同じ）、入力が戻る。`enabled`（削除前の状態に戻る） |
+
+削除した後も、ログイン中の `cadratd` は動き続ける（ログアウトか `systemctl --user stop` まで）。P10-4 の後は `systemctl --user stop cadratd.service` で止めておく。
+
+**Ubuntu 22.04:** 実機が無ければ、22.04 での確認は Release workflow のコンテナでの試験（[docs/packaging.md](packaging.md)「コンテナでの試験」）で代える。その場合は記録にそう書く。
+
+## P11. 復元と片付け
+
+1. `cadratctl --config "$T/restore.toml" apply` で復元し、P4-3、P4-4 と同じ方法で元の動作を確かめる。
+2. 使い続けるパッケージを所有者が決める。試験ビルドを残すか、v0.1.0 に戻すか（v0.1.0 に戻すなら3つを削除し、v0.1.0 を入れ、Phase 1 の user unit を有効にする）。
+3. `$T/logs/` は非公開のまま保管する。
+
+## P12. 記録の形
+
+所有者が結果を返すときは、行の番号ごとに1行で書く。
+
+```text
+P0: 日付、commit、Ubuntu の版、カーネル、復元値（Phase 1 と同じ / 変えた）、試験値
+P1-1: PASS
+P1-5: FAIL  instance が1つしか無かった
+P2-3: INCONCLUSIVE  ログイン画面でカーソルが見えなかった
+…
+調査リポジトリへの報告が要りそうな挙動: …
+復元の確認: …
+```
+
+この節の下に「実施 4（YYYY-MM-DD）」として表にまとめる。
 
