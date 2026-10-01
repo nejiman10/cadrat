@@ -3,9 +3,9 @@
 
 #![allow(missing_docs)]
 
-use std::cell::Cell;
 use std::path::Path;
-use std::rc::Rc;
+use std::sync::Arc;
+use std::sync::atomic::{AtomicBool, Ordering};
 use std::time::Duration;
 
 use cadrat_hidraw::fake::{
@@ -767,11 +767,11 @@ fn pair_interrupt_still_stops() {
     let (node, mut device) =
         management(FakeNode::receiver("hidraw6", "1-4", 0, None, true).slots(empty_slots()));
     let clock = FakeClock::default();
-    let interrupted = Rc::new(Cell::new(false));
-    let flag = Rc::clone(&interrupted);
+    let interrupted = Arc::new(AtomicBool::new(false));
+    let flag = Arc::clone(&interrupted);
     clock.on_sleep(move |now| {
         if now >= Duration::from_secs(2) {
-            flag.set(true);
+            flag.store(true, Ordering::SeqCst);
         }
     });
     let outcome = receiver::pair(
@@ -779,7 +779,7 @@ fn pair_interrupt_still_stops() {
         &clock,
         fast(),
         &mut || {},
-        &|| interrupted.get(),
+        &|| interrupted.load(Ordering::SeqCst),
     )
     .unwrap();
     assert_eq!(outcome.result, PairResult::Interrupted);

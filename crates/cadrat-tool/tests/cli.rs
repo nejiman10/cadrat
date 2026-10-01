@@ -7,6 +7,8 @@ use std::cell::Cell;
 use std::fs;
 use std::path::PathBuf;
 use std::rc::Rc;
+use std::sync::atomic::{AtomicBool, Ordering};
+use std::sync::{Arc, Mutex};
 use std::time::Duration;
 
 use cadrat_config::{ConfigLock, Preset, template};
@@ -25,7 +27,7 @@ const EACCES: i32 = 13;
 #[derive(Default)]
 struct FakeInterrupt {
     armed: Cell<bool>,
-    set: Rc<Cell<bool>>,
+    set: Arc<AtomicBool>,
 }
 
 impl Interrupt for FakeInterrupt {
@@ -36,7 +38,7 @@ impl Interrupt for FakeInterrupt {
         self.armed.set(false);
     }
     fn is_set(&self) -> bool {
-        self.armed.get() && self.set.get()
+        self.armed.get() && self.set.load(Ordering::SeqCst)
     }
 }
 
@@ -671,10 +673,10 @@ fn receiver_pair() {
 fn receiver_pair_interrupted() {
     let node = management([&[None]; 5]);
     let h = Harness::new(vec![node.clone()]);
-    let flag = Rc::clone(&h.interrupt.set);
+    let flag = Arc::clone(&h.interrupt.set);
     h.clock.on_sleep(move |now| {
         if now >= Duration::from_secs(3) {
-            flag.set(true);
+            flag.store(true, Ordering::SeqCst);
         }
     });
     let out = h.run(&["receiver", "pair"]);
@@ -855,12 +857,12 @@ fn unpair_survives_a_vanished_management_node() {
 
 /// Raises the interrupt after `polls` sleeps.
 fn interrupt_after(h: &Harness, polls: u32) {
-    let set = Rc::clone(&h.interrupt.set);
-    let count = Cell::new(0);
+    let set = Arc::clone(&h.interrupt.set);
+    let mut count = 0;
     h.clock.on_sleep(move |_| {
-        count.set(count.get() + 1);
-        if count.get() == polls {
-            set.set(true);
+        count += 1;
+        if count == polls {
+            set.store(true, Ordering::SeqCst);
         }
     });
 }
@@ -996,17 +998,21 @@ fn cadratd_waits_while_a_write_runs() {
     let h = Harness::new(vec![]);
     fs::create_dir_all(h.dir.path().join("run/1000")).unwrap();
     let lock = h.dir.path().join("run/1000/cadrat/cadratd.lock");
-    let seen = Rc::new(Cell::new(None));
-    let during = Rc::clone(&seen);
+    let seen = Arc::new(Mutex::new(None));
+    let during = Arc::clone(&seen);
     let path = lock.clone();
-    let node = wired().on_set(move |_| during.set(Some(cadratd_could_start(&path))));
+    let node = wired().on_set(move |_| *during.lock().unwrap() = Some(cadratd_could_start(&path)));
     let mut h = h;
     h.system = FakeSystem::new(vec![node.clone()]);
     h.write_config(&baseline());
 
     let out = h.run(&["apply"]);
     assert_eq!(out.code, 0, "{}", out.stderr);
-    assert_eq!(seen.get(), Some(false), "cadratd started during the send");
+    assert_eq!(
+        *seen.lock().unwrap(),
+        Some(false),
+        "cadratd started during the send"
+    );
     assert!(cadratd_could_start(&lock), "the lock outlived the command");
 
     // The directory is private to the user.

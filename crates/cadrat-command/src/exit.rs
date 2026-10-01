@@ -1,6 +1,6 @@
 //! Exit codes (spec tool/cli §6).
 
-/// Every exit code `cadrat-tool` uses.
+/// Every exit code of `cadrat-tool` and `cadratctl` (spec tool/cli §6).
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Exit {
     /// 0: success, warnings included.
@@ -45,6 +45,8 @@ pub enum Exit {
     TargetChanged,
     /// 20: `cadratd` is running, so the device-writing command did nothing.
     DaemonRunning,
+    /// 21: `cadratctl` cannot reach `cadratd`.
+    DaemonUnavailable,
     /// 22: another process holds the write lock on the node; nothing was done.
     Busy,
 }
@@ -75,6 +77,7 @@ impl Exit {
             Self::Aborted => 18,
             Self::TargetChanged => 19,
             Self::DaemonRunning => 20,
+            Self::DaemonUnavailable => 21,
             Self::Busy => 22,
         }
     }
@@ -104,6 +107,7 @@ impl Exit {
             Self::Aborted => "Aborted",
             Self::TargetChanged => "TargetChanged",
             Self::DaemonRunning => "DaemonRunning",
+            Self::DaemonUnavailable => "DaemonUnavailable",
             Self::Busy => "Busy",
         }
     }

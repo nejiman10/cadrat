@@ -91,11 +91,11 @@ pub fn run(args: impl IntoIterator<Item = OsString>, env: &Env, io: Io) -> i32 {
         stdin: &mut *io.stdin,
         interactive: io.stdin_is_terminal,
         quiet: options.quiet,
-        json: cli.global.json,
+        json: cli.global.common.json,
     };
     let result = cadrat_command::execute(env, &mut frontend, &options, &request, PROGRAM);
     let human = render::human(PROGRAM, &options, &request, &result);
-    if cli.global.json {
+    if cli.global.common.json {
         let _ = writeln!(io.stdout, "{result}");
     } else {
         for line in &human.stdout {
@@ -126,16 +126,12 @@ impl Frontend for Terminal<'_> {
     }
 
     fn warning(&mut self, code: &str, message: &str) {
-        let _ = writeln!(self.stderr, "warning: {code}: {message}");
+        let _ = writeln!(self.stderr, "{}", render::warning_line(code, message));
     }
 
-    fn pairing_started(&mut self, timeout: Duration) {
+    fn pairing_started(&mut self, _receiver: &str, timeout: Duration) {
         if !self.quiet {
-            let _ = writeln!(
-                self.stderr,
-                "put the mouse in pairing mode now (waiting up to {} s; Ctrl-C stops pairing)",
-                timeout.as_secs_f64()
-            );
+            let _ = writeln!(self.stderr, "{}", render::pairing_prompt(timeout));
         }
     }
 
@@ -150,12 +146,12 @@ impl Frontend for Terminal<'_> {
     }
 
     fn confirm_unpair(&mut self, slot: cadrat_proto::Slot) -> bool {
-        let _ = write!(self.stderr, "Unpair slot {slot}? [y/N] ");
+        let _ = write!(self.stderr, "{}", render::unpair_question(slot));
         let _ = self.stderr.flush();
         let mut answer = String::new();
         if self.stdin.read_line(&mut answer).is_err() {
             return false;
         }
-        matches!(answer.trim(), "y" | "Y" | "yes" | "Yes" | "YES")
+        render::confirms(&answer)
     }
 }

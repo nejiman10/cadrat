@@ -90,7 +90,8 @@
 - `get -n` は表示だけの違いなので、`cadratctl` の側で行う。
 - `Set` の `assignments` は、`cadrat-tool set` の引数と同じ書き方と検証である（[tool/cli §2](../tool/cli.md#2-設定キーと値の書き方)）。
 - `timeout_ms` と `poll_interval_ms` を省略すると、`cadrat-tool` と同じ既定値を使う（[receiver §3](../receiver.md#3-pair)、[§4](../receiver.md#4-unpair)）。
-- `ReceiverUnpair` の `expected` は、確認のときに見せた対象slotの生の応答8 byteである。`receiver` には、確認のときの `ReceiverSlots` の結果にあったkeyを、接頭辞ではなくそのまま渡す。`cadratd` は確認をしない（[daemon §5](daemon.md#5-要求の処理)）。
+- `ReceiverUnpair` の `expected` は、確認のときに見せた対象slotの生の応答8 byteである。対象slotが占有されていて、読んだ値が `expected` と違えば、何も送らずに `SlotChanged`（16、"changed after it was shown"）を返す。対象slotが空きなら、`cadrat-tool` と同じく "is empty" の `SlotChanged` を返す。`receiver` には、確認のときの `ReceiverSlots` の結果にあったkeyを、接頭辞ではなくそのまま渡す。`cadratd` は確認をしない（[daemon §5](daemon.md#5-要求の処理)）。
   - そのため、`ReceiverSlots` のJSONは、各slotの生の応答（`raw_hex`）を載せる。`redact` を指定したときは載せない。
 - `Cancel` は、実行中の `ReceiverPair` の待機をやめさせる。結果は `ReceiverPair` の応答（12または13）で返る。pair以外の実行中の操作（unpairを含む）と、何も実行していないときは何もしない。
+  - `Cancel` 自身は、`command` が `cancel` で、`cancelled`（実行中のpairを止めたか）を持つJSONを返す。
 - 所要時間: `ReceiverPair` と `ReceiverUnpair` は、timeoutまで応答しないことがある。呼び出し側は、D-Busの呼び出しのtimeoutを、要求したtimeoutより30秒以上長くする。

@@ -26,14 +26,14 @@ docs/spec/
 | `cadrat-proto` | `Report10Config`、actionのenum、blob・wireの生成と `inspect`、HID descriptorの長さ解析、Report `0x03` のparser、Receiver管理packet（`41 02 …` / `41 04 …`）の生成、slot応答とIDプローブ応答（GET `0x08`）の解析 | する |
 | `cadrat-hidraw` | 列挙、ioctl、候補の判定・選択、送信、Receiver管理（管理nodeの選択、slotのpoll、pair/unpairの手順）、hold-open、`/dev` の見張り（Phase 2a）。I/Oと時計はtraitの裏に隠し、テストではfakeに差し替える | する |
 | `cadrat-config` | schema 1の型、検証、`toml_edit` での部分更新、原子的な保存、lock | する |
-| `cadrat-command` | 各コマンドの手順（[tool/cli §4](tool/cli.md#4-set-の処理順序) など）。結果は `--json` のオブジェクト（`serde_json` の値）で返し、人間向けの表示はそのオブジェクトだけから作る（`render`、[tool/cli §5](tool/cli.md#5-出力)）。実行中に利用者へ出すもの（警告、pairの案内、unpairの確認）はフロントエンドのtraitを通す。`cadratd` との排他のロック（[daemon §4](daemon/daemon.md#4-デバイスへの書き込みの排他q9)）。Phase 1で `cadrat-tool` にあった `cmd` と `render` をここへ移す | する。`cadrat-tool` と `cadratd` が手順を、`cadratctl` が表示を使う（P11） |
+| `cadrat-command` | 各コマンドの手順（[tool/cli §4](tool/cli.md#4-set-の処理順序) など）。結果は `--json` のオブジェクト（`serde_json` の値）で返し、人間向けの表示はそのオブジェクトだけから作る（`render`、[tool/cli §5](tool/cli.md#5-出力)）。実行中に利用者へ出すもの（警告、pairの案内、unpairの確認）はフロントエンドのtraitを通す。`cadratd` との排他のロック（[daemon §4](daemon/daemon.md#4-デバイスへの書き込みの排他q9)）。Phase 1で `cadrat-tool` にあった `cmd` と `render` をここへ移す。`cadrat-tool` と `cadratctl` に共通のコマンドラインの定義（`cli`、clap）も置く | する。`cadrat-tool` と `cadratd` が手順を、`cadratctl` が表示を使う（P11） |
 | `cadrat-dbus` | bus名、path、interface、引数のkey、エラー名と終了コードの対応（[daemon/dbus.md](daemon/dbus.md)） | `cadratd` と `cadratctl` が使う |
 | `cadrat-tool` | clap、終了コード | 独立ツールとして残す（デーモンのフロントエンド `cadratctl` とは別） |
 | `cadrat-hold-open` | 引数の解析、シグナル、1つのnodeを開いて確かめ、消えるまで待つ（[hold-open/cli §3](hold-open/cli.md#3-コマンド)） | — |
 | `cadratd` | D-Busのobject、要求の直列化、変化の検出、起動と終了 | — |
 | `cadratctl` | clap、D-Busの呼び出し、Receiverの対話、終了コード | — |
 
-依存は必要最小限にする。候補は `clap`、`toml_edit`、`serde`、`serde_json`、`thiserror`、`rustix`（ioctl、flock、inotify）、`sha2`。Phase 2aで `zbus` を加える（pure Rustで、`libdbus` や `libsystemd` にリンクしない）。非同期ランタイム（`tokio` など）は入れず、`zbus` のblocking APIとスレッドで組む。`cadrat-tool` と `cadrat-hold-open` は `zbus` に依存しない。`hidapi` は使わない。descriptorの取得とGET/SET Featureを直接制御したいため。
+依存は必要最小限にする。候補は `clap`、`toml_edit`、`serde`、`serde_json`、`thiserror`、`rustix`（ioctl、flock、inotify）、`sha2`。Phase 2aで `zbus` を加える（pure Rustで、`libdbus` や `libsystemd` にリンクしない）。非同期ランタイム（`tokio` など）は入れず、`zbus` が自分で持つ実行スレッドと、`zbus` のblocking API・`zbus::block_on` とスレッドで組む。`cadratd` のD-Busのobjectは `zbus` のinterfaceの非同期メソッドで受け、デバイスに触れる処理は別のスレッド（`blocking`）で行う。`zbus` の依存に含まれる小さなcrate（`blocking`、`futures-lite`、`async-channel`）は直接使ってよい。`cadrat-tool` と `cadrat-hold-open` は `zbus` に依存しない。`hidapi` は使わない。descriptorの取得とGET/SET Featureを直接制御したいため。
 
 ## 2. 型の方針
 
@@ -76,7 +76,7 @@ docs/spec/
 | CLI | 一時ディレクトリで `set` の各分岐（dry-run、no-save、送信失敗時にTOMLが変わらないこと、H0不一致で終了コード9になること、lock競合） | 不要（fake transport） |
 | コマンド層（Phase 2a） | `cadrat-command` の各コマンドを、fakeのtransportで動かす。JSONから作った人間向けの表示が、直接作った表示と一致すること。案内に出すコマンド名（`cadrat-tool` / `cadratctl`）の差し替え | 不要 |
 | 排他（Phase 2a） | `cadratd.lock` を別のプロセスが持っているときに、`cadrat-tool` の送信系コマンドが20で終わり、TOMLもデバイスも変わらないこと。対象外のコマンドは動くこと。`cadrat-tool` がロックを持つ間、`cadratd` が起動を待つこと。fakeのnodeを別のプロセスが `LOCK_EX` で持っているときに、`set`、`apply`、`receiver pair`、`receiver unpair` が22で終わり、何も送らずTOMLも変わらないこと。Receiverの管理nodeだけがロックされているときに、Receiver経由の `set` が22になること。`list` と `receiver slots` はロックがあっても動くこと。unpairで、確認の間はロックを持たないこと。管理nodeの開き直しでロックを取り直せなくても、pairの停止packetが送られること | 不要 |
-| D-Bus（Phase 2a） | テストごとに起動した `dbus-daemon --session` の上で、fakeのtransportを渡した `cadratd` と `cadratctl` を動かす。同じ場面で `cadrat-tool` と `cadratctl` の標準出力と終了コードが一致すること（案内のコマンド名を除く）、`Busy`、`Cancel` と呼び出し側の切断でpairの停止packetが送られること、`PairingStarted`、unpairの `expected` の不一致で16、相対パスの `config` で `InvalidArgs`、`/dev` の変化による `Devices` の更新と `PropertiesChanged`、起動の準備中の `Starting`、書き込み中の `List` が `Busy` にならないこと、`-v` と `--json` を組み合わせた出力、`Version` が違う `cadratd` への警告と、そのときの `UnknownMethod` で21になること | 不要 |
+| D-Bus（Phase 2a） | テストごとに起動した `dbus-daemon --session` の上で、fakeのtransportを渡した `cadratd` と `cadratctl` を動かす。同じ場面で `cadrat-tool` と `cadratctl` の標準出力と終了コードが一致すること（案内のコマンド名を除く）、`Busy`、`Cancel` と呼び出し側の切断でpairの停止packetが送られること、`PairingStarted`、unpairの `expected` の不一致で16、相対パスの `config` で `InvalidArgs`、`/dev` の変化による `Devices` の更新と `PropertiesChanged`、起動の準備中の `Starting`、書き込み中の `List` が `Busy` にならないこと、`-v` と `--json` を組み合わせた出力、`Version` が違う `cadratd` への警告と、そのときの `UnknownMethod` で21になること。テストは `crates/cadratctl/tests/dbus.rs` に置き、CIには `dbus-daemon` を入れる | 不要 |
 | 実機 | §5の達成条件 | 必要 |
 
 CLIのテストでは、`cadrat-tool` のライブラリの入口 `run(args, env, io)` に、fakeのtransport・時計・シグナルと標準入出力を渡して、プログラム全体を動かす。バイナリ（`main.rs`）は実物を渡すだけで、fakeを含まない。fakeは `cadrat-hidraw` の `fake` featureで、開発時の依存からだけ使う。そのため、環境変数や隠しオプションによる切り替えは用意しない。`cadratd`、`cadratctl`、`cadrat-hold-open` も同じ形で、ライブラリの入口にfakeを渡してテストする。

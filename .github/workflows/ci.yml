@@ -18,5 +18,7 @@ jobs:
       - run: rustup toolchain install
       - run: cargo fmt --all --check
       - run: cargo clippy --locked --workspace --all-targets -- -D warnings
+      # The D-Bus tests start their own dbus-daemon (spec implementation §4).
+      - run: command -v dbus-daemon || (sudo apt-get update && sudo apt-get install -y dbus-daemon)
       - run: cargo test --locked --workspace
       - run: cargo run --locked -p xtask -- dist

@@ -45,25 +45,43 @@ impl DaemonLock {
             // Without the runtime directory, this user's cadratd cannot run.
             return Ok(DaemonGuard(Vec::new()));
         }
+        let (path, file) = self.open().map_err(|(path, e)| io_failure(&path, &e))?;
+        lock(&file, &path, || {
+            format!("cadratd is running; use `cadratctl {instead}` instead")
+        })?;
+        Ok(DaemonGuard(vec![file]))
+    }
+
+    /// Opens `cadratd.lock`, creating `cadrat/` (mode 0700) and the file
+    /// (mode 0600) when missing. `cadratd` takes its exclusive lock on it.
+    ///
+    /// # Errors
+    ///
+    /// The path and error that failed; `NotFound` when `/run/user/<uid>`
+    /// does not exist, which this never creates (spec daemon §4).
+    pub fn open(&self) -> Result<(PathBuf, File), (PathBuf, io::Error)> {
+        let home = self.run_user.join(self.uid.to_string());
+        if !home.is_dir() {
+            return Err((home, io::ErrorKind::NotFound.into()));
+        }
         let dir = home.join("cadrat");
         match DirBuilder::new().mode(0o700).create(&dir) {
             Ok(()) => {}
             Err(e) if e.kind() == io::ErrorKind::AlreadyExists => {}
-            Err(e) => return Err(io_failure(&dir, &e)),
+            Err(e) => return Err((dir, e)),
         }
         let path = dir.join("cadratd.lock");
-        let file = OpenOptions::new()
+        match OpenOptions::new()
             .read(true)
             .write(true)
             .create(true)
             .truncate(false)
             .mode(0o600)
             .open(&path)
-            .map_err(|e| io_failure(&path, &e))?;
-        lock(&file, &path, || {
-            format!("cadratd is running; use `cadratctl {instead}` instead")
-        })?;
-        Ok(DaemonGuard(vec![file]))
+        {
+            Ok(file) => Ok((path, file)),
+            Err(e) => Err((path, e)),
+        }
     }
 
     /// As root, every user's `cadratd` could be writing: check each existing

@@ -2,17 +2,11 @@
 
 このファイルは未完了項目と達成条件の正本です。項目番号は再開時の参照に使うため、完了や並べ替えの後も再利用しません。
 
-Phase 1 は [v0.1.0](https://github.com/nejiman10/cadrat/releases/tag/v0.1.0) の公開で完了しました。Phase 2a の仕様（v0.24）は所有者が承認し、develop にマージしました（TODO 13 完了）。コマンド層は `cadrat-command` に移しました（TODO 14 完了、仕様 v0.25 で `--json` のフィールドを追記）。`cadrat-tool` の `cadratd` との排他と、node ごとの書き込みのロックを入れました（TODO 15 完了、仕様 v0.26）。`cadrat-hold-open` のバイナリ、template unit、udev ルールを作りました（TODO 16 完了、仕様 v0.27）。以下は Phase 2a（[仕様 README §2.2](docs/spec/README.md#22-phase-2a)）の実装の項目です。実装はおおむね番号の順に進めます。
-
-## 17. `cadratd` と `cadratctl`
-
-目的: [daemon/daemon.md](docs/spec/daemon/daemon.md)、[daemon/dbus.md](docs/spec/daemon/dbus.md)、[ctl/cli.md](docs/spec/ctl/cli.md) を実装する。
-
-達成条件: [implementation §4](docs/spec/implementation.md#4-テスト階層) の「D-Bus」のテストが CI で通る。
+Phase 1 は [v0.1.0](https://github.com/nejiman10/cadrat/releases/tag/v0.1.0) の公開で完了しました。Phase 2a の仕様（v0.24）は所有者が承認し、develop にマージしました（TODO 13 完了）。コマンド層は `cadrat-command` に移しました（TODO 14 完了、仕様 v0.25 で `--json` のフィールドを追記）。`cadrat-tool` の `cadratd` との排他と、node ごとの書き込みのロックを入れました（TODO 15 完了、仕様 v0.26）。`cadrat-hold-open` のバイナリ、template unit、udev ルールを作りました（TODO 16 完了、仕様 v0.27）。`cadratd` と `cadratctl` を作りました（TODO 17 完了、仕様 v0.28）。以下は Phase 2a（[仕様 README §2.2](docs/spec/README.md#22-phase-2a)）の実装の項目です。実装はおおむね番号の順に進めます。
 
 ## 18. パッケージの分割
 
-目的: `cadrat-common`、`cadrat-tool`、`cadratd` の 3 つの `.deb` を作る（[implementation §7](docs/spec/implementation.md#7-配布)）。README の導入手順と [docs/packaging.md](docs/packaging.md) も合わせる。
+目的: `cadrat-common`、`cadrat-tool`、`cadratd` の 3 つの `.deb` を作る（[implementation §7](docs/spec/implementation.md#7-配布)）。`packaging/systemd/` と `packaging/dbus/` の unit と activation ファイル、`cadrat-hold-open`・`cadratd`・`cadratctl` の man ページとシェル補完（`xtask dist`）も含める。README の導入手順と [docs/packaging.md](docs/packaging.md) も合わせる。
 
 達成条件: release workflow が 3 つのパッケージを作り、Ubuntu 22.04 のコンテナでインストール・実行・削除と、v0.1.0 からの更新を確かめる。`cadratd` を無効にした後で更新しても、有効に戻らないことを確かめる（[implementation §7](docs/spec/implementation.md#7-配布)）。
 

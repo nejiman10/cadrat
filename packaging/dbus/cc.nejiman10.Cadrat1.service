@@ -1,0 +1,5 @@
+# Starts cadratd through systemd on the first call (spec daemon §2).
+[D-BUS Service]
+Name=cc.nejiman10.Cadrat1
+Exec=/usr/bin/cadratd
+SystemdService=cadratd.service

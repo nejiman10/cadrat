@@ -1,0 +1,25 @@
+[package]
+name = "cadratd"
+description = "Per-user daemon that configures the C658 mouse and the C652 Receiver over D-Bus"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+publish.workspace = true
+
+[lints]
+workspace = true
+
+[dependencies]
+blocking = "1.7.0"
+cadrat-command = { path = "../cadrat-command" }
+cadrat-config = { path = "../cadrat-config" }
+cadrat-dbus = { path = "../cadrat-dbus" }
+cadrat-hidraw = { path = "../cadrat-hidraw" }
+cadrat-proto = { path = "../cadrat-proto" }
+clap = { version = "4.6.7", features = ["derive"] }
+futures-lite = "2.6.1"
+rustix = { version = "1.1.5", features = ["event", "fs", "process"] }
+serde_json = "1.0.151"
+signal-hook = "0.4.4"
+zbus = { version = "5.19.0", default-features = false, features = ["blocking-api", "async-io"] }

@@ -48,8 +48,9 @@ pub trait Frontend {
     fn verbose(&mut self, line: &str);
     /// A warning as it happens. It is also in the JSON `warnings`.
     fn warning(&mut self, code: &str, message: &str);
-    /// Pairing mode has started: tell the user to put the mouse in pairing mode.
-    fn pairing_started(&mut self, timeout: Duration);
+    /// Pairing mode has started on the Receiver with this key: tell the
+    /// user to put the mouse in pairing mode.
+    fn pairing_started(&mut self, receiver: &str, timeout: Duration);
     /// Whether [`Frontend::confirm_unpair`] can ask anyone. Without `--yes`,
     /// unpair is a usage error otherwise (spec receiver §4 step 3).
     fn can_confirm(&self) -> bool;

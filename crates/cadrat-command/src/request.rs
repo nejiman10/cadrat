@@ -20,6 +20,10 @@ pub struct Options {
     pub hidraw: Option<PathBuf>,
     /// `-v`: per-node detail through [`crate::Frontend::verbose`].
     pub verbose: bool,
+    /// The per-node detail of `-v` also goes into the JSON `nodes`
+    /// (`cadratd`'s `verbose` key, spec dbus §3). [`crate::render::verbose_lines`]
+    /// turns it back into the `-v` lines.
+    pub verbose_json: bool,
     /// `-q`: no informational lines.
     pub quiet: bool,
 }
@@ -88,6 +92,10 @@ pub enum Command {
         slot: Slot,
         /// `--yes`.
         yes: bool,
+        /// The raw slot response the caller confirmed (`cadratd`'s
+        /// `expected`, spec dbus §6): no confirmation is asked, and a slot
+        /// that no longer reads the same is `SlotChanged`.
+        expected: Option<[u8; 8]>,
         /// `--timeout` and `--poll-interval`.
         polling: Polling,
     },

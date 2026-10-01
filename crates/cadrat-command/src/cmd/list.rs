@@ -6,18 +6,22 @@ use serde_json::{Value, json};
 use crate::ctx::Ctx;
 use crate::exit::{Exit, Failure};
 use crate::format::{self, Redactor};
+use crate::render;
 
 /// Enumerates devices, reporting unreadable nodes with the udev hint.
 pub fn inventory(ctx: &mut Ctx) -> Result<Inventory, Failure> {
     let inventory = enumerate(ctx.env.system)
         .map_err(|e| Failure::new(Exit::IoError, format!("cannot list hidraw nodes: {e}")))?;
-    for node in &inventory.nodes {
-        let status = match &node.status {
-            NodeStatus::Candidate { .. } => "candidate".to_owned(),
-            NodeStatus::Rejected(reason) => format!("rejected ({reason})"),
-            NodeStatus::Inaccessible(errno) => format!("inaccessible ({errno})"),
-        };
-        ctx.verbose(format!("node {}: {status}", node.info.path.display()));
+    if ctx.options.verbose || ctx.options.verbose_json {
+        // IDs in the detail are always hidden here: the lines do not show
+        // them, and `list --nodes` replaces these rows with its own.
+        let rows = node_rows(&inventory, &mut Redactor::new(true));
+        for row in &rows {
+            ctx.verbose(render::node_line(row));
+        }
+        if ctx.options.verbose_json {
+            ctx.set("nodes", rows);
+        }
     }
     for warning in &inventory.warnings {
         ctx.warn(warning.code(), warning.to_string());
@@ -57,24 +61,29 @@ pub fn run(ctx: &mut Ctx, nodes: bool, redact: bool) -> Result<(), Failure> {
     ctx.set("receivers", receivers);
 
     if nodes {
-        let rows: Vec<Value> = inventory
-            .nodes
-            .iter()
-            .map(|node| {
-                let (status, detail) = node_status(&node.status, &mut redactor);
-                json!({
-                    "node": node.info.path.display().to_string(),
-                    "interface": node.info.interface,
-                    "product": node.product().map(|p| format!("256f:{p:04x}")),
-                    "usb_port": node.info.usb_port,
-                    "status": status,
-                    "detail": detail,
-                })
-            })
-            .collect();
+        let rows = node_rows(&inventory, &mut redactor);
         ctx.set("nodes", rows);
     }
     Ok(())
+}
+
+/// The `list --nodes` rows (spec tool/cli §5).
+fn node_rows(inventory: &Inventory, redactor: &mut Redactor) -> Vec<Value> {
+    inventory
+        .nodes
+        .iter()
+        .map(|node| {
+            let (status, detail) = node_status(&node.status, redactor);
+            json!({
+                "node": node.info.path.display().to_string(),
+                "interface": node.info.interface,
+                "product": node.product().map(|p| format!("256f:{p:04x}")),
+                "usb_port": node.info.usb_port,
+                "status": status,
+                "detail": detail,
+            })
+        })
+        .collect()
 }
 
 fn node_status(status: &NodeStatus, redactor: &mut Redactor) -> (&'static str, String) {
