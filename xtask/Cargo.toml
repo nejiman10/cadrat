@@ -1,6 +1,6 @@
 [package]
 name = "xtask"
-description = "Build helpers: manual page and shell completions for packaging"
+description = "Build helpers: manual pages and shell completions for packaging"
 version.workspace = true
 edition.workspace = true
 license.workspace = true
@@ -10,7 +10,10 @@ publish.workspace = true
 workspace = true
 
 [dependencies]
+cadrat-hold-open = { path = "../crates/cadrat-hold-open" }
 cadrat-tool = { path = "../crates/cadrat-tool" }
+cadratctl = { path = "../crates/cadratctl" }
+cadratd = { path = "../crates/cadratd" }
 clap = { version = "4.6.7", features = ["string"] }
 clap_complete = "4.6.11"
 clap_mangen = "0.3.3"

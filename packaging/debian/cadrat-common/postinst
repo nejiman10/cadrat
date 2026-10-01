@@ -1,0 +1,33 @@
+#!/bin/sh
+# cadrat-common: apply the udev rules and start hold-open for wired C658s
+# that are already connected (spec implementation §7, hold-open/cli §4.3).
+# An upgrade does not stop or restart the running hold-open instances:
+# closing a node stops the mouse's input.
+set -e
+
+if [ "$1" = "configure" ]; then
+    if [ -d /run/systemd/system ]; then
+        systemctl daemon-reload || true
+    fi
+    if [ -d /run/udev ] && command -v udevadm >/dev/null 2>&1; then
+        udevadm control --reload || true
+        # The hidraw access rule, for every node already connected.
+        udevadm trigger --subsystem-match=hidraw --action=change || true
+        # hold-open starts on "add": replay it for wired C658 nodes only,
+        # chosen by the parent HID device (USB, VID 256f, PID c658).
+        for node in /sys/class/hidraw/hidraw*; do
+            [ -e "$node" ] || continue
+            if grep -qx 'HID_ID=0003:0000256F:0000C658' "$node/device/uevent" 2>/dev/null; then
+                udevadm trigger --action=add "$node" || true
+            fi
+        done
+    fi
+    if [ -z "$2" ]; then
+        echo "cadrat: wired C658 hidraw nodes are now kept open by the cadrat-hold-open@.service"
+        echo "system service. If you enabled the user service of cadrat-tool 0.1.0, disable it:"
+        echo "    systemctl --user disable cadrat-hold-open.service"
+    fi
+fi
+
+#DEBHELPER#
+exit 0

@@ -23,3 +23,37 @@ rustix = { version = "1.1.5", features = ["event", "fs", "process"] }
 serde_json = "1.0.151"
 signal-hook = "0.4.4"
 zbus = { version = "5.19.0", default-features = false, features = ["blocking-api", "async-io"] }
+
+# The cadratd `.deb` package (spec implementation §7): the daemon and its
+# front end cadratctl. Built with the other two by packaging/build-deb.sh or
+# packaging/build-release.sh, which also build cadratctl.
+[package.metadata.deb]
+name = "cadratd"
+maintainer = "nejiman10 <72682963+nejiman10@users.noreply.github.com>"
+copyright = "2026, nejiman10"
+license-file = ["../../LICENSE", "0"]
+section = "utils"
+priority = "optional"
+depends = "$auto, cadrat-common (= @VERSION@), default-dbus-session-bus | dbus-session-bus"
+extended-description = """\
+Per-user daemon (cadratd) and its command-line front end (cadratctl) for the \
+CadMouse Compact Wireless (C658) and its Universal Receiver (C652). cadratd \
+runs as a systemd user service and is the only writer to the devices while \
+it runs; cadratctl takes the same commands as cadrat-tool. The service is \
+enabled for every user on first installation. Not affiliated with \
+3Dconnexion.
+"""
+maintainer-scripts = "../../packaging/debian/cadratd"
+assets = [
+    ["target/release/cadratd", "usr/bin/", "755"],
+    ["target/release/cadratctl", "usr/bin/", "755"],
+    ["../../packaging/systemd/cadratd.service", "usr/lib/systemd/user/", "644"],
+    ["../../packaging/dbus/cc.nejiman10.Cadrat1.service", "usr/share/dbus-1/services/", "644"],
+    ["../../target/dist/man/man8/cadratd.8.gz", "usr/share/man/man8/", "644"],
+    ["../../target/dist/man/man1/cadratctl*.1.gz", "usr/share/man/man1/", "644"],
+    ["../../target/dist/completions/cadratctl", "usr/share/bash-completion/completions/", "644"],
+    ["../../target/dist/completions/_cadratctl", "usr/share/zsh/vendor-completions/", "644"],
+    ["../../target/dist/completions/cadratctl.fish", "usr/share/fish/vendor_completions.d/", "644"],
+    ["../../README.md", "usr/share/doc/cadratd/", "644"],
+    ["../../NOTICE.md", "usr/share/doc/cadratd/", "644"],
+]

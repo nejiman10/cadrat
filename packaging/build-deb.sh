@@ -1,17 +1,19 @@
 #!/bin/sh
-# Builds the cadrat-tool .deb as a TEST BUILD.
+# Builds the three .deb packages (cadrat-common, cadrat-tool, cadratd) as a
+# TEST BUILD.
 #
 # The version gets a "~test" suffix, which sorts before the plain release
 # version, so a later release upgrades it. A test build has not passed the
-# Phase 1 hardware checks (docs/hardware-test.md) and is not published as a
-# release. Releases are built with packaging/build-release.sh on Ubuntu 22.04
-# (spec implementation §7).
+# hardware checks (docs/hardware-test.md) and is not published as a release.
+# Releases are built with packaging/build-release.sh on Ubuntu 22.04 (spec
+# implementation §7).
 #
 # Usage: packaging/build-deb.sh [TEST_NUMBER]
 set -eu
 
 root=$(CDPATH= cd -- "$(dirname -- "$0")/.." && pwd)
 cd "$root"
+. packaging/debs.sh
 
 test_number=${1:-1}
 version=$(cargo metadata --format-version 1 --no-deps \
@@ -23,8 +25,8 @@ if [ -n "$(git status --porcelain 2>/dev/null)" ]; then
     deb_version="${deb_version}.dirty"
 fi
 
-cargo run --quiet -p xtask -- dist
-CADRAT_VERSION="$deb_version (test build)" \
-    cargo deb -p cadrat-tool --deb-version "$deb_version" --output target/debian/
+CADRAT_VERSION="$deb_version (test build)"
+export CADRAT_VERSION
+make_debs "$deb_version"
 
-echo "TEST BUILD: cadrat-tool ${deb_version} (not hardware-verified, not a release)"
+echo "TEST BUILD: cadrat ${deb_version} (not hardware-verified, not a release)"

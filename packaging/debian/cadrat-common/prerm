@@ -1,0 +1,16 @@
+#!/bin/sh
+# cadrat-common: stop the running hold-open instances on removal (spec
+# hold-open/cli §4.3). Not on upgrade: closing a node stops the mouse's input.
+set -e
+
+if [ "$1" = "remove" ] && [ -d /run/systemd/system ]; then
+    running=$(systemctl list-units --plain --no-legend --state=active 'cadrat-hold-open@*.service' 2>/dev/null || true)
+    if [ -n "$running" ]; then
+        systemctl stop 'cadrat-hold-open@*.service' || true
+        echo "cadrat: stopped cadrat-hold-open. A wired C658 may stop sending input until it is"
+        echo "unplugged and plugged in again."
+    fi
+fi
+
+#DEBHELPER#
+exit 0

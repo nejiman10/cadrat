@@ -170,12 +170,13 @@ v0.1.0で満たした（[実機確認](../hardware-test.md)）。
   - systemdがnodeのパスを渡して起動するだけの `cadrat-hold-open` は、`$PATH` に出さず `/usr/libexec/cadrat/` に置く。
   - デーモンとシステムサービス（`cadratd`、`cadrat-hold-open`）のmanは8章（`bluetoothd(8)`、`ratbagd(8)` と同じ）。`cadratd` は利用者が `--version` で版を確かめることがあるので、`/usr/bin` に置く。
   - unitの `Documentation=` も同じ章を指す。
-- `cadrat-common`: インストール後に `udevadm control --reload` と `udevadm trigger` を実行する。hold-openのサービスは `enable` せず、udevルールが起動する。すでにつながっているC658には、そのnodeだけに `add` のイベントを起こし直す（[hold-open/cli §4.3](hold-open/cli.md#43-有効無効と更新)）。更新ではhold-openのサービスを止めも再起動もしない。削除では動いているinstanceを止め、有線C658の入力が止まることを表示する。hold-openのサービスは `enable` しないので、cargo-debの `systemd-units` の有効化は使わず、これらはmaintainer scriptに書く。
+- `cadrat-common`: インストール後に `systemctl daemon-reload`、`udevadm control --reload` と、hidrawへの `udevadm trigger --action=change`（`uaccess` のため）を実行する。hold-openのサービスは `enable` せず、udevルールが起動する。すでにつながっているC658には、そのnodeだけに `add` のイベントを起こし直す（[hold-open/cli §4.3](hold-open/cli.md#43-有効無効と更新)）。更新ではhold-openのサービスを止めも再起動もしない。削除では動いているinstanceを止め、有線C658の入力が止まることを表示する。hold-openのサービスは `enable` しないので、cargo-debの `systemd-units` の有効化は使わず、これらはmaintainer scriptに書く。systemdやudevが動いていない環境（コンテナなど）では、それぞれの手順を飛ばす。
 - `cadrat-common` は `Replaces: cadrat-tool (<< 0.2.0)` と `Breaks: cadrat-tool (<< 0.2.0)` を持つ。v0.1.0では `cadrat-tool` がudevルールを持っていたためである。
-- `cadratd`: **初めてインストールしたときだけ**、全ユーザーについて有効にする。`postinst configure` で前の版が無いときに `deb-systemd-helper --user enable cadratd.service` を実行する。更新では有効・無効に触れない。管理者が無効にしたものを、更新で有効に戻さないためである（Debian Policyと `deb-systemd-helper` の考え方）。
-  - Ubuntu 22.04のinit-system-helpersが `--user` に対応しているかは確かめていない（TODO 18）。対応していなければ、初回だけ `systemctl --global enable cadratd.service` を実行する。
+- `cadratd`: **初めてインストールしたときだけ**、全ユーザーについて有効にする。更新では有効・無効に触れない。管理者が無効にしたものを、更新で有効に戻さないためである（Debian Policyと `deb-systemd-helper` の考え方）。maintainer scriptは `dh_installsystemduser` が生成するものと同じ手順にする。
+  - `postinst configure` で `deb-systemd-helper --user was-enabled cadratd.service` が真なら `enable`、偽なら `update-state` を実行する。`deb-systemd-helper` は作ったリンクを記録し、記録が無い初回は真、管理者が `systemctl --global disable cadratd.service` でリンクを消した後は偽になる。
+  - Ubuntu 22.04のinit-system-helpers（1.62）は `--user` に対応している（TODO 18 でコンテナで確かめた。[docs/packaging.md](../packaging.md)）。
   - すでに動いているユーザーの `cadratd` は、更新でも再起動しない。新しい版は次のログインか、`systemctl --user restart cadratd.service` から使われる。その間の版のずれは `cadratctl` が扱う（[ctl/cli §4.1](ctl/cli.md#41-cadratd-との版のずれ)）。
-  - 削除では `systemctl --global disable` を行い、`postrm purge` で有効化の記録を消す。
+  - 削除（`postrm remove`）では `deb-systemd-helper --user mask` を行う。有効化の記録は残すので、入れ直すと削除前の状態に戻る。`postrm purge` で `deb-systemd-helper --user purge` と `unmask` を行い、リンクと記録を消す。
   - デーモンを使わず `cadrat-tool` だけで運用する方法を、READMEに書く。`cadratd` のパッケージを入れないか、`systemctl --user mask --now cadratd.service` で止める。`mask` はD-Busのactivationも止める（activationファイルの `SystemdService=` がmaskされたunitを指すので、起動に失敗する）。
   - `systemctl --user disable --now cadratd.service` は、ログイン時の起動をやめるだけである。`cadratctl` を呼べばD-Busのactivationで起動し、ログアウトまで動き続けるので、その間 `cadrat-tool` の送信系コマンドは20で止まる。READMEでは、`cadrat-tool` だけで使う方法として `mask` を、必要なときだけ起動する方法として `disable` を、分けて書く。
 - Phase 1のuser unit（`/usr/lib/systemd/user/cadrat-hold-open.service`）は配らない。有効にしていた利用者には、リリースノートと `cadrat-common` のインストール時の表示で `systemctl --user disable cadrat-hold-open.service` を案内する。

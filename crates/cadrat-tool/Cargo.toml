@@ -24,8 +24,10 @@ rustix = { version = "1.1.5", features = ["fs"] }
 cadrat-hidraw = { path = "../cadrat-hidraw", features = ["fake"] }
 tempfile = "3.27.0"
 
-# `.deb` package (spec implementation §7). Build it with packaging/build-deb.sh, which
-# generates target/dist first and marks the version as a test build.
+# `.deb` package (spec implementation §7). Build the three packages with
+# packaging/build-deb.sh or packaging/build-release.sh: they generate
+# target/dist first and replace @VERSION@ with the package version, so that
+# the three always come from one build.
 [package.metadata.deb]
 name = "cadrat-tool"
 maintainer = "nejiman10 <72682963+nejiman10@users.noreply.github.com>"
@@ -33,21 +35,18 @@ copyright = "2026, nejiman10"
 license-file = ["../../LICENSE", "0"]
 section = "utils"
 priority = "optional"
-depends = "$auto, udev"
+depends = "$auto, cadrat-common (= @VERSION@)"
 extended-description = """\
 Unofficial command-line tool that configures the CadMouse Compact Wireless \
 (C658) and its Universal Receiver (C652) on Linux through hidraw. It sends \
 DPI, polling rate, wheel mode and button assignments kept in a TOML file, \
-reads, pairs and unpairs Receiver slots, and can keep a wired C658's hidraw \
-nodes open with an optional systemd user service. Not affiliated with \
-3Dconnexion.
+and reads, pairs and unpairs Receiver slots. It works without the cadratd \
+daemon; while cadratd runs, use cadratctl to change settings. Not affiliated \
+with 3Dconnexion.
 """
-maintainer-scripts = "../../packaging/debian"
 assets = [
     ["target/release/cadrat-tool", "usr/bin/", "755"],
-    ["../../udev/69-cadrat.rules", "usr/lib/udev/rules.d/", "644"],
-    ["../../packaging/systemd/cadrat-hold-open.service", "usr/lib/systemd/user/", "644"],
-    ["../../target/dist/man/*.1.gz", "usr/share/man/man1/", "644"],
+    ["../../target/dist/man/man1/cadrat-tool*.1.gz", "usr/share/man/man1/", "644"],
     ["../../target/dist/completions/cadrat-tool", "usr/share/bash-completion/completions/", "644"],
     ["../../target/dist/completions/_cadrat-tool", "usr/share/zsh/vendor-completions/", "644"],
     ["../../target/dist/completions/cadrat-tool.fish", "usr/share/fish/vendor_completions.d/", "644"],
