@@ -1,7 +1,11 @@
 //! Command-line syntax (spec tool/cli §1, §3).
 
 use std::path::PathBuf;
+use std::time::Duration;
 
+use cadrat_command::{Command as Request, Options};
+use cadrat_hidraw::receiver::Polling;
+use cadrat_proto::Slot;
 use clap::{Args, Parser, Subcommand, ValueEnum};
 
 /// The version shown by `--version`: `CADRAT_VERSION` at build time (set by
@@ -186,6 +190,95 @@ pub struct ReceiverArg {
     /// Target Receiver: a key or a unique key prefix
     #[arg(long, value_name = "KEY")]
     pub receiver: Option<String>,
+}
+
+fn config_preset(preset: Option<Preset>) -> cadrat_config::Preset {
+    match preset {
+        None => cadrat_config::Preset::Empty,
+        Some(Preset::ResearchBaseline) => cadrat_config::Preset::ResearchBaseline,
+    }
+}
+
+impl Global {
+    /// The options shared with `cadratd` (`--json` only changes the output).
+    pub fn options(&self) -> Options {
+        Options {
+            config: self.config.clone(),
+            mouse: self.mouse.clone(),
+            route: self.route.map(Into::into),
+            hidraw: self.hidraw.clone(),
+            verbose: self.verbose,
+            quiet: self.quiet,
+        }
+    }
+}
+
+impl Command {
+    /// The shared command, or `None` for `hold-open`, which only `cadrat-tool` has.
+    pub fn request(&self) -> Option<Request> {
+        Some(match self {
+            Self::List { nodes, redact } => Request::List {
+                nodes: *nodes,
+                redact: *redact,
+            },
+            Self::Init { preset, force } => Request::Init {
+                preset: config_preset(*preset),
+                force: *force,
+            },
+            Self::Get {
+                keys,
+                wire,
+                values_only,
+            } => Request::Get {
+                keys: keys.clone(),
+                wire: *wire,
+                values_only: *values_only,
+            },
+            Self::Check => Request::Check,
+            Self::Set {
+                assignments,
+                dry_run,
+                no_save,
+            } => Request::Set {
+                assignments: assignments.clone(),
+                dry_run: *dry_run,
+                no_save: *no_save,
+            },
+            Self::Apply { dry_run } => Request::Apply { dry_run: *dry_run },
+            Self::Receiver(ReceiverCommand::Slots { receiver, redact }) => Request::ReceiverSlots {
+                receiver: receiver.receiver.clone(),
+                redact: *redact,
+            },
+            Self::Receiver(ReceiverCommand::Pair {
+                receiver,
+                timeout,
+                poll_interval,
+            }) => Request::ReceiverPair {
+                receiver: receiver.receiver.clone(),
+                polling: polling(*timeout, *poll_interval),
+            },
+            Self::Receiver(ReceiverCommand::Unpair {
+                slot,
+                receiver,
+                yes,
+                timeout,
+                poll_interval,
+            }) => Request::ReceiverUnpair {
+                receiver: receiver.receiver.clone(),
+                slot: Slot::new(*slot).expect("clap checks the range"),
+                yes: *yes,
+                polling: polling(*timeout, *poll_interval),
+            },
+            Self::HoldOpen { .. } => return None,
+        })
+    }
+}
+
+fn polling(timeout: f64, interval: f64) -> Polling {
+    Polling {
+        timeout: Duration::from_secs_f64(timeout),
+        interval: Duration::from_secs_f64(interval),
+    }
 }
 
 fn seconds(text: &str) -> Result<f64, String> {

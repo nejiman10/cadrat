@@ -26,7 +26,7 @@ docs/spec/
 | `cadrat-proto` | `Report10Config`、actionのenum、blob・wireの生成と `inspect`、HID descriptorの長さ解析、Report `0x03` のparser、Receiver管理packet（`41 02 …` / `41 04 …`）の生成、slot応答とIDプローブ応答（GET `0x08`）の解析 | する |
 | `cadrat-hidraw` | 列挙、ioctl、候補の判定・選択、送信、Receiver管理（管理nodeの選択、slotのpoll、pair/unpairの手順）、hold-open、`/dev` の見張り（Phase 2a）。I/Oと時計はtraitの裏に隠し、テストではfakeに差し替える | する |
 | `cadrat-config` | schema 1の型、検証、`toml_edit` での部分更新、原子的な保存、lock | する |
-| `cadrat-command` | 各コマンドの手順（[tool/cli §4](tool/cli.md#4-set-の処理順序) など）と、その結果の型。結果はserdeで `--json` の形になり、人間向けの表示もここで作る。`cadratd` との排他のロック（[daemon §4](daemon/daemon.md#4-デバイスへの書き込みの排他q9)）。Phase 1で `cadrat-tool` にあった `cmd` と `render` をここへ移す | する。`cadrat-tool` と `cadratd` が手順を、`cadratctl` が表示を使う（P11） |
+| `cadrat-command` | 各コマンドの手順（[tool/cli §4](tool/cli.md#4-set-の処理順序) など）。結果は `--json` のオブジェクト（`serde_json` の値）で返し、人間向けの表示はそのオブジェクトだけから作る（`render`、[tool/cli §5](tool/cli.md#5-出力)）。実行中に利用者へ出すもの（警告、pairの案内、unpairの確認）はフロントエンドのtraitを通す。`cadratd` との排他のロック（[daemon §4](daemon/daemon.md#4-デバイスへの書き込みの排他q9)）。Phase 1で `cadrat-tool` にあった `cmd` と `render` をここへ移す | する。`cadrat-tool` と `cadratd` が手順を、`cadratctl` が表示を使う（P11） |
 | `cadrat-dbus` | bus名、path、interface、引数のkey、エラー名と終了コードの対応（[daemon/dbus.md](daemon/dbus.md)） | `cadratd` と `cadratctl` が使う |
 | `cadrat-tool` | clap、終了コード | 独立ツールとして残す（デーモンのフロントエンド `cadratctl` とは別） |
 | `cadrat-hold-open` | 引数の解析、シグナル、1つのnodeを開いて確かめ、消えるまで待つ（[hold-open/cli §3](hold-open/cli.md#3-コマンド)） | — |

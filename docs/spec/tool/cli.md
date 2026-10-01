@@ -209,8 +209,16 @@ note    the receiver route is on standby; run `cadrat-tool apply` after switchin
 ```
 
 - `command` は `list`、`init`、`get`、`check`、`set`、`apply`、`receiver slots`、`receiver pair`、`receiver unpair` のいずれか。
-- エラーのときは `"ok": false`、`"error": {"code": "AmbiguousTarget", "message": "…", "details": {…}}` とする。
+- エラーのときは `"ok": false`、`"error": {"code": "AmbiguousTarget", "message": "…", "hints": ["…"], "details": {…}}` とする。`hints` は人間向けの `hint:` の行と同じ文を、同じ順に並べる（無ければ空の配列）。
 - `list --json` は、`mice`、`receivers`（`--nodes` 指定時は `nodes` も）を配列で出す。デーモンの前準備として、この構造を[device §2](../device.md#2-デバイスモデル)のモデルと一致させる。
+- コマンドごとのフィールド。失敗したときも、失敗するまでに決まったものは載せる。
+  - `init`: `path`、`preset`（`--preset` なしは `null`、ありは `"research-baseline"`）。
+  - `get`: `values`（keyと値のオブジェクト。読めた値だけ）。`--wire` のときは `wire_hex` と `wire_layout`（`{"offset", "bytes", "meaning"}` の配列。人間向けのwireの表と同じ行）。
+  - `check`: `path`。
+  - `set` と `apply`: `path`、`wire_hex`、`changes`（`set` だけ）、`sent`、`saved`、送信先を決めた後は `mouse`。`--dry-run` のときは `mouse` の代わりに `wire_layout`。
+  - `receiver slots`: `receiver`（`key`、`node`、`interface`）、`slots`。`receiver pair`: `receiver`、`slots_before`、`slots_after`、`stop_sent`、`new_slots`。`receiver unpair`: `receiver`、`target`、`sent`、`slots_after`。
+  - slotのオブジェクトは `slot`、`occupied`、`device_type`、`id`、`mouse` と、GET `0x44` の応答全体を区切りなしの小文字16進にした `raw_hex` を持つ。`raw_hex` はslot識別子を含むので、`--redact` のときは載せない（[dbus §6](../daemon/dbus.md#6-メソッド)）。
+- **人間向けの表示は、このJSONのオブジェクトだけから作る。** 結果の行と案内（`note`、`hint:`）はコマンドが終わってから出す。`cadratctl` はD-Busで受け取ったJSONから同じ表示を作るので、同じコマンドなら同じ行になる（P11）。案内に出すコマンド名だけは、実行したプログラムの名前（`cadrat-tool` / `cadratctl`）にする。実行中に出すもの（警告、`-v` の詳細、pairの案内、unpairの確認）は、その時点で標準エラー出力に出す。
 - `format` はJSON出力の形式バージョン。フィールドを足すときは据え置き、互換性を壊すときだけ上げる。
 
 ## 6. 終了コード
