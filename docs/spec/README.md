@@ -1,6 +1,6 @@
 # cadrat 仕様
 
-状態: **草案 v0.23**（2026-09-30）。Phase 1は実装済み（v0.1.0）。Phase 2aは実装前の合意用。
+状態: **草案 v0.24**（2026-10-01）。Phase 1は実装済み（v0.1.0）。Phase 2aは実装前の合意用。
 
 ## 0. cadrat プロジェクトの構成
 
@@ -67,8 +67,9 @@ hold-openは当初、調査リポジトリのuser service（`c658-hidraw-hold-op
 - **P9 利用者はマウス単位で扱う。** hidraw nodeは実装詳細とし、マウスには機器IDから作った安定した識別キーを付ける。このモデルと識別キーは、`cadratd` でもそのまま使う。
 - **P10 送る直前に宛先を確かめる。** 送信は1回だけ行い、その直前に同じfdで機器IDを読み直して、選んだマウスと一致することを確かめる。
 - **P11 同じ操作は同じ結果になる。** `cadratd` と `cadratctl` は、`cadrat-tool` の同じコマンドと同じ手順、判定、終了コード、出力になる。手順は共有crateに置き、実行ファイルごとに書き直さない。
-- **P12 デバイスへ書き込むのは1か所。** `cadratd` が動いている間は、`cadratd` だけがデバイスへ書き込む（[daemon §4](daemon/daemon.md#4-デバイスへの書き込みの排他q9)）。
+- **P12 デバイスへ書き込むのは1か所。** `cadratd` が動いている間は、`cadratd` だけがデバイスへ書き込む（[daemon §4](daemon/daemon.md#4-デバイスへの書き込みの排他q9)）。どのプロセスも、書き込む間はそのhidraw nodeをロックし、ユーザーやプロセスをまたいで同じデバイスへの書き込みが重ならないようにする（[device §7.2](device.md#72-書き込みのロック)）。
 - **P13 hold-openは設定と独立させる。** hold-openは、ログインの有無やデーモンの状態にかかわらず、システムサービスが行う。
+- **P14 デーモンは呼び出し側に無い権限を与えない。** `cadratd` は呼び出し側と同じユーザーとして動き、そのユーザーが `uaccess` で持つ権限だけを使う。権限の境界をまたがないので、polkitもsystem busも使わない。
 
 ## 4. 文書構成
 
@@ -81,7 +82,7 @@ hold-openは当初、調査リポジトリのuser service（`c658-hidraw-hold-op
 | [receiver.md](receiver.md) | 共通 | Receiver管理nodeの検出、slotの読み取り、pair/unpairの手順と判定 |
 | [implementation.md](implementation.md) | 共通 | crate構成、テスト方針、達成条件、未決事項、配布 |
 | [tool/cli.md](tool/cli.md) | `cadrat-tool` | コマンド体系、`set` の処理順序、出力、終了コード、`cadratd` との排他 |
-| [hold-open/cli.md](hold-open/cli.md) | `cadrat-hold-open` | システムサービスにする理由、コマンド、systemd unit |
+| [hold-open/cli.md](hold-open/cli.md) | `cadrat-hold-open` | システムサービスにする理由、udevからの起動、コマンド、systemd unit |
 | [daemon/daemon.md](daemon/daemon.md) | `cadratd` | 実行形態、起動と終了、書き込みの排他、要求の処理、機器の公開、ログ |
 | [daemon/dbus.md](daemon/dbus.md) | `cadratd` | D-Bus API |
 | [ctl/cli.md](ctl/cli.md) | `cadratctl` | コマンド、Receiverの対話、出力、終了コード |
