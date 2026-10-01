@@ -2,15 +2,7 @@
 
 このファイルは未完了項目と達成条件の正本です。項目番号は再開時の参照に使うため、完了や並べ替えの後も再利用しません。
 
-Phase 1 は [v0.1.0](https://github.com/nejiman10/cadrat/releases/tag/v0.1.0) の公開で完了しました。以下は Phase 2a（[仕様 README §2.2](docs/spec/README.md#22-phase-2a)）の項目です。実装はおおむね番号の順に進めます。
-
-## 13. Phase 2a の仕様の合意
-
-目的: `cadratd`、`cadratctl`、`cadrat-hold-open`、パッケージの分割、`cadrat-tool` との排他を仕様に書き、所有者と合意する。
-
-達成条件: [docs/spec/](docs/spec/README.md) の v0.24 の内容（daemon/、ctl/、hold-open/、device §7.2、implementation §5.2・§6・§7、tool/cli §8）を所有者が承認し、develop にマージされる。
-
-現状: 草案を書き、所有者のレビュー（排他の境界、起動中の要求、`Busy` の範囲、`-v` の出力、`/dev` の見張り方など）を反映した。v0.24 で、後から変えにくい部分を見直した（hold-open を udev から node ごとに起動、D-Bus API を Phase 2a では内部 API とする、書き込み時の hidraw node のロック、`cadratd` の有効化は初回のインストールだけ）。所有者の確認待ち。
+Phase 1 は [v0.1.0](https://github.com/nejiman10/cadrat/releases/tag/v0.1.0) の公開で完了しました。Phase 2a の仕様（v0.24）は所有者が承認し、develop にマージしました（TODO 13 完了）。以下は Phase 2a（[仕様 README §2.2](docs/spec/README.md#22-phase-2a)）の実装の項目です。実装はおおむね番号の順に進めます。
 
 ## 14. コマンド層を共有 crate に移す
 
