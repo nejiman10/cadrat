@@ -109,6 +109,16 @@ dependencies = [
 ]
 
 [[package]]
+name = "cadrat-hold-open"
+version = "0.1.0"
+dependencies = [
+ "cadrat-command",
+ "cadrat-hidraw",
+ "clap",
+ "signal-hook",
+]
+
+[[package]]
 name = "cadrat-proto"
 version = "0.1.0"
 dependencies = [

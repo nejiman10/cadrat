@@ -6,6 +6,7 @@
 
 use std::fmt;
 use std::io;
+use std::os::fd::BorrowedFd;
 use std::path::PathBuf;
 use std::time::{Duration, Instant};
 
@@ -106,6 +107,24 @@ pub trait Device: fmt::Debug {
     ///
     /// `EWOULDBLOCK` when another descriptor holds the lock.
     fn lock(&mut self) -> io::Result<()>;
+
+    /// Waits without reading reports until the node disappears
+    /// (`POLLHUP` or `POLLERR`) or `wake` becomes readable: `poll()` with no
+    /// requested events on this descriptor (spec hold-open/cli §3).
+    ///
+    /// # Errors
+    ///
+    /// The `poll` error, `EINTR` included.
+    fn wait_hangup(&mut self, wake: BorrowedFd<'_>) -> io::Result<Wait>;
+}
+
+/// Why [`Device::wait_hangup`] returned.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum Wait {
+    /// The node is gone.
+    Hangup,
+    /// The wake descriptor became readable.
+    Woken,
 }
 
 /// Monotonic time and sleeping, replaceable in tests.

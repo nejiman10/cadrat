@@ -73,15 +73,42 @@ SUBSYSTEM=="hidraw", ATTRS{idVendor}=="256f", ATTRS{idProduct}=="c658", TAG+="sy
   - `ProtectSystem=strict`、`ProtectHome=yes`、`PrivateTmp=yes`、`PrivateNetwork=yes`
   - `ProtectKernelTunables=yes`、`ProtectKernelModules=yes`、`ProtectKernelLogs=yes`、`ProtectControlGroups=yes`、`ProtectClock=yes`、`ProtectHostname=yes`
   - `RestrictAddressFamilies=AF_UNIX`、`RestrictNamespaces=yes`、`RestrictRealtime=yes`、`RestrictSUIDSGID=yes`、`LockPersonality=yes`、`MemoryDenyWriteExecute=yes`、`SystemCallArchitectures=native`
+  - `SystemCallFilter=@system-service`、`SystemCallFilter=~@privileged @resources`、`SystemCallErrorNumber=EPERM`、`ProtectProc=invisible`、`ProcSubset=pid`、`IPAddressDeny=any`、`UMask=0077`
   - sysfsは読み取りだけで足りる。
+  - AF_UNIXは、シグナルで `poll()` を起こすためのself-pipe（socketpair）と、journalへの出力に使う。
 - `DefaultDependencies` は既定のままにする。起動時のサービスは `basic.target` の後に始まり、ログイン画面より前になる。それでも入力が止まる場合は、`DefaultDependencies=no` で早める（Q20）。
 - `Restart=on-failure` で再起動した場合、閉じてから開き直すまでの間に入力が止まる。開き直せば入力が戻るかは確かめていない（Q20）。
+
+#### 確かめた結果（2026-10-01、Ubuntu 22.04のコンテナ、systemd 249）
+
+実機ではなく、systemdを動かしたコンテナで確かめた。hidrawのnodeは無いので、実際の保持と、udevがnodeの出現で起動する流れは、Phase 2aの実機確認（[implementation §5.2](../implementation.md#52-phase-2a) の7）で確かめる。
+
+- `systemd-analyze verify cadrat-hold-open@hidraw5.service`: このunitについての警告は無い。
+- `systemd-analyze security cadrat-hold-open@hidraw5.service`: 0.9 SAFE。残る項目と、残す理由は次のとおり。
+  - `User=`（rootで動く）、`PrivateUsers=`: hidrawのnodeはrootが所有し、ほかのユーザーにはアクティブなユーザーの `uaccess` のACLしか付かない。どのユーザーのログインにも依らずに開くには、rootのままにする必要がある。
+  - `PrivateDevices=`、`DeviceAllow=`: hidrawのnodeを開くために要る。開けるのは `DeviceAllow=` の1つだけである。
+  - `SystemCallFilter=~@privileged`、`~@resources`: `@system-service` の許可リストにこれらの集合が含まれる、という指摘である。除外のフィルタを重ねているので、実際には呼べない。
+  - `RootDirectory=`、`RestrictAddressFamilies=~AF_UNIX`: 上のとおり、AF_UNIXは使う。
+- 同じsandboxの設定を `systemd-run` で付けて実行した。シグナルの準備、`open`、ioctlまで進み、`/dev/null` ではioctlが `ENOTTY` を返して1で終わった（seccompで止まっていない）。無いnodeでは4で終わった。
+- udevルールは、`systemd-udevd` が読み込んでエラーを出さなかった（`udevadm test`）。
 
 ### 4.3 有効・無効と更新
 
 - **既定で動く。** パッケージを入れればudevルールが働く。C658がつながっていなければ何も起動しない。
 - 使わない管理者は `systemctl mask cadrat-hold-open@.service` で止める。udevルールは残るが、サービスは起動しない。
-- **インストール時**: udevルールを読み直し（`udevadm control --reload`）、すでにつながっているC658のnodeについてだけ `add` のイベントを起こし直す（`udevadm trigger --action=add`）。対象をC658のnodeに絞る方法は、Ubuntu 22.04で確かめてから決める（TODO 16）。ほかのデバイスに `add` を起こし直さないためである。
+  - Ubuntu 22.04（systemd 249）で確かめた: templateをmaskすると、すべてのinstanceが `LoadState=masked` になり、`systemctl start` も、`Wants=` による起動（udevの `SYSTEMD_WANTS` がdevice unitに付けるもの）も行われない。`systemctl unmask` で戻る。
+- **インストール時**: udevルールを読み直し（`udevadm control --reload`）、すでにつながっているC658のnodeについてだけ `add` のイベントを起こし直す（`udevadm trigger --action=add`）。ほかのデバイスに `add` を起こし直さないためである。
+  - 対象は、親のHIDデバイスの `uevent` の `HID_ID` がbus USB、VID `256f`、PID `c658` のhidraw nodeである（[device §9](../device.md#9-hold-open) の対象と同じ）。`udevadm trigger` の条件の指定（`--attr-match` など）はhidraw node自身の属性しか見ないので、nodeをsysfsから選んで、パスで渡す。
+  - `udevadm trigger` はパスで渡したデバイスだけにイベントを起こす。Ubuntu 22.04（udevadm 249）で、`--dry-run --verbose` で渡したデバイスだけが対象になることを確かめた。
+
+```sh
+for node in /sys/class/hidraw/hidraw*; do
+    [ -e "$node" ] || continue
+    if grep -qx 'HID_ID=0003:0000256F:0000C658' "$node/device/uevent" 2>/dev/null; then
+        udevadm trigger --action=add "$node" || true
+    fi
+done
+```
 - **パッケージの更新では止めも再起動もしない。** 止めると、閉じた瞬間に入力が止まるためである。新しい版は、次に抜き差ししたときか次の起動から使われる。maintainer scriptに `systemctl restart` は置かない。
 - **削除**: 動いているinstanceをすべて止め、有線C658の入力が止まることを表示する。
 

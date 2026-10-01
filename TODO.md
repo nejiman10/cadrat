@@ -2,13 +2,7 @@
 
 このファイルは未完了項目と達成条件の正本です。項目番号は再開時の参照に使うため、完了や並べ替えの後も再利用しません。
 
-Phase 1 は [v0.1.0](https://github.com/nejiman10/cadrat/releases/tag/v0.1.0) の公開で完了しました。Phase 2a の仕様（v0.24）は所有者が承認し、develop にマージしました（TODO 13 完了）。コマンド層は `cadrat-command` に移しました（TODO 14 完了、仕様 v0.25 で `--json` のフィールドを追記）。`cadrat-tool` の `cadratd` との排他と、node ごとの書き込みのロックを入れました（TODO 15 完了、仕様 v0.26）。以下は Phase 2a（[仕様 README §2.2](docs/spec/README.md#22-phase-2a)）の実装の項目です。実装はおおむね番号の順に進めます。
-
-## 16. `cadrat-hold-open` とシステムサービス
-
-目的: udev が node ごとに起動する hold-open のシステムサービスを作る（[hold-open/cli.md](docs/spec/hold-open/cli.md)）。
-
-達成条件: `cadrat-hold-open` のバイナリ、template unit（`cadrat-hold-open@.service`）、udev ルール（`69-cadrat-hold-open.rules`）があり、`systemd-analyze verify` と `systemd-analyze security` で unit を確かめた結果を記録している。Ubuntu 22.04 で、`systemctl mask cadrat-hold-open@.service` で起動が止まることと、インストール時に `add` を起こし直す対象を C658 の node に絞る方法を確かめ、hold-open/cli §4.3 に書いている。実機の確認は 19 で行う。
+Phase 1 は [v0.1.0](https://github.com/nejiman10/cadrat/releases/tag/v0.1.0) の公開で完了しました。Phase 2a の仕様（v0.24）は所有者が承認し、develop にマージしました（TODO 13 完了）。コマンド層は `cadrat-command` に移しました（TODO 14 完了、仕様 v0.25 で `--json` のフィールドを追記）。`cadrat-tool` の `cadratd` との排他と、node ごとの書き込みのロックを入れました（TODO 15 完了、仕様 v0.26）。`cadrat-hold-open` のバイナリ、template unit、udev ルールを作りました（TODO 16 完了、仕様 v0.27）。以下は Phase 2a（[仕様 README §2.2](docs/spec/README.md#22-phase-2a)）の実装の項目です。実装はおおむね番号の順に進めます。
 
 ## 17. `cadratd` と `cadratctl`
 

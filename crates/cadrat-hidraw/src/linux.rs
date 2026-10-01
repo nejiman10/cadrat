@@ -7,12 +7,13 @@
 use std::ffi::c_void;
 use std::fs::{self, File, OpenOptions};
 use std::io;
+use std::os::fd::BorrowedFd;
 use std::os::unix::fs::OpenOptionsExt;
 use std::path::{Path, PathBuf};
 
 use rustix::ioctl::{self, Direction, Ioctl, IoctlOutput, Opcode, opcode};
 
-use crate::sys::{Device, NodeInfo, RawInfo, System};
+use crate::sys::{Device, NodeInfo, RawInfo, System, Wait};
 
 /// sysfs and `/dev`, with configurable roots for tests.
 #[derive(Debug, Clone)]
@@ -258,6 +259,25 @@ impl Device for LinuxDevice {
             rustix::fs::FlockOperation::NonBlockingLockExclusive,
         )?;
         Ok(())
+    }
+
+    fn wait_hangup(&mut self, wake: BorrowedFd<'_>) -> io::Result<Wait> {
+        use rustix::event::{PollFd, PollFlags, poll};
+        // No events requested on the node: input reports never wake us,
+        // only POLLHUP / POLLERR, which poll always reports.
+        let mut fds = [
+            PollFd::new(&self.file, PollFlags::empty()),
+            PollFd::from_borrowed_fd(wake, PollFlags::IN),
+        ];
+        poll(&mut fds, None)?;
+        if fds[0]
+            .revents()
+            .intersects(PollFlags::HUP | PollFlags::ERR | PollFlags::NVAL)
+        {
+            Ok(Wait::Hangup)
+        } else {
+            Ok(Wait::Woken)
+        }
     }
 }
 

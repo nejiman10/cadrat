@@ -1,0 +1,20 @@
+[package]
+name = "cadrat-hold-open"
+description = "Keeps one wired C658 hidraw node open, started by udev per node"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+publish.workspace = true
+
+[lints]
+workspace = true
+
+[dependencies]
+cadrat-command = { path = "../cadrat-command" }
+cadrat-hidraw = { path = "../cadrat-hidraw" }
+clap = { version = "4.6.7", features = ["derive"] }
+signal-hook = "0.4.4"
+
+[dev-dependencies]
+cadrat-hidraw = { path = "../cadrat-hidraw", features = ["fake"] }
