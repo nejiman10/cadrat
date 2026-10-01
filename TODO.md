@@ -40,7 +40,7 @@ Phase 1 は [v0.1.0](https://github.com/nejiman10/cadrat/releases/tag/v0.1.0) �
 
 目的: `cadrat-common`、`cadrat-tool`、`cadratd` の 3 つの `.deb` を作る（[implementation §7](docs/spec/implementation.md#7-配布)）。README の導入手順と [docs/packaging.md](docs/packaging.md) も合わせる。
 
-達成条件: release workflow が 3 つのパッケージを作り、Ubuntu 22.04 のコンテナでインストール・実行・削除と、v0.1.0 からの更新を確かめる。
+達成条件: release workflow が 3 つのパッケージを作り、Ubuntu 22.04 のコンテナでインストール・実行・削除と、v0.1.0 からの更新を確かめる。`cadratd` を無効にした後で更新しても、有効に戻らないことを確かめる（[implementation §7](docs/spec/implementation.md#7-配布)）。
 
 ## 19. Phase 2a の実機確認
 

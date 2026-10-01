@@ -165,7 +165,11 @@ v0.1.0で満たした（[実機確認](../hardware-test.md)）。
 
 - `cadrat-common`: インストール後に `udevadm control --reload` と `udevadm trigger` を実行する。hold-openのサービスは `enable` せず、udevルールが起動する。すでにつながっているC658には、そのnodeだけに `add` のイベントを起こし直す（[hold-open/cli §4.3](hold-open/cli.md#43-有効無効と更新)）。更新ではhold-openのサービスを止めも再起動もしない。削除では動いているinstanceを止め、有線C658の入力が止まることを表示する。hold-openのサービスは `enable` しないので、cargo-debの `systemd-units` の有効化は使わず、これらはmaintainer scriptに書く。
 - `cadrat-common` は `Replaces: cadrat-tool (<< 0.2.0)` と `Breaks: cadrat-tool (<< 0.2.0)` を持つ。v0.1.0では `cadrat-tool` がudevルールを持っていたためである。
-- `cadratd`: インストール後に `systemctl --global enable cadratd.service` で全ユーザーについて有効にする。すでに動いているユーザーの `cadratd` は、更新でも再起動しない。新しい版は次のログインか、`systemctl --user restart cadratd.service` から使われる。削除では `systemctl --global disable` を行う。
+- `cadratd`: **初めてインストールしたときだけ**、全ユーザーについて有効にする。`postinst configure` で前の版が無いときに `deb-systemd-helper --user enable cadratd.service` を実行する。更新では有効・無効に触れない。管理者が無効にしたものを、更新で有効に戻さないためである（Debian Policyと `deb-systemd-helper` の考え方）。
+  - Ubuntu 22.04のinit-system-helpersが `--user` に対応しているかは確かめていない（TODO 18）。対応していなければ、初回だけ `systemctl --global enable cadratd.service` を実行する。
+  - すでに動いているユーザーの `cadratd` は、更新でも再起動しない。新しい版は次のログインか、`systemctl --user restart cadratd.service` から使われる。その間の版のずれは `cadratctl` が扱う（[ctl/cli §4.1](ctl/cli.md#41-cadratd-との版のずれ)）。
+  - 削除では `systemctl --global disable` を行い、`postrm purge` で有効化の記録を消す。
+  - デーモンを使わず `cadrat-tool` だけで運用する方法を、READMEに書く。`cadratd` のパッケージを入れないか、`systemctl --user disable --now cadratd.service` で止める。止めた後も、`cadratctl` を呼べばD-Busのactivationで起動する。
 - Phase 1のuser unit（`/usr/lib/systemd/user/cadrat-hold-open.service`）は配らない。有効にしていた利用者には、リリースノートと `cadrat-common` のインストール時の表示で `systemctl --user disable cadrat-hold-open.service` を案内する。
 - 後のPhaseでは、GNOME Shell拡張（`/usr/share/gnome-shell/extensions/`）を別のパッケージで追加する。
 - manページとシェル補完は、CLIの定義から `cargo run -p xtask -- dist` で生成する。
